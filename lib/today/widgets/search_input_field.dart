@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/theme.dart';
 
 /// Reusable search input field styled to match the TaskChat theme.
 class SearchInputField extends StatelessWidget {
@@ -22,7 +23,7 @@ class SearchInputField extends StatelessWidget {
       child: Container(
         height: 48,
         decoration: BoxDecoration(
-          color: const Color(0xFFF1F5F9),
+          color: AppColors.surfaceGrey,
           borderRadius: BorderRadius.circular(24),
         ),
         child: TextField(
@@ -30,10 +31,13 @@ class SearchInputField extends StatelessWidget {
           onChanged: onChanged,
           decoration: InputDecoration(
             hintText: hintText,
-            hintStyle: const TextStyle(color: Color(0xFF64748B), fontSize: 15),
+            hintStyle: const TextStyle(
+              color: AppColors.textSubtitle,
+              fontSize: 15,
+            ),
             prefixIcon: const Icon(
               Icons.search_rounded,
-              color: Color(0xFF64748B),
+              color: AppColors.textSubtitle,
               size: 22,
             ),
             suffixIcon: controller.text.isNotEmpty
@@ -41,7 +45,7 @@ class SearchInputField extends StatelessWidget {
                     icon: const Icon(
                       Icons.close_rounded,
                       size: 18,
-                      color: Color(0xFF64748B),
+                      color: AppColors.textSubtitle,
                     ),
                     onPressed: () {
                       controller.clear();

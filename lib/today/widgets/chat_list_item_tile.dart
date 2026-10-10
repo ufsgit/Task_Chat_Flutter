@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/theme.dart';
 
 /// Reusable list tile widget for rendering a redesigned lead or task item.
 /// Decoupled from data models and styling logic.
@@ -21,15 +22,15 @@ class ChatListItemTile extends StatelessWidget {
     super.key,
     required this.title,
     required this.avatarLetter,
-    this.avatarBgColor = const Color(0xFFF1F5F9),
-    this.avatarTextColor = const Color(0xFF334155),
+    this.avatarBgColor = AppColors.surfaceGrey,
+    this.avatarTextColor = AppColors.textSecondary,
     this.avatarBorderColor,
     this.hasVerifiedBadge = false,
-    this.indicatorColor = const Color(0xFF22C55E),
+    this.indicatorColor = Colors.transparent,
     required this.date,
     required this.tagText,
-    this.tagBgColor = const Color(0xFFDCFCE7),
-    this.tagTextColor = const Color(0xFF15803D),
+    this.tagBgColor = AppColors.completedBg,
+    this.tagTextColor = AppColors.completedText,
     required this.location,
     this.onTap,
   });
@@ -79,7 +80,7 @@ class ChatListItemTile extends StatelessWidget {
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
-                            color: Color(0xFF0F172A),
+                            color: AppColors.textPrimary,
                             letterSpacing: -0.2,
                           ),
                         ),
@@ -88,7 +89,7 @@ class ChatListItemTile extends StatelessWidget {
                           style: const TextStyle(
                             fontSize: 12.5,
                             fontWeight: FontWeight.w600,
-                            color: Color(0xFF0F172A),
+                            color: AppColors.textPrimary,
                           ),
                         ),
                       ],
@@ -123,7 +124,7 @@ class ChatListItemTile extends StatelessWidget {
                         const Icon(
                           Icons.location_on_outlined,
                           size: 15,
-                          color: Color(0xFF64748B),
+                          color: AppColors.textSubtitle,
                         ),
                         const SizedBox(width: 3),
 
@@ -136,7 +137,7 @@ class ChatListItemTile extends StatelessWidget {
                             style: const TextStyle(
                               fontSize: 12.5,
                               fontWeight: FontWeight.w500,
-                              color: Color(0xFF64748B),
+                              color: AppColors.textSubtitle,
                             ),
                           ),
                         ),
@@ -185,7 +186,7 @@ class ChatListItemTile extends StatelessWidget {
               width: 17,
               height: 17,
               decoration: BoxDecoration(
-                color: const Color(0xFF22C55E),
+                color: AppColors.verifiedBadge,
                 shape: BoxShape.circle,
                 border: Border.all(color: Colors.white, width: 2),
               ),

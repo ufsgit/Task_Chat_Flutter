@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'core/theme.dart';
 import 'login_page/login_page.dart';
 
 void main() {
@@ -17,7 +18,7 @@ void main() {
       statusBarColor: Colors.transparent,
       statusBarIconBrightness: Brightness.dark,
       statusBarBrightness: Brightness.light,
-      systemNavigationBarColor: Color(0xFFF3F7FC),
+      systemNavigationBarColor: AppColors.scaffoldBackground,
       systemNavigationBarIconBrightness: Brightness.dark,
     ),
   );
@@ -33,14 +34,7 @@ class TaskChatApp extends StatelessWidget {
     return MaterialApp(
       title: 'TaskChat',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF036838),
-          primary: const Color(0xFF036838),
-        ),
-        useMaterial3: true,
-        scaffoldBackgroundColor: const Color(0xFFF3F7FC),
-      ),
+      theme: AppTheme.lightTheme,
       home: const LoginPage(),
     );
   }

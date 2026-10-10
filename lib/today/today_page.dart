@@ -1,5 +1,5 @@
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import '../core/theme.dart';
 import 'today_data.dart';
 import 'widgets/chat_list_item_tile.dart';
 import 'widgets/filter_chips_bar.dart';
@@ -56,16 +56,16 @@ class _TodayPageState extends State<TodayPage> {
     final filtered = _filteredChatItems;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.surfaceWhite,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.surfaceWhite,
         elevation: 0,
         scrolledUnderElevation: 0,
         titleSpacing: 20,
         title: const Text(
           'TaskChat',
           style: TextStyle(
-            color: Color(0xFF00A859),
+            color: AppColors.brandGreen,
             fontSize: 24,
             fontWeight: FontWeight.w800,
             letterSpacing: -0.5,
@@ -77,28 +77,18 @@ class _TodayPageState extends State<TodayPage> {
             child: GestureDetector(
               onTap: () {
                 Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => const CreateLeadPage(),
-                  ),
+                  MaterialPageRoute(builder: (_) => const CreateLeadPage()),
                 );
               },
-              child: CustomPaint(
-                painter: DashedCirclePainter(
-                  color: const Color(0xFF4C82FB),
-                  strokeWidth: 1.2,
-                  dashWidth: 4.0,
-                  dashSpace: 3.0,
+              child: Container(
+                width: 38,
+                height: 38,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(100),
+                  color: AppColors.surfaceGrey,
                 ),
-                child: Container(
-                  width: 38,
-                  height: 38,
-                  alignment: Alignment.center,
-                  child: const Icon(
-                    Icons.add,
-                    color: Colors.black87,
-                    size: 22,
-                  ),
-                ),
+                child: const Icon(Icons.add, color: Colors.black87, size: 22),
               ),
             ),
           ),
@@ -134,7 +124,9 @@ class _TodayPageState extends State<TodayPage> {
                       child: Text(
                         'No tasks or leads found',
                         style: TextStyle(
-                            color: Color(0xFF64748B), fontSize: 14),
+                          color: AppColors.textSubtitle,
+                          fontSize: 14,
+                        ),
                       ),
                     )
                   : ListView.separated(
@@ -142,7 +134,7 @@ class _TodayPageState extends State<TodayPage> {
                       separatorBuilder: (context, index) => const Divider(
                         height: 1,
                         thickness: 0.6,
-                        color: Color(0xFFF1F5F9),
+                        color: AppColors.divider,
                         indent: 16,
                         endIndent: 16,
                       ),
@@ -151,21 +143,24 @@ class _TodayPageState extends State<TodayPage> {
                         return ChatListItemTile(
                           title: item['title'] ?? '',
                           avatarLetter: item['avatarLetter'] ?? '',
-                          avatarBgColor: item['avatarBgColor'] ??
-                              const Color(0xFFF1F5F9),
-                          avatarTextColor: item['avatarTextColor'] ??
-                              const Color(0xFF334155),
+                          avatarBgColor:
+                              item['avatarBgColor'] ?? AppColors.surfaceGrey,
+                          avatarTextColor:
+                              item['avatarTextColor'] ??
+                              AppColors.textSecondary,
                           avatarBorderColor: item['avatarBorderColor'],
-                          hasVerifiedBadge:
-                              item['hasVerifiedBadge'] ?? false,
-                          indicatorColor: item['indicatorColor'] ??
-                              const Color(0xFF22C55E),
+                          hasVerifiedBadge: item['hasVerifiedBadge'] ?? false,
+                          indicatorColor:
+                              item['indicatorColor'] ??
+                              (item['tagText']?.toString().toLowerCase() == 'new'
+                                  ? const Color(0xFFEF4444)
+                                  : Colors.transparent),
                           date: item['date'] ?? '',
                           tagText: item['tagText'] ?? '',
-                          tagBgColor: item['tagBgColor'] ??
-                              const Color(0xFFDCFCE7),
-                          tagTextColor: item['tagTextColor'] ??
-                              const Color(0xFF15803D),
+                          tagBgColor:
+                              item['tagBgColor'] ?? AppColors.completedBg,
+                          tagTextColor:
+                              item['tagTextColor'] ?? AppColors.completedText,
                           location: item['location'] ?? '',
                           onTap: () {
                             // Action on tap
@@ -180,53 +175,3 @@ class _TodayPageState extends State<TodayPage> {
     );
   }
 }
-
-/// Custom painter for a subtle dashed circular border.
-class DashedCirclePainter extends CustomPainter {
-  final Color color;
-  final double strokeWidth;
-  final double dashWidth;
-  final double dashSpace;
-
-  DashedCirclePainter({
-    required this.color,
-    this.strokeWidth = 1.2,
-    this.dashWidth = 4.0,
-    this.dashSpace = 3.0,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..strokeWidth = strokeWidth
-      ..style = PaintingStyle.stroke;
-
-    final radius = size.width / 2;
-    final center = Offset(size.width / 2, size.height / 2);
-    final circumference = 2 * math.pi * radius;
-    final totalDashLength = dashWidth + dashSpace;
-    final dashCount = (circumference / totalDashLength).floor();
-    final adjustedDashAngle = (2 * math.pi) / dashCount;
-    final dashAngle = adjustedDashAngle * (dashWidth / totalDashLength);
-
-    for (int i = 0; i < dashCount; i++) {
-      final startAngle = i * adjustedDashAngle;
-      canvas.drawArc(
-        Rect.fromCircle(center: center, radius: radius),
-        startAngle,
-        dashAngle,
-        false,
-        paint,
-      );
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant DashedCirclePainter oldDelegate) =>
-      oldDelegate.color != color ||
-      oldDelegate.strokeWidth != strokeWidth ||
-      oldDelegate.dashWidth != dashWidth ||
-      oldDelegate.dashSpace != dashSpace;
-}
-

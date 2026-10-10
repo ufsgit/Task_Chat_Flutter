@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import '../core/theme.dart';
+import '../dashboard/dashboard_page.dart';
+import '../report_activity/main/report_activity.dart';
 import '../settings/settings_page.dart';
 import '../today/today_page.dart';
 
@@ -6,10 +9,7 @@ import '../today/today_page.dart';
 class BottomNavigator extends StatefulWidget {
   final int initialIndex;
 
-  const BottomNavigator({
-    super.key,
-    this.initialIndex = 0,
-  });
+  const BottomNavigator({super.key, this.initialIndex = 0});
 
   @override
   State<BottomNavigator> createState() => _BottomNavigatorState();
@@ -17,24 +17,18 @@ class BottomNavigator extends StatefulWidget {
 
 class _BottomNavigatorState extends State<BottomNavigator> {
   late int _selectedIndex;
-
-  final List<Widget> _pages = const [
-    TodayPage(),
-    _PlaceholderTab(
-      title: 'Dashboard',
-      icon: Icons.chat_bubble_outline_rounded,
-    ),
-    _PlaceholderTab(
-      title: 'Report',
-      icon: Icons.bar_chart_rounded,
-    ),
-    SettingsPage(),
-  ];
+  late final List<Widget> _pages;
 
   @override
   void initState() {
     super.initState();
     _selectedIndex = widget.initialIndex;
+    _pages = [
+      const TodayPage(),
+      DashboardPage(onBack: () => _onItemTapped(0)),
+      const ReportActivity(),
+      const SettingsPage(),
+    ];
   }
 
   void _onItemTapped(int index) {
@@ -46,10 +40,7 @@ class _BottomNavigatorState extends State<BottomNavigator> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(
-        index: _selectedIndex,
-        children: _pages,
-      ),
+      body: IndexedStack(index: _selectedIndex, children: _pages),
       bottomNavigationBar: FloatingBottomBar(
         selectedIndex: _selectedIndex,
         onTap: _onItemTapped,
@@ -77,17 +68,17 @@ class FloatingBottomBar extends StatelessWidget {
         child: Container(
           height: 66,
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppColors.surfaceWhite,
             borderRadius: BorderRadius.circular(33),
-            border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
+            border: Border.all(color: AppColors.border, width: 1),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF0F172A).withValues(alpha: 0.08),
+                color: AppColors.textPrimary.withValues(alpha: 0.08),
                 blurRadius: 20,
                 offset: const Offset(0, 8),
               ),
               BoxShadow(
-                color: const Color(0xFF0F172A).withValues(alpha: 0.04),
+                color: AppColors.textPrimary.withValues(alpha: 0.04),
                 blurRadius: 6,
                 offset: const Offset(0, 2),
               ),
@@ -112,11 +103,7 @@ class FloatingBottomBar extends StatelessWidget {
                 icon: Icons.bar_chart_rounded,
                 label: 'Report',
               ),
-              _buildNavItem(
-                index: 3,
-                icon: Icons.settings,
-                label: 'Settings',
-              ),
+              _buildNavItem(index: 3, icon: Icons.settings, label: 'Settings'),
             ],
           ),
         ),
@@ -143,7 +130,7 @@ class FloatingBottomBar extends StatelessWidget {
           vertical: 7,
         ),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFFDCFCE7) : Colors.transparent,
+          color: isSelected ? AppColors.completedBg : Colors.transparent,
           borderRadius: BorderRadius.circular(20),
         ),
         child: Row(
@@ -156,8 +143,8 @@ class FloatingBottomBar extends StatelessWidget {
                   icon,
                   size: 21,
                   color: isSelected
-                      ? const Color(0xFF036838)
-                      : const Color(0xFF64748B),
+                      ? AppColors.primaryGreen
+                      : AppColors.textSubtitle,
                 ),
                 if (badgeText != null && !isSelected)
                   Positioned(top: -4, right: -6, child: _buildBadge(badgeText)),
@@ -170,7 +157,7 @@ class FloatingBottomBar extends StatelessWidget {
                 style: const TextStyle(
                   fontSize: 12.5,
                   fontWeight: FontWeight.w700,
-                  color: Color(0xFF036838),
+                  color: AppColors.primaryGreen,
                   letterSpacing: -0.2,
                 ),
               ),
@@ -189,7 +176,7 @@ class FloatingBottomBar extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 4.5, vertical: 1),
       decoration: const BoxDecoration(
-        color: Color(0xFF22C55E),
+        color: AppColors.verifiedBadge,
         shape: BoxShape.circle,
       ),
       constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
@@ -201,57 +188,6 @@ class FloatingBottomBar extends StatelessWidget {
           fontSize: 9.5,
           fontWeight: FontWeight.bold,
           height: 1.1,
-        ),
-      ),
-    );
-  }
-}
-
-class _PlaceholderTab extends StatelessWidget {
-  final String title;
-  final IconData icon;
-
-  const _PlaceholderTab({required this.title, required this.icon});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF4F7FB),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFFF4F7FB),
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        titleSpacing: 20,
-        title: const Text(
-          'TaskChat',
-          style: TextStyle(
-            color: Color(0xFF00A859),
-            fontSize: 24,
-            fontWeight: FontWeight.w800,
-            letterSpacing: -0.5,
-          ),
-        ),
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 60, color: const Color(0xFF94A3B8)),
-            const SizedBox(height: 12),
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-                color: Color(0xFF334155),
-              ),
-            ),
-            const SizedBox(height: 6),
-            const Text(
-              'Coming soon',
-              style: TextStyle(fontSize: 14, color: Color(0xFF64748B)),
-            ),
-          ],
         ),
       ),
     );

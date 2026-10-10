@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/theme.dart';
 
 /// Reusable horizontal filter chips selector bar.
 class FilterChipsBar extends StatelessWidget {
@@ -35,8 +36,8 @@ class FilterChipsBar extends StatelessWidget {
                 ),
                 decoration: BoxDecoration(
                   color: isSelected
-                      ? const Color(0xFFD4F4DD)
-                      : const Color(0xFFF1F5F9),
+                      ? AppColors.chipPendingBg
+                      : AppColors.chipUnselectedBg,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 alignment: Alignment.center,
@@ -44,8 +45,8 @@ class FilterChipsBar extends StatelessWidget {
                   filters[index],
                   style: TextStyle(
                     color: isSelected
-                        ? const Color(0xFF15803D)
-                        : const Color(0xFF64748B),
+                        ? AppColors.chipPendingText
+                        : AppColors.chipUnselectedText,
                     fontSize: 13.5,
                     fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                   ),
