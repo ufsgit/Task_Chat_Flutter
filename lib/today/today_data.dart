@@ -8,9 +8,9 @@ final List<Map<String, dynamic>> todayChatItems = [
     'id': '1',
     'title': 'Arun',
     'avatarLetter': 'H',
-    'avatarBgColor': AppColors.surfaceWhite,
+    'avatarBgColor': AppColors.cancelledBg,
     'avatarTextColor': AppColors.cancelledText,
-    'avatarBorderColor': AppColors.emerald,
+    'avatarBorderColor': null,
     'hasVerifiedBadge': false,
     'indicatorColor': Colors.transparent,
     'tagText': 'Cancelled',
@@ -90,3 +90,52 @@ final List<Map<String, dynamic>> todayChatItems = [
     'isPending': true,
   },
 ];
+
+/// Updates the status and appearance of a chat item by customer title/name.
+void updateChatItemStatus({
+  required String customerName,
+  required String newStatus,
+  String? newLocation,
+}) {
+  final index = todayChatItems.indexWhere(
+    (item) =>
+        (item['title'] as String?)?.toLowerCase().trim() ==
+        customerName.toLowerCase().trim(),
+  );
+
+  if (index != -1) {
+    final item = todayChatItems[index];
+    item['tagText'] = newStatus;
+
+    if (newLocation != null && newLocation.isNotEmpty) {
+      item['location'] = newLocation;
+    }
+
+    switch (newStatus.toLowerCase()) {
+      case 'completed':
+        item['tagBgColor'] = AppColors.completedBg;
+        item['tagTextColor'] = AppColors.completedText;
+        item['indicatorColor'] = Colors.transparent;
+        item['isPending'] = false;
+        break;
+      case 'new':
+        item['tagBgColor'] = AppColors.newBg;
+        item['tagTextColor'] = AppColors.newText;
+        item['indicatorColor'] = const Color(0xFFEF4444);
+        item['isPending'] = true;
+        break;
+      case 'scheduled':
+        item['tagBgColor'] = const Color(0xFFFEF3C7);
+        item['tagTextColor'] = const Color(0xFFD97706);
+        item['indicatorColor'] = Colors.transparent;
+        item['isPending'] = true;
+        break;
+      case 'cancelled':
+        item['tagBgColor'] = AppColors.cancelledBg;
+        item['tagTextColor'] = AppColors.cancelledText;
+        item['indicatorColor'] = Colors.transparent;
+        item['isPending'] = false;
+        break;
+    }
+  }
+}

@@ -3,11 +3,17 @@ import 'package:flutter/material.dart';
 /// Centralized color palette and theme configurations for TaskChat.
 /// Contains only the colors actively used across the app.
 abstract final class AppColors {
-  // --- Brand & Primary Colors ---
-  static const Color brandGreen = Color(0xFF00A859);
-  static const Color primaryGreen = Color(0xFF036838);
-  static const Color activeGreen = Color(0xFF16A34A);
-  static const Color emerald = Color(0xFF10B981);
+  // ===========================================================================
+  // PRIMARY GREEN (ONE CENTRAL VARIABLE TO TEST DIFFERENT GREENS)
+  // Change this single color to change the green theme everywhere across the app!
+  // ===========================================================================
+  static const Color primaryGreen = Color(0xFF16A34A);
+
+  // --- Aliased Green Tokens (driven by primaryGreen) ---
+  static const Color brandGreen = primaryGreen;
+  static const Color whatsappGreen = primaryGreen;
+  static const Color activeGreen = primaryGreen;
+  static const Color emerald = primaryGreen;
 
   // --- Backgrounds & Surfaces ---
   static const Color scaffoldBackground = Color(0xFFF3F7FC);
@@ -33,8 +39,8 @@ abstract final class AppColors {
 
   // Completed / Green
   static const Color completedBg = Color(0xFFDCFCE7);
-  static const Color completedText = Color(0xFF15803D);
-  static const Color completedIndicator = Color(0xFF22C55E);
+  static const Color completedText = primaryGreen;
+  static const Color completedIndicator = primaryGreen;
 
   // New / Blue
   static const Color newBg = Color(0xFFDBEAFE);
@@ -50,7 +56,7 @@ abstract final class AppColors {
 
   // Chips & Filters
   static const Color chipPendingBg = Color(0xFFD4F4DD);
-  static const Color chipPendingText = Color(0xFF15803D);
+  static const Color chipPendingText = primaryGreen;
   static const Color chipUnselectedBg = Color(0xFFF1F5F9);
   static const Color chipUnselectedText = Color(0xFF64748B);
 
@@ -58,7 +64,11 @@ abstract final class AppColors {
   static const Color purpleAvatarBg = Color(0xFFEDE9FE);
   static const Color purpleAvatarText = Color(0xFF7C3AED);
   static const Color cyanIndicator = Color(0xFF06B6D4);
-  static const Color verifiedBadge = Color(0xFF22C55E);
+  static const Color verifiedBadge = primaryGreen;
+
+  // Dropdowns & Menus
+  static const Color dropdownBackground = Colors.white;
+  static const Color dropdownItemText = Color(0xFF0F172A);
 }
 
 /// Global theme data definitions for TaskChat.
@@ -68,6 +78,7 @@ abstract final class AppTheme {
       colorScheme: ColorScheme.fromSeed(
         seedColor: AppColors.primaryGreen,
         primary: AppColors.primaryGreen,
+        surface: AppColors.surfaceWhite,
       ),
       useMaterial3: true,
       scaffoldBackgroundColor: AppColors.scaffoldBackground,
@@ -82,7 +93,73 @@ abstract final class AppTheme {
           letterSpacing: -0.5,
         ),
       ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.whatsappGreen,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          textStyle: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+            letterSpacing: -0.2,
+          ),
+        ),
+      ),
+      popupMenuTheme: PopupMenuThemeData(
+        color: AppColors.dropdownBackground,
+        surfaceTintColor: Colors.transparent,
+        elevation: 4,
+        shadowColor: Colors.black.withValues(alpha: 0.12),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+          side: const BorderSide(color: AppColors.border, width: 1),
+        ),
+        textStyle: const TextStyle(
+          color: AppColors.dropdownItemText,
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      dropdownMenuTheme: DropdownMenuThemeData(
+        menuStyle: MenuStyle(
+          backgroundColor: const WidgetStatePropertyAll<Color>(
+            AppColors.dropdownBackground,
+          ),
+          surfaceTintColor: const WidgetStatePropertyAll<Color>(
+            Colors.transparent,
+          ),
+          elevation: const WidgetStatePropertyAll<double>(4),
+          shadowColor: WidgetStatePropertyAll<Color>(
+            Colors.black.withValues(alpha: 0.12),
+          ),
+          shape: WidgetStatePropertyAll<OutlinedBorder>(
+            RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+              side: const BorderSide(color: AppColors.border, width: 1),
+            ),
+          ),
+        ),
+      ),
+      menuTheme: MenuThemeData(
+        style: MenuStyle(
+          backgroundColor: const WidgetStatePropertyAll<Color>(
+            AppColors.dropdownBackground,
+          ),
+          surfaceTintColor: const WidgetStatePropertyAll<Color>(
+            Colors.transparent,
+          ),
+          elevation: const WidgetStatePropertyAll<double>(4),
+          shape: WidgetStatePropertyAll<OutlinedBorder>(
+            RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+              side: const BorderSide(color: AppColors.border, width: 1),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
-

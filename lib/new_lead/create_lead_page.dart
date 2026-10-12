@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../core/theme.dart';
 import 'lead_data.dart';
 import 'widgets/lead_form_card.dart';
 import 'widgets/lead_labeled_row.dart';
@@ -214,7 +215,7 @@ class _CreateLeadPageState extends State<CreateLeadPage> {
                 child: ElevatedButton(
                   onPressed: _handleSave,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF16A34A),
+                    backgroundColor: AppColors.whatsappGreen,
                     foregroundColor: Colors.white,
                     elevation: 0,
                     shape: RoundedRectangleBorder(
@@ -229,16 +230,23 @@ class _CreateLeadPageState extends State<CreateLeadPage> {
               ),
               const SizedBox(height: 14),
 
-              // 6. Cancel Button
+              // 6. Cancel Button (pure text with no background)
               Center(
-                child: TextButton(
-                  onPressed: _handleCancel,
-                  child: const Text(
-                    'Cancel',
-                    style: TextStyle(
-                      fontSize: 14.5,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF475569),
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: _handleCancel,
+                  child: const Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 16.0,
+                      vertical: 8.0,
+                    ),
+                    child: Text(
+                      'Cancel',
+                      style: TextStyle(
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF475569),
+                      ),
                     ),
                   ),
                 ),

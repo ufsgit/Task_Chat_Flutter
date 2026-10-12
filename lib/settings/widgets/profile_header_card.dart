@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/theme.dart';
 import '../settings_data.dart';
 
 /// Reusable profile header card with circle avatar initials, verified badge,
@@ -55,12 +56,12 @@ class ProfileHeaderCard extends StatelessWidget {
                   child: Container(
                     padding: const EdgeInsets.all(4.5),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF10B981),
+                      color: AppColors.primaryGreen,
                       shape: BoxShape.circle,
                       border: Border.all(color: Colors.white, width: 2),
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFF10B981).withValues(alpha: 0.3),
+                          color: AppColors.primaryGreen.withValues(alpha: 0.3),
                           blurRadius: 4,
                           offset: const Offset(0, 1),
                         ),
@@ -102,7 +103,7 @@ class ProfileHeaderCard extends StatelessWidget {
                       const Icon(
                         Icons.verified,
                         size: 18,
-                        color: Color(0xFF10B981),
+                        color: AppColors.primaryGreen,
                       ),
                     ],
                   ],
@@ -122,7 +123,7 @@ class ProfileHeaderCard extends StatelessWidget {
                     width: 8,
                     height: 8,
                     decoration: const BoxDecoration(
-                      color: Color(0xFF10B981),
+                      color: AppColors.primaryGreen,
                       shape: BoxShape.circle,
                     ),
                   ),

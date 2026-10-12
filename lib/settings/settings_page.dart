@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../core/theme.dart';
 import '../login_page/login_page.dart';
 import 'settings_data.dart';
 import 'widgets/profile_header_card.dart';
@@ -31,7 +32,7 @@ class SettingsPage extends StatelessWidget {
         title: const Text(
           'TaskChat',
           style: TextStyle(
-            color: Color(0xFF00A859),
+            color: AppColors.primaryGreen,
             fontSize: 24,
             fontWeight: FontWeight.w800,
             letterSpacing: -0.5,
@@ -165,7 +166,7 @@ class SettingsPage extends StatelessWidget {
                   child: ElevatedButton(
                     onPressed: () => Navigator.of(ctx).pop(),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF036838),
+                      backgroundColor: AppColors.whatsappGreen,
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),

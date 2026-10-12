@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../bottom_navigator/bottom_navigator.dart';
+import '../core/theme.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -38,8 +39,13 @@ class _LoginPageState extends State<LoginPage> {
       return;
     }
 
+    final isSuperAdmin =
+        username.toLowerCase() == 'superadmin' && password == '123';
+
     Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const BottomNavigator()),
+      MaterialPageRoute(
+        builder: (_) => BottomNavigator(isSuperAdmin: isSuperAdmin),
+      ),
     );
   }
 
@@ -165,7 +171,7 @@ class _LoginPageState extends State<LoginPage> {
                                   focusedBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(14),
                                     borderSide: const BorderSide(
-                                      color: Color(0xFF036838),
+                                      color: AppColors.primaryGreen,
                                       width: 1.5,
                                     ),
                                   ),
@@ -235,7 +241,7 @@ class _LoginPageState extends State<LoginPage> {
                                   focusedBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(14),
                                     borderSide: const BorderSide(
-                                      color: Color(0xFF036838),
+                                      color: AppColors.primaryGreen,
                                       width: 1.5,
                                     ),
                                   ),
@@ -250,12 +256,11 @@ class _LoginPageState extends State<LoginPage> {
                                 child: ElevatedButton(
                                   onPressed: _handleLogin,
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFF036838),
+                                    backgroundColor: AppColors.whatsappGreen,
                                     foregroundColor: Colors.white,
                                     elevation: 2,
-                                    shadowColor: const Color(
-                                      0xFF036838,
-                                    ).withValues(alpha: 0.35),
+                                    shadowColor: AppColors.whatsappGreen
+                                        .withValues(alpha: 0.35),
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(14),
                                     ),
@@ -311,7 +316,7 @@ class _TaskChatLogo extends StatelessWidget {
         borderRadius: BorderRadius.circular(30),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF036838).withValues(alpha: 0.08),
+            color: AppColors.primaryGreen.withValues(alpha: 0.08),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -329,7 +334,7 @@ class _TaskChatLogo extends StatelessWidget {
                 width: 64,
                 height: 64,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF036838),
+                  color: AppColors.primaryGreen,
                   borderRadius: BorderRadius.circular(18),
                 ),
                 child: Center(
@@ -348,7 +353,7 @@ class _TaskChatLogo extends StatelessWidget {
                   width: 24,
                   height: 24,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF22C55E),
+                    color: AppColors.primaryGreen,
                     shape: BoxShape.circle,
                     border: Border.all(
                       color: const Color(0xFFD3F9E0),
@@ -405,7 +410,7 @@ class _ChatBubblePainter extends CustomPainter {
 
     // Two rounded horizontal lines inside representing text lines
     final linePaint = Paint()
-      ..color = const Color(0xFF036838)
+      ..color = AppColors.primaryGreen
       ..strokeCap = StrokeCap.round
       ..strokeWidth = 2.2;
 

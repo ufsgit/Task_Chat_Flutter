@@ -4,6 +4,9 @@ import 'today_data.dart';
 import 'widgets/chat_list_item_tile.dart';
 import 'widgets/filter_chips_bar.dart';
 import 'widgets/search_input_field.dart';
+import '../core/slide_up_route.dart';
+import '../customer_details/customer_details_data.dart';
+import '../customer_details/customer_details_page.dart';
 import '../new_lead/create_lead_page.dart';
 
 class TodayPage extends StatefulWidget {
@@ -77,7 +80,7 @@ class _TodayPageState extends State<TodayPage> {
             child: GestureDetector(
               onTap: () {
                 Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const CreateLeadPage()),
+                  SlideUpRoute(page: const CreateLeadPage()),
                 );
               },
               child: Container(
@@ -152,7 +155,8 @@ class _TodayPageState extends State<TodayPage> {
                           hasVerifiedBadge: item['hasVerifiedBadge'] ?? false,
                           indicatorColor:
                               item['indicatorColor'] ??
-                              (item['tagText']?.toString().toLowerCase() == 'new'
+                              (item['tagText']?.toString().toLowerCase() ==
+                                      'new'
                                   ? const Color(0xFFEF4444)
                                   : Colors.transparent),
                           date: item['date'] ?? '',
@@ -162,8 +166,21 @@ class _TodayPageState extends State<TodayPage> {
                           tagTextColor:
                               item['tagTextColor'] ?? AppColors.completedText,
                           location: item['location'] ?? '',
-                          onTap: () {
-                            // Action on tap
+                          onTap: () async {
+                            final customer = CustomerDetailsData.fromChatInfo(
+                              name: item['title']?.toString() ?? 'Customer',
+                              location: item['location']?.toString(),
+                              tagText: item['tagText']?.toString(),
+                              id: item['id']?.toString(),
+                            );
+                            await Navigator.of(context).push(
+                              SlideUpRoute(
+                                page: CustomerDetailsPage(customer: customer),
+                              ),
+                            );
+                            if (mounted) {
+                              setState(() {});
+                            }
                           },
                         );
                       },

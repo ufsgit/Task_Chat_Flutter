@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../core/theme.dart';
 
 /// Performance data model for each day in the weekly performance chart.
 class DayPerformanceData {
@@ -81,7 +82,7 @@ const MetricCardData defaultCompletedMetric = MetricCardData(
   footerIcon: Icons.timelapse_rounded,
   cardBgColor: Color(0xFFF0FDF4),
   borderColor: Color(0xFFDCFCE7),
-  accentColor: Color(0xFF15803D),
+  accentColor: AppColors.primaryGreen,
 );
 
 /// Default scheduled metrics data.

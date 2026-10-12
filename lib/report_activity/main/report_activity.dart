@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../core/theme.dart';
+import '../activity_page.dart';
 import '../report_data.dart';
+import '../task_report_page.dart';
 import '../widgets/report_menu_card.dart';
 
 /// Report & Activity landing screen.
@@ -39,7 +41,22 @@ class ReportActivity extends StatelessWidget {
                   child: ReportMenuCard(
                     item: item,
                     onTap: () {
-                      // Action when tapping Report 1 or Activity
+                      if (item.title == 'Activity') {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const ActivityPage(),
+                          ),
+                        );
+                      } else if (item.title == 'Report 1' ||
+                          item.title == 'Task Report') {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const TaskReportPage(),
+                          ),
+                        );
+                      }
                     },
                   ),
                 );

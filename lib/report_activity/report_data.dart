@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../core/theme.dart';
 
 /// Menu items for the ReportActivity landing screen.
 class ReportMenuItemData {
@@ -22,11 +23,11 @@ class ReportMenuItemData {
 /// Landing page menu items for Report & Activity.
 const List<ReportMenuItemData> defaultReportMenuItems = [
   ReportMenuItemData(
-    title: 'Report 1',
+    title: 'Task Report',
     imageAsset: 'assets/images/taskchat_report_logo.png',
     fallbackIcon: Icons.bar_chart_rounded,
     fallbackBg: Color(0xFFDCFCE7),
-    fallbackIconColor: Color(0xFF036838),
+    fallbackIconColor: AppColors.primaryGreen,
   ),
   ReportMenuItemData(
     title: 'Activity',

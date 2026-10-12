@@ -1,15 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../core/theme.dart';
 import '../dashboard/dashboard_page.dart';
 import '../report_activity/main/report_activity.dart';
 import '../settings/settings_page.dart';
+import '../super_admin/super_admin_page.dart';
 import '../today/today_page.dart';
 
 /// Main navigation shell holding the pages and floating bottom navigation bar.
 class BottomNavigator extends StatefulWidget {
   final int initialIndex;
+  final bool isSuperAdmin;
 
-  const BottomNavigator({super.key, this.initialIndex = 0});
+  const BottomNavigator({
+    super.key,
+    this.initialIndex = 0,
+    this.isSuperAdmin = false,
+  });
 
   @override
   State<BottomNavigator> createState() => _BottomNavigatorState();
@@ -24,7 +31,7 @@ class _BottomNavigatorState extends State<BottomNavigator> {
     super.initState();
     _selectedIndex = widget.initialIndex;
     _pages = [
-      const TodayPage(),
+      widget.isSuperAdmin ? const SuperAdminPage() : const TodayPage(),
       DashboardPage(onBack: () => _onItemTapped(0)),
       const ReportActivity(),
       const SettingsPage(),
@@ -49,8 +56,10 @@ class _BottomNavigatorState extends State<BottomNavigator> {
   }
 }
 
-/// Floating pill bottom navigation bar widget.
-class FloatingBottomBar extends StatelessWidget {
+/// Floating pill bottom navigation bar widget with WhatsApp-style draggable scrubbing.
+/// You can drag/slide the active pill across the bar, and when released, whichever page
+/// it lands on loads.
+class FloatingBottomBar extends StatefulWidget {
   final int selectedIndex;
   final ValueChanged<int> onTap;
 
@@ -61,15 +70,61 @@ class FloatingBottomBar extends StatelessWidget {
   });
 
   @override
+  State<FloatingBottomBar> createState() => _FloatingBottomBarState();
+}
+
+class _FloatingBottomBarState extends State<FloatingBottomBar> {
+  int? _hoveredIndex;
+  bool _isDragging = false;
+
+  int get _activeDisplayIndex =>
+      _isDragging ? (_hoveredIndex ?? widget.selectedIndex) : widget.selectedIndex;
+
+  void _handleDragUpdate(Offset localPosition, double totalWidth) {
+    if (totalWidth <= 0) return;
+    final slotWidth = totalWidth / 4;
+    final targetIndex = (localPosition.dx / slotWidth).clamp(0.0, 3.999).floor();
+
+    if (targetIndex != _hoveredIndex) {
+      HapticFeedback.selectionClick();
+      setState(() {
+        _hoveredIndex = targetIndex;
+      });
+    }
+  }
+
+  void _handleDragEnd() {
+    if (_isDragging && _hoveredIndex != null) {
+      final selected = _hoveredIndex!;
+      setState(() {
+        _isDragging = false;
+        _hoveredIndex = null;
+      });
+      HapticFeedback.lightImpact();
+      widget.onTap(selected);
+    } else {
+      setState(() {
+        _isDragging = false;
+        _hoveredIndex = null;
+      });
+    }
+  }
+
+  void _handleTapItem(int index) {
+    HapticFeedback.lightImpact();
+    widget.onTap(index);
+  }
+
+  @override
   Widget build(BuildContext context) {
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(20, 0, 20, 14),
         child: Container(
-          height: 66,
+          height: 68,
           decoration: BoxDecoration(
             color: AppColors.surfaceWhite,
-            borderRadius: BorderRadius.circular(33),
+            borderRadius: BorderRadius.circular(34),
             border: Border.all(color: AppColors.border, width: 1),
             boxShadow: [
               BoxShadow(
@@ -84,27 +139,98 @@ class FloatingBottomBar extends StatelessWidget {
               ),
             ],
           ),
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildNavItem(
-                index: 0,
-                icon: Icons.calendar_today_outlined,
-                label: "Today's",
-              ),
-              _buildNavItem(
-                index: 1,
-                icon: Icons.chat_bubble_outline_rounded,
-                label: 'Dashboard',
-              ),
-              _buildNavItem(
-                index: 2,
-                icon: Icons.bar_chart_rounded,
-                label: 'Report',
-              ),
-              _buildNavItem(index: 3, icon: Icons.settings, label: 'Settings'),
-            ],
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final totalWidth = constraints.maxWidth;
+              final slotWidth = totalWidth / 4;
+
+              return GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onHorizontalDragStart: (details) {
+                  setState(() {
+                    _isDragging = true;
+                    _hoveredIndex = widget.selectedIndex;
+                  });
+                  _handleDragUpdate(details.localPosition, totalWidth);
+                },
+                onHorizontalDragUpdate: (details) {
+                  _handleDragUpdate(details.localPosition, totalWidth);
+                },
+                onHorizontalDragEnd: (_) {
+                  _handleDragEnd();
+                },
+                onHorizontalDragCancel: () {
+                  _handleDragEnd();
+                },
+                onTapUp: (details) {
+                  final index =
+                      (details.localPosition.dx / slotWidth).clamp(0.0, 3.999).floor();
+                  _handleTapItem(index);
+                },
+                child: Stack(
+                  children: [
+                    // Sliding pill background involving both the icon and the label
+                    AnimatedPositioned(
+                      duration: const Duration(milliseconds: 220),
+                      curve: Curves.easeOutCubic,
+                      left: _activeDisplayIndex * slotWidth + 4,
+                      top: 4,
+                      bottom: 4,
+                      width: slotWidth - 8,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: AppColors.completedBg,
+                          borderRadius: BorderRadius.circular(22),
+                        ),
+                      ),
+                    ),
+
+                    // Items layer: Icon on top, Label underneath
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Center(
+                            child: _buildNavItem(
+                              index: 0,
+                              icon: Icons.calendar_today_outlined,
+                              label: "Today's",
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          child: Center(
+                            child: _buildNavItem(
+                              index: 1,
+                              icon: Icons.chat_bubble_outline_rounded,
+                              label: 'Dashboard',
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          child: Center(
+                            child: _buildNavItem(
+                              index: 2,
+                              icon: Icons.bar_chart_rounded,
+                              label: 'Report',
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          child: Center(
+                            child: _buildNavItem(
+                              index: 3,
+                              icon: Icons.settings,
+                              label: 'Settings',
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              );
+            },
           ),
         ),
       ),
@@ -117,57 +243,47 @@ class FloatingBottomBar extends StatelessWidget {
     required String label,
     String? badgeText,
   }) {
-    final isSelected = selectedIndex == index;
+    final isSelected = _activeDisplayIndex == index;
 
-    return GestureDetector(
-      onTap: () => onTap(index),
-      behavior: HitTestBehavior.opaque,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 250),
-        curve: Curves.easeInOut,
-        padding: EdgeInsets.symmetric(
-          horizontal: isSelected ? 12 : 10,
-          vertical: 7,
-        ),
-        decoration: BoxDecoration(
-          color: isSelected ? AppColors.completedBg : Colors.transparent,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Icon(
-                  icon,
-                  size: 21,
-                  color: isSelected
-                      ? AppColors.primaryGreen
-                      : AppColors.textSubtitle,
-                ),
-                if (badgeText != null && !isSelected)
-                  Positioned(top: -4, right: -6, child: _buildBadge(badgeText)),
-              ],
-            ),
-            if (isSelected) ...[
-              const SizedBox(width: 7),
-              Text(
-                label,
-                style: const TextStyle(
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.primaryGreen,
-                  letterSpacing: -0.2,
-                ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Stack(
+            clipBehavior: Clip.none,
+            alignment: Alignment.center,
+            children: [
+              Icon(
+                icon,
+                size: 21,
+                color: isSelected
+                    ? AppColors.primaryGreen
+                    : AppColors.textSubtitle,
               ),
-              if (badgeText != null) ...[
-                const SizedBox(width: 5),
-                _buildBadge(badgeText),
-              ],
+              if (badgeText != null && !isSelected)
+                Positioned(top: -4, right: -6, child: _buildBadge(badgeText)),
             ],
-          ],
-        ),
+          ),
+          const SizedBox(height: 3),
+          AnimatedDefaultTextStyle(
+            duration: const Duration(milliseconds: 180),
+            style: TextStyle(
+              fontSize: 11.5,
+              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+              color: isSelected
+                  ? AppColors.primaryGreen
+                  : AppColors.textSubtitle,
+              letterSpacing: -0.2,
+            ),
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
       ),
     );
   }

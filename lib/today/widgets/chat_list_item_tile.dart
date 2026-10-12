@@ -16,6 +16,9 @@ class ChatListItemTile extends StatelessWidget {
   final Color tagBgColor;
   final Color tagTextColor;
   final String location;
+  final String? extraBadgeText;
+  final Color? extraBadgeBgColor;
+  final Color? extraBadgeTextColor;
   final VoidCallback? onTap;
 
   const ChatListItemTile({
@@ -32,6 +35,9 @@ class ChatListItemTile extends StatelessWidget {
     this.tagBgColor = AppColors.completedBg,
     this.tagTextColor = AppColors.completedText,
     required this.location,
+    this.extraBadgeText,
+    this.extraBadgeBgColor,
+    this.extraBadgeTextColor,
     this.onTap,
   });
 
@@ -141,6 +147,29 @@ class ChatListItemTile extends StatelessWidget {
                             ),
                           ),
                         ),
+
+                        // Optional extra badge (e.g. 'Branch Manager' for Super Admin)
+                        if (extraBadgeText != null && extraBadgeText!.isNotEmpty) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 2.5,
+                            ),
+                            decoration: BoxDecoration(
+                              color: extraBadgeBgColor ?? const Color(0xFFDCFCE7),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              extraBadgeText!,
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: extraBadgeTextColor ?? AppColors.primaryGreen,
+                              ),
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ],
@@ -191,11 +220,7 @@ class ChatListItemTile extends StatelessWidget {
                 border: Border.all(color: Colors.white, width: 2),
               ),
               child: const Center(
-                child: Icon(
-                  Icons.check,
-                  size: 10,
-                  color: Colors.white,
-                ),
+                child: Icon(Icons.check, size: 10, color: Colors.white),
               ),
             ),
           ),
@@ -203,4 +228,3 @@ class ChatListItemTile extends StatelessWidget {
     );
   }
 }
-

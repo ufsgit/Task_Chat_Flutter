@@ -102,7 +102,7 @@ class WeeklyPerformanceChartCard extends StatelessWidget {
           Row(
             children: [
               _buildLegendItem(
-                color: const Color(0xFF16A34A),
+                color: AppColors.primaryGreen,
                 label: 'Completed',
               ),
               const SizedBox(width: 16),
@@ -247,7 +247,7 @@ class WeeklyPerformanceChartCard extends StatelessWidget {
                           vertical: 2,
                         ),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF16A34A),
+                          color: AppColors.primaryGreen,
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: const Text(
@@ -266,7 +266,7 @@ class WeeklyPerformanceChartCard extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.end,
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          _buildBar(completedHeight, const Color(0xFF16A34A)),
+                          _buildBar(completedHeight, AppColors.primaryGreen),
                           const SizedBox(width: 3),
                           _buildBar(newBookingHeight, const Color(0xFF2563EB)),
                         ],
@@ -282,7 +282,7 @@ class WeeklyPerformanceChartCard extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.end,
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        _buildBar(completedHeight, const Color(0xFF16A34A)),
+                        _buildBar(completedHeight, AppColors.primaryGreen),
                         const SizedBox(width: 3),
                         _buildBar(newBookingHeight, const Color(0xFF2563EB)),
                       ],
@@ -301,7 +301,7 @@ class WeeklyPerformanceChartCard extends StatelessWidget {
               fontSize: 11.5,
               fontWeight: dayItem.isPeak ? FontWeight.w700 : FontWeight.w500,
               color: dayItem.isPeak
-                  ? const Color(0xFF15803D)
+                  ? AppColors.primaryGreen
                   : AppColors.textSubtitle,
             ),
           ),
