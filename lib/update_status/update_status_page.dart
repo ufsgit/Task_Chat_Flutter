@@ -1,24 +1,24 @@
 import 'package:flutter/material.dart';
 import '../../core/theme.dart';
-import '../customer_details/customer_details_data.dart';
-import '../today/today_data.dart';
+import '../customer_details/customer_details_model.dart';
+import '../today/today_view_model.dart';
 import 'update_status_data.dart';
-import 'widgets/group_field_card.dart';
-import 'widgets/location_field_card.dart';
+import 'widgets/attach_documents_card.dart';
 import 'widgets/notes_field_card.dart';
 import 'widgets/schedule_field_card.dart';
 import 'widgets/status_selector_chips.dart';
 import 'widgets/update_status_header.dart';
 
-/// Screen allowing users to update the status, schedule, location,
-/// and notes for a customer lead with dynamic field visibility rules.
+/// Screen allowing users to update the status, schedule,
+/// and notes for a customer lead.
+/// Per requirements:
+/// - Location field is removed.
+/// - All statuses use the same: Notes and Calendar only.
+/// - "Completed" option only shows after the lead has been scheduled once.
 class UpdateStatusPage extends StatefulWidget {
   final CustomerDetailsData customer;
 
-  const UpdateStatusPage({
-    super.key,
-    required this.customer,
-  });
+  const UpdateStatusPage({super.key, required this.customer});
 
   @override
   State<UpdateStatusPage> createState() => _UpdateStatusPageState();
@@ -28,19 +28,25 @@ class _UpdateStatusPageState extends State<UpdateStatusPage> {
   late String _selectedStatus;
   late TextEditingController _notesController;
   late String _scheduleDate;
-  String _selectedLocation = 'Home';
-  String _selectedGroup = 'Personal Care';
+  late bool _hasBeenScheduled;
 
   @override
   void initState() {
     super.initState();
-    _selectedStatus = defaultUpdateStatusFormData.defaultStatus;
-    _notesController = TextEditingController(
-      text: defaultUpdateStatusFormData.defaultNotes,
-    );
+    _hasBeenScheduled = widget.customer.hasBeenScheduled ||
+        widget.customer.status.toLowerCase() == 'scheduled' ||
+        widget.customer.status.toLowerCase() == 'completed';
+
+    _selectedStatus = widget.customer.status.toLowerCase() == 'new'
+        ? 'Scheduled'
+        : widget.customer.status;
+
+    if (!_hasBeenScheduled && _selectedStatus.toLowerCase() == 'completed') {
+      _selectedStatus = 'Scheduled';
+    }
+
+    _notesController = TextEditingController(text: '');
     _scheduleDate = defaultUpdateStatusFormData.defaultScheduleDate;
-    _selectedLocation = defaultUpdateStatusFormData.defaultLocation;
-    _selectedGroup = defaultUpdateStatusFormData.defaultGroup;
   }
 
   @override
@@ -54,7 +60,6 @@ class _UpdateStatusPageState extends State<UpdateStatusPage> {
     updateChatItemStatus(
       customerName: widget.customer.name,
       newStatus: _selectedStatus,
-      newLocation: _selectedLocation,
     );
 
     // 2. Feedback SnackBar
@@ -74,10 +79,14 @@ class _UpdateStatusPageState extends State<UpdateStatusPage> {
 
   @override
   Widget build(BuildContext context) {
+    final availableOptions = getAvailableStatusOptions(
+      hasBeenScheduled: _hasBeenScheduled,
+    );
     final visibility = UpdateStatusVisibility(_selectedStatus);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: AppColors.scaffoldBackground,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
@@ -93,18 +102,20 @@ class _UpdateStatusPageState extends State<UpdateStatusPage> {
 
               const SizedBox(height: 20),
 
-              // 2. Select Status Section (Completed, Scheduled, Cancelled)
-              const Text(
+              // 2. Select Status Section
+              // "Completed" only shows after the lead has been scheduled once
+              Text(
                 'Select Status',
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
-                  color: AppColors.textPrimary,
+                  color: isDark ? AppDarkColors.textPrimary : AppColors.textPrimary,
                 ),
               ),
               const SizedBox(height: 10),
               StatusSelectorChips(
                 selectedStatus: _selectedStatus,
+                options: availableOptions,
                 onStatusSelected: (status) {
                   setState(() {
                     _selectedStatus = status;
@@ -114,39 +125,7 @@ class _UpdateStatusPageState extends State<UpdateStatusPage> {
 
               const SizedBox(height: 20),
 
-              // 3. Dynamic Fields based on status:
-              // - Completed: Only Schedule (Calendar) is shown
-              // - Cancelled: Only Notes is shown
-              // - Scheduled: All fields (Notes, Location, Group, Schedule) are shown
-              if (visibility.showNotes) ...[
-                NotesFieldCard(controller: _notesController),
-                const SizedBox(height: 20),
-              ],
-
-              if (visibility.showLocation) ...[
-                LocationFieldCard(
-                  selectedLocation: _selectedLocation,
-                  onLocationChanged: (val) {
-                    setState(() {
-                      _selectedLocation = val;
-                    });
-                  },
-                ),
-                const SizedBox(height: 20),
-              ],
-
-              if (visibility.showGroup) ...[
-                GroupFieldCard(
-                  selectedGroup: _selectedGroup,
-                  onGroupChanged: (val) {
-                    setState(() {
-                      _selectedGroup = val;
-                    });
-                  },
-                ),
-                const SizedBox(height: 20),
-              ],
-
+              // 3. Schedule (Calendar) Section (hidden when Cancelled)
               if (visibility.showSchedule) ...[
                 ScheduleFieldCard(
                   dateText: _scheduleDate,
@@ -159,10 +138,18 @@ class _UpdateStatusPageState extends State<UpdateStatusPage> {
                 const SizedBox(height: 20),
               ],
 
-              const SizedBox(height: 8),
+              // 4. Notes Section (put second)
+              NotesFieldCard(controller: _notesController),
 
-              // 4. Save Button
-              _buildSaveButton(),
+              const SizedBox(height: 20),
+
+              // 5. Attach Documents Section
+              const AttachDocumentsCard(),
+
+              const SizedBox(height: 24),
+
+              // 6. Save Button
+              _buildSaveButton(isDark),
 
               const SizedBox(height: 20),
             ],
@@ -172,30 +159,32 @@ class _UpdateStatusPageState extends State<UpdateStatusPage> {
     );
   }
 
-  Widget _buildSaveButton() {
+  Widget _buildSaveButton(bool isDark) {
+    final fgColor = isDark ? const Color(0xFF0B141B) : Colors.white;
+
     return SizedBox(
       height: 52,
       child: ElevatedButton(
         onPressed: _handleSave,
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.whatsappGreen,
-          foregroundColor: Colors.white,
+          foregroundColor: fgColor,
           elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(26),
           ),
         ),
-        child: const Row(
+        child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.check_rounded, color: Colors.white, size: 20),
-            SizedBox(width: 8),
+            Icon(Icons.check, size: 20, color: fgColor),
+            const SizedBox(width: 8),
             Text(
               'Save',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
-                letterSpacing: -0.2,
+                color: fgColor,
               ),
             ),
           ],

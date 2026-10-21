@@ -1,17 +1,33 @@
-/// Separated data models and visibility rules for Update Status.
-/// Keeps form state and business logic decoupled from the UI.
+// Separated data models and visibility rules for Update Status.
+// Keeps form state and business logic decoupled from the UI.
+
+/// Returns the status options available to the user based on whether
+/// the customer has been scheduled at least once.
+/// "Completed" only shows after the customer has been scheduled once.
+List<String> getAvailableStatusOptions({required bool hasBeenScheduled}) {
+  if (hasBeenScheduled) {
+    return const ['Completed', 'Scheduled', 'Cancelled'];
+  } else {
+    return const ['Scheduled', 'Cancelled'];
+  }
+}
+
 const List<String> availableStatusOptions = [
   'Completed',
   'Scheduled',
   'Cancelled',
 ];
 
-/// Status options available to Super Admin
-const List<String> availableSuperAdminStatusOptions = [
+/// Status options available to Coordinator (formerly Super Admin)
+const List<String> availableCoordinatorStatusOptions = [
   'Completed',
   'Scheduled',
   'Cancelled',
 ];
+
+/// Backward compatibility alias for Coordinator status options
+const List<String> availableSuperAdminStatusOptions =
+    availableCoordinatorStatusOptions;
 
 /// Available branch managers for assignment
 const List<String> availableBranchManagers = [
@@ -21,26 +37,27 @@ const List<String> availableBranchManagers = [
   'Priya Sharma',
 ];
 
-/// Helper determining which fields are visible according to the selected status:
-/// - Completed: only Schedule (Calendar) is shown
-/// - Cancelled: only Notes is shown
-/// - Scheduled: all fields (Notes, Schedule, Location, Group) are shown
+/// Helper determining which fields are visible:
+/// Per requirements, location field is removed and all three statuses
+/// (Completed, Scheduled, Cancelled) use the same: Notes and Calendar only.
 class UpdateStatusVisibility {
   final String status;
 
   const UpdateStatusVisibility(this.status);
 
-  bool get showSchedule =>
-      status.toLowerCase() == 'completed' ||
-      status.toLowerCase() == 'scheduled';
+  /// Schedule (Calendar) is shown for Completed and Scheduled, but removed for Cancelled
+  bool get showSchedule => status.toLowerCase() != 'cancelled';
 
-  bool get showNotes =>
-      status.toLowerCase() == 'cancelled' ||
-      status.toLowerCase() == 'scheduled';
+  /// All statuses use Notes
+  bool get showNotes => true;
 
-  bool get showLocation => status.toLowerCase() == 'scheduled';
+  /// Location field has been removed
+  bool get showLocation => false;
 
-  bool get showGroup => status.toLowerCase() == 'scheduled';
+  bool get showGroup => false;
+
+  /// Coordinator / Branch Manager assignment when scheduled
+  bool get showBranchManager => status.toLowerCase() == 'scheduled';
 }
 
 /// Initial or default form data for updating a customer's status.
@@ -48,41 +65,38 @@ class UpdateStatusFormData {
   final String defaultStatus;
   final String defaultNotes;
   final String defaultScheduleDate;
-  final String defaultLocation;
-  final String defaultGroup;
 
   const UpdateStatusFormData({
-    this.defaultStatus = 'Completed',
-    this.defaultNotes =
-        '“Use Omron digital arm monitor. Rest seated 5 minutes beforehand. Record both systolic and diastolic numbers carefully.”',
+    this.defaultStatus = 'Scheduled',
+    this.defaultNotes = '',
     this.defaultScheduleDate = '10/24/2024',
-    this.defaultLocation = 'Home',
-    this.defaultGroup = 'Personal Care',
   });
 }
 
 const UpdateStatusFormData defaultUpdateStatusFormData = UpdateStatusFormData();
 
-/// Default form data for Super Admin Update Status
-class SuperAdminUpdateStatusFormData {
+/// Default form data for Coordinator Update Status
+class CoordinatorUpdateStatusFormData {
   final String defaultStatus;
   final String defaultNotes;
   final String defaultScheduleDate;
-  final String defaultLocation;
   final String defaultBranchManager;
-  final String defaultGroup;
 
-  const SuperAdminUpdateStatusFormData({
-    this.defaultStatus = 'Completed',
-    this.defaultNotes =
-        '“Use Omron digital arm monitor. Rest seated 5 minutes beforehand. Record both systolic and diastolic numbers carefully.”',
+  const CoordinatorUpdateStatusFormData({
+    this.defaultStatus = 'Scheduled',
+    this.defaultNotes = '',
     this.defaultScheduleDate = '10/24/2024',
-    this.defaultLocation = 'Home',
     this.defaultBranchManager = 'Sarah Jenkins',
-    this.defaultGroup = 'Personal Care',
   });
 }
 
-const SuperAdminUpdateStatusFormData defaultSuperAdminUpdateStatusFormData =
-    SuperAdminUpdateStatusFormData();
+/// Backward compatibility alias
+typedef SuperAdminUpdateStatusFormData = CoordinatorUpdateStatusFormData;
+
+const CoordinatorUpdateStatusFormData defaultCoordinatorUpdateStatusFormData =
+    CoordinatorUpdateStatusFormData();
+
+/// Backward compatibility alias
+const CoordinatorUpdateStatusFormData defaultSuperAdminUpdateStatusFormData =
+    defaultCoordinatorUpdateStatusFormData;
 

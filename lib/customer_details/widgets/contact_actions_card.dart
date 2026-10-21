@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import '../../core/theme.dart';
-import '../customer_details_data.dart';
+import '../customer_details_model.dart';
+import 'package:url_launcher/url_launcher.dart';
 
-/// Card containing customer phone, call/message action buttons,
-/// address info, and notes & interaction history.
-class ContactActionsCard extends StatelessWidget {
+/// Card containing customer contact phone, quick call/message action buttons,
+/// and editable notes & interaction history.
+class ContactActionsCard extends StatefulWidget {
   final CustomerDetailsData customer;
   final VoidCallback? onCallTap;
   final VoidCallback? onMessageTap;
@@ -17,18 +18,69 @@ class ContactActionsCard extends StatelessWidget {
   });
 
   @override
+  State<ContactActionsCard> createState() => _ContactActionsCardState();
+}
+
+class _ContactActionsCardState extends State<ContactActionsCard> {
+  late final TextEditingController _notesController;
+  final FocusNode _notesFocusNode = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    _notesController = TextEditingController(text: widget.customer.notes);
+  }
+
+  @override
+  void didUpdateWidget(covariant ContactActionsCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.customer.notes != widget.customer.notes &&
+        _notesController.text != widget.customer.notes) {
+      _notesController.text = widget.customer.notes;
+    }
+  }
+
+  @override
+  void dispose() {
+    _notesController.dispose();
+    _notesFocusNode.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final customer = widget.customer;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final primaryText = isDark
+        ? AppDarkColors.textPrimary
+        : AppColors.textPrimary;
+    final subtitleText = isDark
+        ? AppDarkColors.textSubtitle
+        : AppColors.textSubtitle;
+    final iconBgColor = isDark
+        ? AppDarkColors.pillActiveBg
+        : const Color(0xFFE7FCE3);
+    final iconFgColor = isDark
+        ? AppDarkColors.whatsappGreen
+        : AppColors.primaryGreen;
+
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        color: AppColors.surfaceWhite,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: AppColors.border, width: 1),
+        color: isDark ? AppDarkColors.surfaceCard : AppColors.surfaceWhite,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: isDark ? AppDarkColors.border : AppColors.border,
+          width: 1,
+        ),
         boxShadow: [
           BoxShadow(
-            color: AppColors.textPrimary.withValues(alpha: 0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: isDark
+                ? Colors.black.withValues(alpha: 0.15)
+                : Colors.black.withValues(alpha: 0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -36,99 +88,18 @@ class ContactActionsCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 1. Phone Number Row
+          // 1. Contact Phone Row
           Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Container(
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFE0F2FE),
-                  borderRadius: BorderRadius.circular(10),
+                  color: iconBgColor,
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(
-                  Icons.phone_android_rounded,
-                  color: Color(0xFF0D9488),
-                  size: 22,
-                ),
-              ),
-              const SizedBox(width: 14),
-              Text(
-                customer.phoneNumber,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.textPrimary,
-                  letterSpacing: 0.2,
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 14),
-
-          // 2. Call & Message Action Buttons
-          Row(
-            children: [
-              Expanded(
-                child: _buildActionButton(
-                  icon: Icons.call_outlined,
-                  label: 'Call',
-                  onTap:
-                      onCallTap ??
-                      () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('Calling ${customer.name}...'),
-                            duration: const Duration(seconds: 1),
-                          ),
-                        );
-                      },
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _buildActionButton(
-                  icon: Icons.chat_outlined,
-                  label: 'Message',
-                  onTap:
-                      onMessageTap ??
-                      () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              'Opening chat with ${customer.name}...',
-                            ),
-                            duration: const Duration(seconds: 1),
-                          ),
-                        );
-                      },
-                ),
-              ),
-            ],
-          ),
-
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 16),
-            child: Divider(height: 1, thickness: 1, color: Color(0xFFF1F5F9)),
-          ),
-
-          // 3. Location / Address Row
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE0F2FE),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(
-                  Icons.location_on_outlined,
-                  color: Color(0xFF0D9488),
-                  size: 22,
-                ),
+                child: Icon(Icons.phone_outlined, color: iconFgColor, size: 20),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -136,20 +107,23 @@ class ContactActionsCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      customer.addressLine1,
-                      style: const TextStyle(
-                        fontSize: 14.5,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.textPrimary,
+                      customer.phoneNumber,
+                      style: TextStyle(
+                        fontFamily: 'Helvetica Neue',
+                        fontSize: 15.5,
+                        fontWeight: FontWeight.w600,
+                        color: primaryText,
+                        letterSpacing: 0.3,
                       ),
                     ),
-                    const SizedBox(height: 3),
+                    const SizedBox(height: 1),
                     Text(
-                      customer.addressLine2,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                        color: AppColors.textSubtitle,
+                      'Mobile',
+                      style: TextStyle(
+                        fontFamily: 'Helvetica Neue',
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w400,
+                        color: subtitleText,
                       ),
                     ),
                   ],
@@ -158,51 +132,105 @@ class ContactActionsCard extends StatelessWidget {
             ],
           ),
 
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 16),
-            child: Divider(height: 1, thickness: 1, color: Color(0xFFF1F5F9)),
-          ),
+          const SizedBox(height: 14),
 
-          // 4. Notes & Interaction History Section
-          const Text(
-            'Notes & Interaction History',
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-              color: Color(0xFF64748B),
-            ),
-          ),
-          const SizedBox(height: 10),
-
-          // Ice-blue Note Box
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: const Color(0xFFEDF6FF),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Icon(
-                  Icons.article_outlined,
-                  color: AppColors.primaryGreen,
-                  size: 20,
+          // 2. WhatsApp Quick Action Buttons (Call & Message)
+          Row(
+            children: [
+              Expanded(
+                child: _buildActionButton(
+                  context: context,
+                  icon: Icons.call_outlined,
+                  label: 'Call',
+                  isPrimary: false,
+                  onTap: () {
+                    final phone = customer.phoneNumber.isNotEmpty
+                        ? customer.phoneNumber
+                        : "7089098908";
+                    openDialer(phone);
+                  },
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    customer.notes,
-                    style: const TextStyle(
-                      fontSize: 13.5,
-                      fontWeight: FontWeight.w500,
-                      color: AppColors.textPrimary,
-                      height: 1.45,
-                    ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildActionButton(
+                  context: context,
+                  icon: Icons.chat_bubble_outline_rounded,
+                  label: 'Message',
+                  isPrimary: true,
+                  onTap:
+                      widget.onMessageTap ??
+                      () {
+                        final phone = customer.phoneNumber.isNotEmpty
+                            ? customer.phoneNumber
+                            : "7089098910";
+                        openWhatsApp(phone);
+                      },
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 18),
+
+          // 3. Notes & Interaction History Section
+          Text(
+            'NOTES',
+            style: TextStyle(
+              fontFamily: 'Helvetica Neue',
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: isDark
+                  ? AppDarkColors.textPlaceholder
+                  : AppColors.textSubtitle,
+              letterSpacing: 0.6,
+            ),
+          ),
+          const SizedBox(height: 8),
+
+          // Clean Note Container matching screenshot
+          GestureDetector(
+            onTap: () => _notesFocusNode.requestFocus(),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                color: isDark
+                    ? AppDarkColors.surfaceSecondary
+                    : const Color(0xFFF7F8FA),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: isDark ? AppDarkColors.border : AppColors.border,
+                  width: 1,
+                ),
+              ),
+              child: TextField(
+                controller: _notesController,
+                focusNode: _notesFocusNode,
+                maxLines: null,
+                minLines: 3,
+                style: TextStyle(
+                  fontFamily: 'Helvetica Neue',
+                  fontSize: 14,
+                  fontWeight: FontWeight.w400,
+                  color: primaryText,
+                  height: 1.45,
+                ),
+                decoration: InputDecoration(
+                  isDense: true,
+                  contentPadding: EdgeInsets.zero,
+                  border: InputBorder.none,
+                  hintText: 'Add notes or client details...',
+                  hintStyle: TextStyle(
+                    fontFamily: 'Helvetica Neue',
+                    fontSize: 14,
+                    fontWeight: FontWeight.w400,
+                    color: isDark
+                        ? AppDarkColors.textPlaceholder
+                        : AppColors.textPlaceholder,
                   ),
                 ),
-              ],
+              ),
             ),
           ),
         ],
@@ -211,30 +239,59 @@ class ContactActionsCard extends StatelessWidget {
   }
 
   Widget _buildActionButton({
+    required BuildContext context,
     required IconData icon,
     required String label,
+    required bool isPrimary,
     required VoidCallback onTap,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final Color bgColor;
+    final Color fgColor;
+    final Color iconColor;
+    final Color borderColor;
+
+    if (isPrimary) {
+      bgColor = isDark ? AppDarkColors.whatsappGreen : AppColors.whatsappGreen;
+      fgColor = isDark ? const Color(0xFF06140D) : Colors.white;
+      iconColor = isDark ? const Color(0xFF06140D) : Colors.white;
+      borderColor = Colors.transparent;
+    } else {
+      bgColor = isDark
+          ? AppDarkColors.surfaceSecondary
+          : const Color(0xFFF0FDF4);
+      fgColor = isDark ? Colors.white : AppColors.primaryGreen;
+      iconColor = isDark ? AppDarkColors.whatsappGreen : AppColors.primaryGreen;
+      borderColor = isDark ? AppDarkColors.border : const Color(0xFFDCFCE7);
+    }
+
     return Material(
-      color: const Color(0xFFE6F4FE),
+      color: bgColor,
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
         child: Container(
           height: 44,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: borderColor, width: 1),
+          ),
           alignment: Alignment.center,
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, color: AppColors.primaryGreen, size: 19),
+              Icon(icon, color: iconColor, size: 18),
               const SizedBox(width: 7),
               Text(
                 label,
-                style: const TextStyle(
+                style: TextStyle(
+                  fontFamily: 'Helvetica Neue',
                   fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.w600,
+                  color: fgColor,
+                  letterSpacing: 0.1,
                 ),
               ),
             ],
@@ -242,5 +299,64 @@ class ContactActionsCard extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+Future<void> openDialer(String phoneNumber) async {
+  final trimmed = phoneNumber.trim();
+  final numberOnly = trimmed.startsWith('tel:')
+      ? trimmed.substring(4)
+      : trimmed;
+  final cleanNumber = numberOnly.replaceAll(RegExp(r'[^0-9+]'), '');
+  final Uri uri = Uri(scheme: 'tel', path: cleanNumber);
+
+  try {
+    final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!launched) {
+      await launchUrl(uri);
+    }
+  } catch (e) {
+    debugPrint('Could not launch dialer: $e');
+  }
+}
+
+Future<void> openWhatsApp(String phoneNumber) async {
+  final trimmed = phoneNumber.trim();
+
+  final numberOnly = trimmed.startsWith('whatsapp:')
+      ? trimmed.substring('whatsapp:'.length)
+      : trimmed.startsWith('tel:')
+      ? trimmed.substring(4)
+      : trimmed;
+
+  final cleanNumber = numberOnly.replaceAll(RegExp(r'[^0-9+]'), '');
+  var whatsappNumber = cleanNumber.replaceAll('+', '');
+  if (whatsappNumber.length == 10) {
+    whatsappNumber = '91$whatsappNumber';
+  }
+
+  final nativeUri = Uri.parse('whatsapp://send?phone=$whatsappNumber');
+  //final webUri = Uri.parse('https://wa.me/$whatsappNumber');
+
+  try {
+    await launchUrl(
+      nativeUri,
+      mode: LaunchMode.externalApplication,
+    );
+    // if (!launched) {
+    //   await launchUrl(webUri, mode: LaunchMode.externalApplication);
+    // }
+  } catch (_) {
+    try {
+      // final launchedWeb = await launchUrl(
+      //   webUri,
+      //   mode: LaunchMode.externalApplication,
+      // );
+      // if (!launchedWeb) {
+      //   await launchUrl(webUri);
+      // }
+    } catch (e) {
+      debugPrint('Could not launch WhatsApp: $e');
+    }
   }
 }

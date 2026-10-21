@@ -1,54 +1,63 @@
 import 'package:flutter/material.dart';
 import '../../core/theme.dart';
-import '../customer_details/customer_details_data.dart';
-import '../today/today_data.dart';
+import '../customer_details/customer_details_model.dart';
+import '../today/today_view_model.dart';
 import 'update_status_data.dart';
+import 'widgets/attach_documents_card.dart';
 import 'widgets/branch_manager_field_card.dart';
-import 'widgets/group_field_card.dart';
-import 'widgets/location_field_card.dart';
 import 'widgets/notes_field_card.dart';
 import 'widgets/schedule_field_card.dart';
 import 'widgets/status_selector_chips.dart';
 import 'widgets/update_status_header.dart';
 
-/// Screen allowing Super Admin to update the status, notes, schedule,
-/// location, branch manager assignment, and group for a lead.
-class SuperAdminUpdateStatusPage extends StatefulWidget {
+/// Screen allowing Coordinator (formerly Super Admin) to update the status, notes, schedule,
+/// and assigned branch manager for a customer lead.
+/// Per requirements:
+/// - Location field is removed.
+/// - Notes and Calendar used for updating status.
+/// - "Completed" option only shows after the lead has been scheduled once.
+/// - Option to change branch manager for coordinator.
+class CoordinatorUpdateStatusPage extends StatefulWidget {
   final CustomerDetailsData customer;
 
-  const SuperAdminUpdateStatusPage({
-    super.key,
-    required this.customer,
-  });
+  const CoordinatorUpdateStatusPage({super.key, required this.customer});
 
   @override
-  State<SuperAdminUpdateStatusPage> createState() =>
-      _SuperAdminUpdateStatusPageState();
+  State<CoordinatorUpdateStatusPage> createState() =>
+      _CoordinatorUpdateStatusPageState();
 }
 
-class _SuperAdminUpdateStatusPageState
-    extends State<SuperAdminUpdateStatusPage> {
+/// Backward compatibility alias for CoordinatorUpdateStatusPage.
+typedef SuperAdminUpdateStatusPage = CoordinatorUpdateStatusPage;
+
+class _CoordinatorUpdateStatusPageState
+    extends State<CoordinatorUpdateStatusPage> {
   late String _selectedStatus;
   late TextEditingController _notesController;
   late String _scheduleDate;
-  late String _selectedLocation;
   late String _selectedBranchManager;
-  late String _selectedGroup;
+  late bool _hasBeenScheduled;
 
   @override
   void initState() {
     super.initState();
-    _selectedStatus = defaultSuperAdminUpdateStatusFormData.defaultStatus;
-    _notesController = TextEditingController(
-      text: defaultSuperAdminUpdateStatusFormData.defaultNotes,
-    );
-    _scheduleDate =
-        defaultSuperAdminUpdateStatusFormData.defaultScheduleDate;
-    _selectedLocation =
-        defaultSuperAdminUpdateStatusFormData.defaultLocation;
+    _hasBeenScheduled =
+        widget.customer.hasBeenScheduled ||
+        widget.customer.status.toLowerCase() == 'scheduled' ||
+        widget.customer.status.toLowerCase() == 'completed';
+
+    _selectedStatus = widget.customer.status.toLowerCase() == 'new'
+        ? 'Scheduled'
+        : widget.customer.status;
+
+    if (!_hasBeenScheduled && _selectedStatus.toLowerCase() == 'completed') {
+      _selectedStatus = 'Scheduled';
+    }
+
+    _notesController = TextEditingController(text: '');
+    _scheduleDate = defaultCoordinatorUpdateStatusFormData.defaultScheduleDate;
     _selectedBranchManager =
-        defaultSuperAdminUpdateStatusFormData.defaultBranchManager;
-    _selectedGroup = defaultSuperAdminUpdateStatusFormData.defaultGroup;
+        defaultCoordinatorUpdateStatusFormData.defaultBranchManager;
   }
 
   @override
@@ -62,7 +71,6 @@ class _SuperAdminUpdateStatusPageState
     updateChatItemStatus(
       customerName: widget.customer.name,
       newStatus: _selectedStatus,
-      newLocation: _selectedLocation,
     );
 
     // 2. Feedback SnackBar
@@ -82,8 +90,13 @@ class _SuperAdminUpdateStatusPageState
 
   @override
   Widget build(BuildContext context) {
+    final availableOptions = getAvailableStatusOptions(
+      hasBeenScheduled: _hasBeenScheduled,
+    );
+    final visibility = UpdateStatusVisibility(_selectedStatus);
+
     return Scaffold(
-      backgroundColor: AppColors.scaffoldBackground,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
@@ -99,7 +112,8 @@ class _SuperAdminUpdateStatusPageState
 
               const SizedBox(height: 20),
 
-              // 2. Select Status Section (Completed, New, Scheduled, Cancelled)
+              // 2. Select Status Section
+              // "Completed" only shows after the lead has been scheduled once
               const Text(
                 'Select Status',
                 style: TextStyle(
@@ -111,7 +125,7 @@ class _SuperAdminUpdateStatusPageState
               const SizedBox(height: 10),
               StatusSelectorChips(
                 selectedStatus: _selectedStatus,
-                options: availableSuperAdminStatusOptions,
+                options: availableOptions,
                 onStatusSelected: (status) {
                   setState(() {
                     _selectedStatus = status;
@@ -121,64 +135,38 @@ class _SuperAdminUpdateStatusPageState
 
               const SizedBox(height: 20),
 
-              // 3. Notes Section
+              // 3. Branch Manager Selection Card
+              BranchManagerFieldCard(
+                selectedManager: _selectedBranchManager,
+                onManagerChanged: (val) {
+                  setState(() {
+                    _selectedBranchManager = val;
+                  });
+                },
+              ),
+
+              const SizedBox(height: 20),
+
+              // 4. Schedule (Calendar) Section (hidden when Cancelled)
+              if (visibility.showSchedule) ...[
+                ScheduleFieldCard(
+                  dateText: _scheduleDate,
+                  onDateChanged: (newDate) {
+                    setState(() {
+                      _scheduleDate = newDate;
+                    });
+                  },
+                ),
+                const SizedBox(height: 20),
+              ],
+
+              // 5. Notes Section (put second)
               NotesFieldCard(controller: _notesController),
 
               const SizedBox(height: 20),
 
-              // 4. Schedule Section
-              ScheduleFieldCard(
-                dateText: _scheduleDate,
-                onDateChanged: (newDate) {
-                  setState(() {
-                    _scheduleDate = newDate;
-                  });
-                },
-              ),
-
-              const SizedBox(height: 20),
-
-              // 5. Location & Branch Manager side-by-side
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: LocationFieldCard(
-                      selectedLocation: _selectedLocation,
-                      onLocationChanged: (val) {
-                        setState(() {
-                          _selectedLocation = val;
-                        });
-                      },
-                      padding: const EdgeInsets.symmetric(horizontal: 10),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: BranchManagerFieldCard(
-                      selectedManager: _selectedBranchManager,
-                      onManagerChanged: (val) {
-                        setState(() {
-                          _selectedBranchManager = val;
-                        });
-                      },
-                      padding: const EdgeInsets.symmetric(horizontal: 10),
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 20),
-
-              // 6. Select Group Section
-              GroupFieldCard(
-                selectedGroup: _selectedGroup,
-                onGroupChanged: (val) {
-                  setState(() {
-                    _selectedGroup = val;
-                  });
-                },
-              ),
+              // 6. Attach Documents Section
+              const AttachDocumentsCard(),
 
               const SizedBox(height: 24),
 
@@ -209,15 +197,11 @@ class _SuperAdminUpdateStatusPageState
         child: const Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.check_rounded, color: Colors.white, size: 20),
+            Icon(Icons.check, size: 20, color: Colors.white),
             SizedBox(width: 8),
             Text(
               'Save',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-                letterSpacing: -0.2,
-              ),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
             ),
           ],
         ),

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../core/theme.dart';
+import '../../core/widgets/app_filter_chip.dart';
 
 /// Reusable horizontal filter chips selector bar.
 class FilterChipsBar extends StatelessWidget {
@@ -16,44 +16,30 @@ class FilterChipsBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: SizedBox(
-        height: 38,
-        child: ListView.separated(
+    return SizedBox(
+      width: double.infinity,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4.0),
+        child: SingleChildScrollView(
           scrollDirection: Axis.horizontal,
+          physics: const BouncingScrollPhysics(),
+          clipBehavior: Clip.none,
           padding: const EdgeInsets.symmetric(horizontal: 16.0),
-          itemCount: filters.length,
-          separatorBuilder: (context, index) => const SizedBox(width: 10),
-          itemBuilder: (context, index) {
-            final isSelected = selectedIndex == index;
-            return GestureDetector(
-              onTap: () => onSelected(index),
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 18,
-                  vertical: 8,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.start,
+            children: filters.asMap().entries.map((entry) {
+              final index = entry.key;
+              final filter = entry.value;
+              return Padding(
+                padding: const EdgeInsets.only(right: 8.0),
+                child: AppFilterChip(
+                  label: filter,
+                  isSelected: selectedIndex == index,
+                  onTap: () => onSelected(index),
                 ),
-                decoration: BoxDecoration(
-                  color: isSelected
-                      ? AppColors.chipPendingBg
-                      : AppColors.chipUnselectedBg,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                alignment: Alignment.center,
-                child: Text(
-                  filters[index],
-                  style: TextStyle(
-                    color: isSelected
-                        ? AppColors.chipPendingText
-                        : AppColors.chipUnselectedText,
-                    fontSize: 13.5,
-                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                  ),
-                ),
-              ),
-            );
-          },
+              );
+            }).toList(),
+          ),
         ),
       ),
     );

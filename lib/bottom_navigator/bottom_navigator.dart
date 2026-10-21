@@ -1,22 +1,30 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../core/theme.dart';
 import '../dashboard/dashboard_page.dart';
 import '../report_activity/main/report_activity.dart';
-import '../settings/settings_page.dart';
+import '../login_page/login_model.dart';
+import '../settings/settings_model.dart';
+import '../settings/settings_view.dart';
 import '../super_admin/super_admin_page.dart';
-import '../today/today_page.dart';
+import '../today/today_view.dart';
 
 /// Main navigation shell holding the pages and floating bottom navigation bar.
 class BottomNavigator extends StatefulWidget {
   final int initialIndex;
-  final bool isSuperAdmin;
+  final bool isCoordinator;
+  final UserModel? user;
 
   const BottomNavigator({
     super.key,
     this.initialIndex = 0,
-    this.isSuperAdmin = false,
-  });
+    bool? isCoordinator,
+    bool? isSuperAdmin,
+    this.user,
+  }) : isCoordinator = isCoordinator ?? isSuperAdmin ?? false;
+
+  bool get isSuperAdmin => isCoordinator;
 
   @override
   State<BottomNavigator> createState() => _BottomNavigatorState();
@@ -30,11 +38,14 @@ class _BottomNavigatorState extends State<BottomNavigator> {
   void initState() {
     super.initState();
     _selectedIndex = widget.initialIndex;
+    final profile = widget.user != null
+        ? UserProfileData.fromUserModel(widget.user!)
+        : null;
     _pages = [
-      widget.isSuperAdmin ? const SuperAdminPage() : const TodayPage(),
+      widget.isCoordinator ? const CoordinatorPage() : const TodayPage(),
       DashboardPage(onBack: () => _onItemTapped(0)),
       const ReportActivity(),
-      const SettingsPage(),
+      SettingsPage(profile: profile),
     ];
   }
 
@@ -46,11 +57,15 @@ class _BottomNavigatorState extends State<BottomNavigator> {
 
   @override
   Widget build(BuildContext context) {
+    final currentBgColor = Theme.of(context).scaffoldBackgroundColor;
+
     return Scaffold(
+      backgroundColor: currentBgColor,
       body: IndexedStack(index: _selectedIndex, children: _pages),
       bottomNavigationBar: FloatingBottomBar(
         selectedIndex: _selectedIndex,
         onTap: _onItemTapped,
+        backgroundColor: currentBgColor,
       ),
     );
   }
@@ -62,11 +77,13 @@ class _BottomNavigatorState extends State<BottomNavigator> {
 class FloatingBottomBar extends StatefulWidget {
   final int selectedIndex;
   final ValueChanged<int> onTap;
+  final Color? backgroundColor;
 
   const FloatingBottomBar({
     super.key,
     required this.selectedIndex,
     required this.onTap,
+    this.backgroundColor,
   });
 
   @override
@@ -77,13 +94,16 @@ class _FloatingBottomBarState extends State<FloatingBottomBar> {
   int? _hoveredIndex;
   bool _isDragging = false;
 
-  int get _activeDisplayIndex =>
-      _isDragging ? (_hoveredIndex ?? widget.selectedIndex) : widget.selectedIndex;
+  int get _activeDisplayIndex => _isDragging
+      ? (_hoveredIndex ?? widget.selectedIndex)
+      : widget.selectedIndex;
 
   void _handleDragUpdate(Offset localPosition, double totalWidth) {
     if (totalWidth <= 0) return;
     final slotWidth = totalWidth / 4;
-    final targetIndex = (localPosition.dx / slotWidth).clamp(0.0, 3.999).floor();
+    final targetIndex = (localPosition.dx / slotWidth)
+        .clamp(0.0, 3.999)
+        .floor();
 
     if (targetIndex != _hoveredIndex) {
       HapticFeedback.selectionClick();
@@ -94,19 +114,15 @@ class _FloatingBottomBarState extends State<FloatingBottomBar> {
   }
 
   void _handleDragEnd() {
-    if (_isDragging && _hoveredIndex != null) {
-      final selected = _hoveredIndex!;
-      setState(() {
-        _isDragging = false;
-        _hoveredIndex = null;
-      });
+    if (!_isDragging) return;
+    final selected = _hoveredIndex;
+    setState(() {
+      _isDragging = false;
+      _hoveredIndex = null;
+    });
+    if (selected != null) {
       HapticFeedback.lightImpact();
       widget.onTap(selected);
-    } else {
-      setState(() {
-        _isDragging = false;
-        _hoveredIndex = null;
-      });
     }
   }
 
@@ -117,120 +133,168 @@ class _FloatingBottomBarState extends State<FloatingBottomBar> {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 0, 20, 14),
-        child: Container(
-          height: 68,
-          decoration: BoxDecoration(
-            color: AppColors.surfaceWhite,
-            borderRadius: BorderRadius.circular(34),
-            border: Border.all(color: AppColors.border, width: 1),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final outerBg =
+        widget.backgroundColor ??
+        (isDark ? AppDarkColors.scaffoldBackground : AppColors.surfaceWhite);
+    final barBg = isDark ? AppDarkColors.surfaceCard : AppColors.surfaceWhite;
+    final barBorder = isDark ? AppDarkColors.border : AppColors.border;
+    final activePillDecoration = isDark
+        ? BoxDecoration(
+            borderRadius: BorderRadius.circular(22),
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Colors.white.withValues(alpha: 0.18),
+                Colors.white.withValues(alpha: 0.08),
+              ],
+            ),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.22),
+              width: 1.0,
+            ),
             boxShadow: [
               BoxShadow(
-                color: AppColors.textPrimary.withValues(alpha: 0.08),
-                blurRadius: 20,
-                offset: const Offset(0, 8),
-              ),
-              BoxShadow(
-                color: AppColors.textPrimary.withValues(alpha: 0.04),
+                color: Colors.black.withValues(alpha: 0.15),
                 blurRadius: 6,
                 offset: const Offset(0, 2),
               ),
+              BoxShadow(
+                color: Colors.white.withValues(alpha: 0.04),
+                blurRadius: 4,
+                offset: const Offset(0, -1),
+              ),
             ],
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final totalWidth = constraints.maxWidth;
-              final slotWidth = totalWidth / 4;
+          )
+        : BoxDecoration(
+            color: AppColors.completedBg,
+            borderRadius: BorderRadius.circular(22),
+          );
 
-              return GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onHorizontalDragStart: (details) {
-                  setState(() {
-                    _isDragging = true;
-                    _hoveredIndex = widget.selectedIndex;
-                  });
-                  _handleDragUpdate(details.localPosition, totalWidth);
-                },
-                onHorizontalDragUpdate: (details) {
-                  _handleDragUpdate(details.localPosition, totalWidth);
-                },
-                onHorizontalDragEnd: (_) {
-                  _handleDragEnd();
-                },
-                onHorizontalDragCancel: () {
-                  _handleDragEnd();
-                },
-                onTapUp: (details) {
-                  final index =
-                      (details.localPosition.dx / slotWidth).clamp(0.0, 3.999).floor();
-                  _handleTapItem(index);
-                },
-                child: Stack(
-                  children: [
-                    // Sliding pill background involving both the icon and the label
-                    AnimatedPositioned(
-                      duration: const Duration(milliseconds: 220),
-                      curve: Curves.easeOutCubic,
-                      left: _activeDisplayIndex * slotWidth + 4,
-                      top: 4,
-                      bottom: 4,
-                      width: slotWidth - 8,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: AppColors.completedBg,
-                          borderRadius: BorderRadius.circular(22),
-                        ),
-                      ),
-                    ),
-
-                    // Items layer: Icon on top, Label underneath
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Center(
-                            child: _buildNavItem(
-                              index: 0,
-                              icon: Icons.calendar_today_outlined,
-                              label: "Today's",
-                            ),
-                          ),
-                        ),
-                        Expanded(
-                          child: Center(
-                            child: _buildNavItem(
-                              index: 1,
-                              icon: Icons.chat_bubble_outline_rounded,
-                              label: 'Dashboard',
-                            ),
-                          ),
-                        ),
-                        Expanded(
-                          child: Center(
-                            child: _buildNavItem(
-                              index: 2,
-                              icon: Icons.bar_chart_rounded,
-                              label: 'Report',
-                            ),
-                          ),
-                        ),
-                        Expanded(
-                          child: Center(
-                            child: _buildNavItem(
-                              index: 3,
-                              icon: Icons.settings,
-                              label: 'Settings',
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      color: outerBg,
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 14),
+          child: Container(
+            height: 68,
+            decoration: BoxDecoration(
+              color: barBg,
+              borderRadius: BorderRadius.circular(34),
+              border: Border.all(color: barBorder, width: 1),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.08),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8),
                 ),
-              );
-            },
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: isDark ? 0.15 : 0.04),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final totalWidth = constraints.maxWidth;
+                final slotWidth = totalWidth / 4;
+
+                return GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onHorizontalDragStart: (details) {
+                    setState(() {
+                      _isDragging = true;
+                      _hoveredIndex = widget.selectedIndex;
+                    });
+                    _handleDragUpdate(details.localPosition, totalWidth);
+                  },
+                  onHorizontalDragUpdate: (details) {
+                    _handleDragUpdate(details.localPosition, totalWidth);
+                  },
+                  onHorizontalDragEnd: (_) => _handleDragEnd(),
+                  onHorizontalDragCancel: _handleDragEnd,
+                  onTapUp: (details) {
+                    final index = (details.localPosition.dx / slotWidth)
+                        .clamp(0.0, 3.999)
+                        .floor();
+                    _handleTapItem(index);
+                  },
+                  child: Stack(
+                    children: [
+                      // Sliding pill background involving both the icon and the label
+                      AnimatedPositioned(
+                        duration: const Duration(milliseconds: 220),
+                        curve: Curves.easeOutCubic,
+                        left: _activeDisplayIndex * slotWidth + 4,
+                        top: 4,
+                        bottom: 4,
+                        width: slotWidth - 8,
+                        child: isDark
+                            ? ClipRRect(
+                                borderRadius: BorderRadius.circular(22),
+                                child: BackdropFilter(
+                                  filter: ImageFilter.blur(
+                                    sigmaX: 8,
+                                    sigmaY: 8,
+                                  ),
+                                  child: Container(
+                                    decoration: activePillDecoration,
+                                  ),
+                                ),
+                              )
+                            : Container(decoration: activePillDecoration),
+                      ),
+
+                      // Items layer: Icon on top, Label underneath
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Center(
+                              child: _buildNavItem(
+                                index: 0,
+                                icon: Icons.calendar_today_outlined,
+                                label: "Today's",
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: Center(
+                              child: _buildNavItem(
+                                index: 1,
+                                icon: Icons.chat_bubble_outline_rounded,
+                                label: 'Dashboard',
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: Center(
+                              child: _buildNavItem(
+                                index: 2,
+                                icon: Icons.bar_chart_rounded,
+                                label: 'Report',
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: Center(
+                              child: _buildNavItem(
+                                index: 3,
+                                icon: Icons.settings,
+                                label: 'Settings',
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
           ),
         ),
       ),
@@ -241,9 +305,15 @@ class _FloatingBottomBarState extends State<FloatingBottomBar> {
     required int index,
     required IconData icon,
     required String label,
-    String? badgeText,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final isSelected = _activeDisplayIndex == index;
+    final activeColor = isDark
+        ? AppDarkColors.primaryGreen
+        : AppColors.primaryGreen;
+    final inactiveColor = isDark
+        ? AppDarkColors.textSubtitle
+        : AppColors.textSubtitle;
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
@@ -251,62 +321,27 @@ class _FloatingBottomBarState extends State<FloatingBottomBar> {
         mainAxisSize: MainAxisSize.min,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Stack(
-            clipBehavior: Clip.none,
-            alignment: Alignment.center,
-            children: [
-              Icon(
-                icon,
-                size: 21,
-                color: isSelected
-                    ? AppColors.primaryGreen
-                    : AppColors.textSubtitle,
-              ),
-              if (badgeText != null && !isSelected)
-                Positioned(top: -4, right: -6, child: _buildBadge(badgeText)),
-            ],
+          Icon(
+            icon,
+            size: 21,
+            color: isSelected ? activeColor : inactiveColor,
           ),
           const SizedBox(height: 3),
           AnimatedDefaultTextStyle(
             duration: const Duration(milliseconds: 180),
             style: TextStyle(
+              fontFamily: 'Helvetica Neue',
               fontSize: 11.5,
-              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
               color: isSelected
-                  ? AppColors.primaryGreen
-                  : AppColors.textSubtitle,
+                  ? (isDark ? Colors.white : activeColor)
+                  : inactiveColor,
               letterSpacing: -0.2,
             ),
-            child: Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
+            child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
           ),
         ],
       ),
     );
   }
-
-  Widget _buildBadge(String text) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 4.5, vertical: 1),
-      decoration: const BoxDecoration(
-        color: AppColors.verifiedBadge,
-        shape: BoxShape.circle,
-      ),
-      constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
-      alignment: Alignment.center,
-      child: Text(
-        text,
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 9.5,
-          fontWeight: FontWeight.bold,
-          height: 1.1,
-        ),
-      ),
-    );
-  }
 }
-

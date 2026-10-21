@@ -11,11 +11,16 @@ class ActivityItemCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surfaceWhite,
+        color: isDark ? AppDarkColors.surfaceCard : AppColors.surfaceWhite,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border, width: 1.2),
+        border: Border.all(
+          color: isDark ? AppDarkColors.border : AppColors.border,
+          width: 1.2,
+        ),
       ),
       padding: const EdgeInsets.all(14),
       child: Row(
@@ -53,19 +58,23 @@ class ActivityItemCard extends StatelessWidget {
                   children: [
                     Text(
                       item.title,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
-                        color: AppColors.textPrimary,
+                        color: isDark
+                            ? AppDarkColors.textPrimary
+                            : AppColors.textPrimary,
                         letterSpacing: -0.2,
                       ),
                     ),
                     Text(
                       item.date,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
-                        color: AppColors.textSubtitle,
+                        color: isDark
+                            ? AppDarkColors.textSubtitle
+                            : AppColors.textSubtitle,
                       ),
                     ),
                   ],
@@ -77,18 +86,22 @@ class ActivityItemCard extends StatelessWidget {
                   RichText(
                     text: TextSpan(
                       text: item.subtitlePrefix,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 13,
-                        color: Color(0xFF64748B),
+                        color: isDark
+                            ? AppDarkColors.textSubtitle
+                            : const Color(0xFF64748B),
                         fontWeight: FontWeight.w500,
                       ),
                       children: [
                         if (item.subtitleHighlight != null)
                           TextSpan(
                             text: item.subtitleHighlight,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 13,
-                              color: AppColors.textPrimary,
+                              color: isDark
+                                  ? AppDarkColors.textPrimary
+                                  : AppColors.textPrimary,
                               fontWeight: FontWeight.w700,
                             ),
                           ),
@@ -147,9 +160,14 @@ class ActivityItemCard extends StatelessWidget {
                       vertical: 8,
                     ),
                     decoration: BoxDecoration(
-                      color: AppColors.surfaceWhite,
+                      color: isDark
+                          ? AppDarkColors.surfaceSecondary
+                          : AppColors.surfaceWhite,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.border, width: 1),
+                      border: Border.all(
+                        color: isDark ? AppDarkColors.border : AppColors.border,
+                        width: 1,
+                      ),
                     ),
                     child: Row(
                       children: [
@@ -158,7 +176,10 @@ class ActivityItemCard extends StatelessWidget {
                             item.noteIcon,
                             size: 16,
                             color:
-                                item.noteIconColor ?? const Color(0xFF64748B),
+                                item.noteIconColor ??
+                                (isDark
+                                    ? AppDarkColors.textSubtitle
+                                    : const Color(0xFF64748B)),
                           ),
                           const SizedBox(width: 8),
                         ],
@@ -170,7 +191,9 @@ class ActivityItemCard extends StatelessWidget {
                               fontWeight: item.subtitlePrefix != null
                                   ? FontWeight.w700
                                   : FontWeight.w500,
-                              color: AppColors.textPrimary,
+                              color: isDark
+                                  ? AppDarkColors.textPrimary
+                                  : AppColors.textPrimary,
                             ),
                           ),
                         ),

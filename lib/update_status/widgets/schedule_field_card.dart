@@ -164,15 +164,17 @@ class _ScheduleFieldCardState extends State<ScheduleFieldCard> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Schedule',
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w700,
-            color: AppColors.textPrimary,
+            color: isDark ? AppDarkColors.textPrimary : AppColors.textPrimary,
           ),
         ),
         const SizedBox(height: 10),
@@ -184,12 +186,12 @@ class _ScheduleFieldCardState extends State<ScheduleFieldCard> {
             duration: const Duration(milliseconds: 200),
             height: 56,
             decoration: BoxDecoration(
-              color: AppColors.surfaceWhite,
+              color: isDark ? AppDarkColors.surfaceCard : AppColors.surfaceWhite,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
                 color: _isExpanded
-                    ? AppColors.primaryGreen
-                    : AppColors.border,
+                    ? (isDark ? AppDarkColors.whatsappGreen : AppColors.primaryGreen)
+                    : (isDark ? AppDarkColors.border : AppColors.border),
                 width: _isExpanded ? 1.5 : 1,
               ),
             ),
@@ -200,12 +202,16 @@ class _ScheduleFieldCardState extends State<ScheduleFieldCard> {
                   width: 36,
                   height: 36,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFE0F2FE),
+                    color: isDark
+                        ? AppDarkColors.pillActiveBg
+                        : const Color(0xFFE0F2FE),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.calendar_today_outlined,
-                    color: AppColors.primaryGreen,
+                    color: isDark
+                        ? AppDarkColors.whatsappGreen
+                        : AppColors.primaryGreen,
                     size: 19,
                   ),
                 ),
@@ -213,10 +219,12 @@ class _ScheduleFieldCardState extends State<ScheduleFieldCard> {
                 Expanded(
                   child: Text(
                     _formatDate(_confirmedDate),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14.5,
                       fontWeight: FontWeight.w700,
-                      color: AppColors.textPrimary,
+                      color: isDark
+                          ? AppDarkColors.textPrimary
+                          : AppColors.textPrimary,
                     ),
                   ),
                 ),
@@ -225,8 +233,8 @@ class _ScheduleFieldCardState extends State<ScheduleFieldCard> {
                       ? Icons.keyboard_arrow_up_rounded
                       : Icons.keyboard_arrow_down_rounded,
                   color: _isExpanded
-                      ? AppColors.primaryGreen
-                      : AppColors.textSubtitle,
+                      ? (isDark ? AppDarkColors.whatsappGreen : AppColors.primaryGreen)
+                      : (isDark ? AppDarkColors.textSubtitle : AppColors.textSubtitle),
                   size: 24,
                 ),
               ],
@@ -237,21 +245,26 @@ class _ScheduleFieldCardState extends State<ScheduleFieldCard> {
         // 2. Inline Expanded Calendar Card
         if (_isExpanded) ...[
           const SizedBox(height: 12),
-          _buildInlineCalendarCard(),
+          _buildInlineCalendarCard(isDark),
         ],
       ],
     );
   }
 
-  Widget _buildInlineCalendarCard() {
+  Widget _buildInlineCalendarCard(bool isDark) {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surfaceWhite,
+        color: isDark ? AppDarkColors.surfaceCard : AppColors.surfaceWhite,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.border, width: 1),
+        border: Border.all(
+          color: isDark ? AppDarkColors.border : AppColors.border,
+          width: 1,
+        ),
         boxShadow: [
           BoxShadow(
-            color: AppColors.textPrimary.withValues(alpha: 0.04),
+            color: isDark
+                ? Colors.black.withValues(alpha: 0.2)
+                : AppColors.textPrimary.withValues(alpha: 0.04),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -270,20 +283,24 @@ class _ScheduleFieldCardState extends State<ScheduleFieldCard> {
                 children: [
                   Text(
                     '${_months[_currentMonthView.month - 1]} ${_currentMonthView.year}',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w800,
-                      color: AppColors.textPrimary,
+                      color: isDark
+                          ? AppDarkColors.textPrimary
+                          : AppColors.textPrimary,
                       letterSpacing: -0.2,
                     ),
                   ),
                   const SizedBox(height: 3),
                   Text(
                     _formatSubtitle(_tempSelectedDate),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
-                      color: AppColors.textSubtitle,
+                      color: isDark
+                          ? AppDarkColors.textSubtitle
+                          : AppColors.textSubtitle,
                     ),
                   ),
                 ],
@@ -297,13 +314,17 @@ class _ScheduleFieldCardState extends State<ScheduleFieldCard> {
                       height: 32,
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
-                        color: AppColors.surfaceGrey,
+                        color: isDark
+                            ? AppDarkColors.surfaceSecondary
+                            : AppColors.surfaceGrey,
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.chevron_left_rounded,
                         size: 20,
-                        color: AppColors.textPrimary,
+                        color: isDark
+                            ? AppDarkColors.textPrimary
+                            : AppColors.textPrimary,
                       ),
                     ),
                   ),
@@ -315,13 +336,17 @@ class _ScheduleFieldCardState extends State<ScheduleFieldCard> {
                       height: 32,
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
-                        color: AppColors.surfaceGrey,
+                        color: isDark
+                            ? AppDarkColors.surfaceSecondary
+                            : AppColors.surfaceGrey,
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.chevron_right_rounded,
                         size: 20,
-                        color: AppColors.textPrimary,
+                        color: isDark
+                            ? AppDarkColors.textPrimary
+                            : AppColors.textPrimary,
                       ),
                     ),
                   ),
@@ -348,7 +373,7 @@ class _ScheduleFieldCardState extends State<ScheduleFieldCard> {
           const SizedBox(height: 8),
 
           // Calendar Days Grid
-          _buildDaysGrid(),
+          _buildDaysGrid(isDark),
 
           const SizedBox(height: 16),
 
@@ -359,14 +384,16 @@ class _ScheduleFieldCardState extends State<ScheduleFieldCard> {
               GestureDetector(
                 behavior: HitTestBehavior.opaque,
                 onTap: _handleCancel,
-                child: const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                   child: Text(
                     'Cancel',
                     style: TextStyle(
                       fontSize: 13.5,
                       fontWeight: FontWeight.w600,
-                      color: AppColors.textSubtitle,
+                      color: isDark
+                          ? AppDarkColors.textSubtitle
+                          : AppColors.textSubtitle,
                     ),
                   ),
                 ),
@@ -380,15 +407,15 @@ class _ScheduleFieldCardState extends State<ScheduleFieldCard> {
                     vertical: 9,
                   ),
                   decoration: BoxDecoration(
-                    color: AppColors.primaryGreen,
+                    color: AppColors.whatsappGreen,
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  child: const Text(
+                  child: Text(
                     'Set Date',
                     style: TextStyle(
                       fontSize: 13.5,
                       fontWeight: FontWeight.w700,
-                      color: Colors.white,
+                      color: isDark ? const Color(0xFF0B141B) : Colors.white,
                     ),
                   ),
                 ),
@@ -400,7 +427,7 @@ class _ScheduleFieldCardState extends State<ScheduleFieldCard> {
     );
   }
 
-  Widget _buildDaysGrid() {
+  Widget _buildDaysGrid(bool isDark) {
     final year = _currentMonthView.year;
     final month = _currentMonthView.month;
 
@@ -456,13 +483,17 @@ class _ScheduleFieldCardState extends State<ScheduleFieldCard> {
 
               Color textColor;
               if (isSelected) {
-                textColor = Colors.white;
+                textColor = isDark ? const Color(0xFF0B141B) : Colors.white;
               } else if (!isCurrentMonth) {
-                textColor = const Color(0xFFCBD5E1);
+                textColor = isDark
+                    ? const Color(0xFF475569)
+                    : const Color(0xFFCBD5E1);
               } else if (isSunday) {
                 textColor = const Color(0xFFEF4444);
               } else {
-                textColor = AppColors.textPrimary;
+                textColor = isDark
+                    ? AppDarkColors.textPrimary
+                    : AppColors.textPrimary;
               }
 
               return Expanded(
@@ -483,7 +514,7 @@ class _ScheduleFieldCardState extends State<ScheduleFieldCard> {
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
                         color: isSelected
-                            ? AppColors.primaryGreen
+                            ? AppColors.whatsappGreen
                             : Colors.transparent,
                         shape: BoxShape.circle,
                       ),
@@ -516,6 +547,7 @@ class _WeekdayLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Expanded(
       child: Center(
         child: Text(
@@ -525,7 +557,7 @@ class _WeekdayLabel extends StatelessWidget {
             fontWeight: FontWeight.w600,
             color: isSunday
                 ? const Color(0xFFEF4444)
-                : AppColors.textSubtitle,
+                : (isDark ? AppDarkColors.textSubtitle : AppColors.textSubtitle),
           ),
         ),
       ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/theme.dart';
+import '../../core/widgets/user_circle_avatar.dart';
 
 /// Reusable list tile widget for rendering a redesigned lead or task item.
 /// Decoupled from data models and styling logic.
@@ -10,7 +11,6 @@ class ChatListItemTile extends StatelessWidget {
   final Color avatarTextColor;
   final Color? avatarBorderColor;
   final bool hasVerifiedBadge;
-  final Color indicatorColor;
   final String date;
   final String tagText;
   final Color tagBgColor;
@@ -24,12 +24,11 @@ class ChatListItemTile extends StatelessWidget {
   const ChatListItemTile({
     super.key,
     required this.title,
-    required this.avatarLetter,
+    this.avatarLetter = '',
     this.avatarBgColor = AppColors.surfaceGrey,
     this.avatarTextColor = AppColors.textSecondary,
     this.avatarBorderColor,
     this.hasVerifiedBadge = false,
-    this.indicatorColor = Colors.transparent,
     required this.date,
     required this.tagText,
     this.tagBgColor = AppColors.completedBg,
@@ -43,28 +42,25 @@ class ChatListItemTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primaryTextColor = isDark ? AppDarkColors.textPrimary : AppColors.textPrimary;
+    final subtextColor = isDark ? AppDarkColors.textSubtitle : AppColors.textSubtitle;
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
+        hoverColor: Colors.transparent,
+        focusColor: Colors.transparent,
+        highlightColor: Colors.transparent,
+        splashColor: Colors.transparent,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Left rounded vertical indicator bar
-              Container(
-                width: 3.5,
-                height: 28,
-                decoration: BoxDecoration(
-                  color: indicatorColor,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(width: 12),
-
               // Avatar
-              _buildAvatar(),
+              _buildAvatar(isDark),
               const SizedBox(width: 14),
 
               // Middle: Title + Date (Row) and Tag + Location (Row)
@@ -83,24 +79,26 @@ class ChatListItemTile extends StatelessWidget {
                           title,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
+                          style: TextStyle(
+                            fontFamily: 'Helvetica Neue',
                             fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.textPrimary,
-                            letterSpacing: -0.2,
+                            fontWeight: FontWeight.w600,
+                            color: primaryTextColor,
+                            letterSpacing: -0.1,
                           ),
                         ),
                         Text(
                           date,
-                          style: const TextStyle(
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.textPrimary,
+                          style: TextStyle(
+                            fontFamily: 'Helvetica Neue',
+                            fontSize: 12,
+                            fontWeight: FontWeight.w400,
+                            color: subtextColor,
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 5),
 
                     // Bottom Row: Tag + Location
                     Row(
@@ -112,13 +110,30 @@ class ChatListItemTile extends StatelessWidget {
                             vertical: 2.5,
                           ),
                           decoration: BoxDecoration(
-                            color: tagBgColor,
-                            borderRadius: BorderRadius.circular(4.5),
+                            color: isDark
+                                ? (tagText.toLowerCase() == 'completed'
+                                    ? AppDarkColors.completedBg
+                                    : (tagText.toLowerCase() == 'cancelled'
+                                        ? AppDarkColors.cancelledBg
+                                        : (tagText.toLowerCase() == 'new'
+                                            ? AppDarkColors.newBg
+                                            : AppDarkColors.surfaceSecondary)))
+                                : tagBgColor,
+                            borderRadius: BorderRadius.circular(5),
                           ),
                           child: Text(
                             tagText,
                             style: TextStyle(
-                              color: tagTextColor,
+                              fontFamily: 'Helvetica Neue',
+                              color: isDark
+                                  ? (tagText.toLowerCase() == 'completed'
+                                      ? AppDarkColors.completedText
+                                      : (tagText.toLowerCase() == 'cancelled'
+                                          ? AppDarkColors.cancelledText
+                                          : (tagText.toLowerCase() == 'new'
+                                              ? AppDarkColors.newText
+                                              : AppDarkColors.textPrimary)))
+                                  : tagTextColor,
                               fontSize: 11,
                               fontWeight: FontWeight.w600,
                             ),
@@ -127,10 +142,10 @@ class ChatListItemTile extends StatelessWidget {
                         const SizedBox(width: 8),
 
                         // Location pin icon
-                        const Icon(
+                        Icon(
                           Icons.location_on_outlined,
-                          size: 15,
-                          color: AppColors.textSubtitle,
+                          size: 14,
+                          color: subtextColor,
                         ),
                         const SizedBox(width: 3),
 
@@ -140,10 +155,11 @@ class ChatListItemTile extends StatelessWidget {
                             location,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 12.5,
-                              fontWeight: FontWeight.w500,
-                              color: AppColors.textSubtitle,
+                            style: TextStyle(
+                              fontFamily: 'Helvetica Neue',
+                              fontSize: 13,
+                              fontWeight: FontWeight.w400,
+                              color: subtextColor,
                             ),
                           ),
                         ),
@@ -182,49 +198,7 @@ class ChatListItemTile extends StatelessWidget {
     );
   }
 
-  Widget _buildAvatar() {
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        Container(
-          width: 48,
-          height: 48,
-          decoration: BoxDecoration(
-            color: avatarBgColor,
-            shape: BoxShape.circle,
-            border: avatarBorderColor != null
-                ? Border.all(color: avatarBorderColor!, width: 1.5)
-                : null,
-          ),
-          child: Center(
-            child: Text(
-              avatarLetter,
-              style: TextStyle(
-                color: avatarTextColor,
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-        ),
-        if (hasVerifiedBadge)
-          Positioned(
-            right: -2,
-            bottom: -1,
-            child: Container(
-              width: 17,
-              height: 17,
-              decoration: BoxDecoration(
-                color: AppColors.verifiedBadge,
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 2),
-              ),
-              child: const Center(
-                child: Icon(Icons.check, size: 10, color: Colors.white),
-              ),
-            ),
-          ),
-      ],
-    );
+  Widget _buildAvatar(bool isDark) {
+    return const UserCircleAvatar(size: 48);
   }
 }

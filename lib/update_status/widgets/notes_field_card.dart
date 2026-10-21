@@ -12,38 +12,51 @@ class NotesFieldCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Notes',
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w700,
-            color: AppColors.textPrimary,
+            color: isDark ? AppDarkColors.textPrimary : AppColors.textPrimary,
           ),
         ),
         const SizedBox(height: 10),
         Container(
           decoration: BoxDecoration(
-            color: AppColors.surfaceWhite,
+            color: isDark ? AppDarkColors.surfaceCard : AppColors.surfaceWhite,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppColors.border, width: 1),
+            border: Border.all(
+              color: isDark ? AppDarkColors.border : AppColors.border,
+              width: 1,
+            ),
           ),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           child: TextField(
             controller: controller,
             maxLines: null,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 13.5,
               fontWeight: FontWeight.w500,
-              color: AppColors.textPrimary,
+              color: isDark ? AppDarkColors.textPrimary : AppColors.textPrimary,
               height: 1.45,
             ),
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               isDense: true,
               contentPadding: EdgeInsets.zero,
               border: InputBorder.none,
+              hintText: 'Enter notes...',
+              hintStyle: TextStyle(
+                fontSize: 13.5,
+                fontWeight: FontWeight.w400,
+                color: isDark
+                    ? AppDarkColors.textPlaceholder
+                    : AppColors.textPlaceholder,
+              ),
             ),
           ),
         ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/theme.dart';
 
 /// Reusable action card tile used for Settings options like 'About' and 'Log out'.
 class SettingsActionTile extends StatelessWidget {
@@ -25,14 +26,21 @@ class SettingsActionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark ? AppDarkColors.surfaceCard : Colors.white;
+    final cardBorder = isDark ? AppDarkColors.border : const Color(0xFFE9EDEF);
+    final primaryTextColor = titleColor ?? (isDark ? const Color(0xFFE9EDEF) : const Color(0xFF111B21));
+    final subtextColor = isDark ? const Color(0xFF8696A0) : const Color(0xFF667781);
+
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cardBg,
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: cardBorder, width: 1),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF0F172A).withValues(alpha: 0.04),
-            blurRadius: 10,
+            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.03),
+            blurRadius: 8,
             offset: const Offset(0, 2),
           ),
         ],
@@ -73,18 +81,20 @@ class SettingsActionTile extends StatelessWidget {
                       Text(
                         title,
                         style: TextStyle(
+                          fontFamily: 'Helvetica Neue',
                           fontSize: 15.5,
-                          fontWeight: FontWeight.w700,
-                          color: titleColor ?? const Color(0xFF0F172A),
+                          fontWeight: FontWeight.w600,
+                          color: primaryTextColor,
                         ),
                       ),
                       if (subtitle != null) ...[
                         const SizedBox(height: 3),
                         Text(
                           subtitle!,
-                          style: const TextStyle(
+                          style: TextStyle(
+                            fontFamily: 'Helvetica Neue',
                             fontSize: 13,
-                            color: Color(0xFF64748B),
+                            color: subtextColor,
                             fontWeight: FontWeight.w400,
                           ),
                         ),

@@ -15,8 +15,10 @@ class ReportMenuCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Material(
-      color: AppColors.surfaceWhite,
+      color: isDark ? AppDarkColors.surfaceCard : AppColors.surfaceWhite,
       borderRadius: BorderRadius.circular(20),
       child: InkWell(
         onTap: onTap,
@@ -26,7 +28,7 @@ class ReportMenuCard extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: AppColors.border,
+              color: isDark ? AppDarkColors.border : AppColors.border,
               width: 1.2,
             ),
           ),
@@ -43,18 +45,24 @@ class ReportMenuCard extends StatelessWidget {
                     width: 54,
                     height: 54,
                     decoration: BoxDecoration(
-                      color: item.fallbackBg,
+                      color: isDark
+                          ? const Color(0xFF233138)
+                          : item.fallbackBg,
                       shape: BoxShape.circle,
                       border: item.hasBorderOnFallback
                           ? Border.all(
-                              color: const Color(0xFFFDE68A),
+                              color: isDark
+                                  ? AppDarkColors.whatsappGreen
+                                  : const Color(0xFFFDE68A),
                               width: 1.5,
                             )
                           : null,
                     ),
                     child: Icon(
                       item.fallbackIcon,
-                      color: item.fallbackIconColor,
+                      color: isDark
+                          ? AppDarkColors.whatsappGreen
+                          : item.fallbackIconColor,
                       size: 28,
                     ),
                   );
@@ -66,10 +74,12 @@ class ReportMenuCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   item.title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 17,
                     fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimary,
+                    color: isDark
+                        ? AppDarkColors.textPrimary
+                        : AppColors.textPrimary,
                     letterSpacing: -0.2,
                   ),
                 ),

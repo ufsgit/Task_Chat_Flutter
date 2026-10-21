@@ -17,6 +17,11 @@ class StaffPerformanceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primaryTextColor = isDark ? AppDarkColors.textPrimary : AppColors.textPrimary;
+    final subtitleTextColor = isDark ? AppDarkColors.textSubtitle : AppColors.textSubtitle;
+    final greenColor = isDark ? AppDarkColors.whatsappGreen : AppColors.primaryGreen;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -24,23 +29,23 @@ class StaffPerformanceCard extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text(
+            Text(
               'STAFF PERFORMANCE',
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 0.5,
-                color: AppColors.textSubtitle,
+                color: subtitleTextColor,
               ),
             ),
             GestureDetector(
               onTap: onShowAllTap,
-              child: const Text(
+              child: Text(
                 'Show All',
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
-                  color: AppColors.primaryGreen,
+                  color: greenColor,
                 ),
               ),
             ),
@@ -51,12 +56,17 @@ class StaffPerformanceCard extends StatelessWidget {
         // White Container Card
         Container(
           decoration: BoxDecoration(
-            color: AppColors.surfaceWhite,
+            color: isDark ? AppDarkColors.surfaceCard : AppColors.surfaceWhite,
             borderRadius: BorderRadius.circular(22),
-            border: Border.all(color: AppColors.border, width: 1.2),
+            border: Border.all(
+              color: isDark ? AppDarkColors.border : AppColors.border,
+              width: 1.2,
+            ),
             boxShadow: [
               BoxShadow(
-                color: AppColors.textPrimary.withValues(alpha: 0.03),
+                color: isDark
+                    ? Colors.black.withValues(alpha: 0.15)
+                    : AppColors.textPrimary.withValues(alpha: 0.03),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -70,12 +80,14 @@ class StaffPerformanceCard extends StatelessWidget {
 
               return Column(
                 children: [
-                  _buildStaffRow(context, staff),
+                  _buildStaffRow(context, staff, isDark, primaryTextColor, greenColor),
                   if (!isLast)
-                    const Divider(
+                    Divider(
                       height: 28,
-                      thickness: 1,
-                      color: Color(0xFFF1F5F9),
+                      thickness: 0.6,
+                      color: isDark
+                          ? AppDarkColors.divider
+                          : const Color(0xFFF1F5F9),
                     ),
                 ],
               );
@@ -86,7 +98,13 @@ class StaffPerformanceCard extends StatelessWidget {
     );
   }
 
-  Widget _buildStaffRow(BuildContext context, StaffPerformanceItem staff) {
+  Widget _buildStaffRow(
+    BuildContext context,
+    StaffPerformanceItem staff,
+    bool isDark,
+    Color primaryTextColor,
+    Color greenColor,
+  ) {
     return InkWell(
       onTap: onStaffTap != null ? () => onStaffTap!(staff) : null,
       borderRadius: BorderRadius.circular(12),
@@ -124,19 +142,19 @@ class StaffPerformanceCard extends StatelessWidget {
                   children: [
                     Text(
                       staff.name,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 14.5,
                         fontWeight: FontWeight.w800,
-                        color: AppColors.textPrimary,
+                        color: primaryTextColor,
                         letterSpacing: -0.2,
                       ),
                     ),
                     Text(
                       '${staff.totalTasks} Tasks',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12.5,
                         fontWeight: FontWeight.w700,
-                        color: AppColors.textPrimary,
+                        color: primaryTextColor,
                       ),
                     ),
                   ],
@@ -203,9 +221,9 @@ class StaffPerformanceCard extends StatelessWidget {
                 Row(
                   children: [
                     _buildSubMetric(
-                      dotColor: AppColors.primaryGreen,
+                      dotColor: greenColor,
                       label: '${staff.doneTasks} Done',
-                      labelColor: AppColors.primaryGreen,
+                      labelColor: greenColor,
                     ),
                     const SizedBox(width: 10),
                     _buildSubMetric(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../core/circular_back_button.dart';
 import '../core/theme.dart';
 import 'task_report_data.dart';
 import 'widgets/attention_efficiency_card.dart';
@@ -41,50 +42,29 @@ class _TaskReportPageState extends State<TaskReportPage> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final scaffoldBg = Theme.of(context).scaffoldBackgroundColor;
+
     return Scaffold(
-      backgroundColor: AppColors.scaffoldBackground,
+      backgroundColor: scaffoldBg,
       appBar: AppBar(
-        backgroundColor: AppColors.scaffoldBackground,
+        backgroundColor: scaffoldBg,
         elevation: 0,
         scrolledUnderElevation: 0,
         leadingWidth: 58,
         leading: Padding(
           padding: const EdgeInsets.only(left: 16.0),
           child: Center(
-            child: GestureDetector(
-              onTap: _handleBack,
-              child: Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  color: AppColors.surfaceWhite,
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: AppColors.border,
-                    width: 1,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.textPrimary.withValues(alpha: 0.04),
-                      blurRadius: 6,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: const Icon(
-                  Icons.chevron_left_rounded,
-                  color: Color(0xFF005C4B),
-                  size: 24,
-                ),
-              ),
+            child: CircularBackButton(
+              onBack: _handleBack,
             ),
           ),
         ),
         titleSpacing: 8,
-        title: const Text(
+        title: Text(
           'Task Report',
           style: TextStyle(
-            color: Color(0xFF005C4B),
+            color: isDark ? AppDarkColors.whatsappGreen : const Color(0xFF005C4B),
             fontSize: 22,
             fontWeight: FontWeight.w800,
             letterSpacing: -0.4,
@@ -101,7 +81,7 @@ class _TaskReportPageState extends State<TaskReportPage> {
               const SizedBox(height: 8),
 
               // 1. Date Range Header Bar ("This Week (Nov 10 – Nov 16)" + Chevron)
-              _buildDateSelectorBar(context),
+              _buildDateSelectorBar(context, isDark),
 
               const SizedBox(height: 14),
 
@@ -145,14 +125,14 @@ class _TaskReportPageState extends State<TaskReportPage> {
     );
   }
 
-  Widget _buildDateSelectorBar(BuildContext context) {
+  Widget _buildDateSelectorBar(BuildContext context, bool isDark) {
     return Row(
       children: [
         RichText(
           text: TextSpan(
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 16,
-              color: AppColors.textPrimary,
+              color: isDark ? AppDarkColors.textPrimary : AppColors.textPrimary,
             ),
             children: [
               TextSpan(
@@ -163,10 +143,10 @@ class _TaskReportPageState extends State<TaskReportPage> {
               ),
               TextSpan(
                 text: ' (${_data.dateRange})',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 13.5,
                   fontWeight: FontWeight.w500,
-                  color: AppColors.textSubtitle,
+                  color: isDark ? AppDarkColors.textSubtitle : AppColors.textSubtitle,
                 ),
               ),
             ],
@@ -186,17 +166,17 @@ class _TaskReportPageState extends State<TaskReportPage> {
             width: 32,
             height: 32,
             decoration: BoxDecoration(
-              color: const Color(0xFFF1F5F9),
+              color: isDark ? AppDarkColors.surfaceCard : const Color(0xFFF1F5F9),
               shape: BoxShape.circle,
               border: Border.all(
-                color: const Color(0xFFE2E8F0),
+                color: isDark ? AppDarkColors.border : const Color(0xFFE2E8F0),
                 width: 0.8,
               ),
             ),
-            child: const Icon(
+            child: Icon(
               Icons.chevron_right_rounded,
               size: 20,
-              color: AppColors.textSubtitle,
+              color: isDark ? AppDarkColors.textSubtitle : AppColors.textSubtitle,
             ),
           ),
         ),

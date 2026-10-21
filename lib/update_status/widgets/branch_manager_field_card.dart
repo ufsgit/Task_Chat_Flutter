@@ -17,38 +17,47 @@ class BranchManagerFieldCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Branch Manager',
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w700,
-            color: AppColors.textPrimary,
+            color: isDark ? AppDarkColors.textPrimary : AppColors.textPrimary,
           ),
         ),
         const SizedBox(height: 10),
         Container(
           height: 60,
           decoration: BoxDecoration(
-            color: AppColors.surfaceWhite,
+            color: isDark ? AppDarkColors.surfaceCard : AppColors.surfaceWhite,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppColors.border, width: 1),
+            border: Border.all(
+              color: isDark ? AppDarkColors.border : AppColors.border,
+              width: 1,
+            ),
           ),
-          padding: padding ?? const EdgeInsets.symmetric(horizontal: 10),
+          padding: padding ?? const EdgeInsets.symmetric(horizontal: 14),
           child: Row(
             children: [
               Container(
                 width: 36,
                 height: 36,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFE0F2FE),
+                  color: isDark
+                      ? AppDarkColors.pillActiveBg
+                      : const Color(0xFFE0F2FE),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.person_outline,
-                  color: AppColors.primaryGreen,
+                  color: isDark
+                      ? AppDarkColors.whatsappGreen
+                      : AppColors.primaryGreen,
                   size: 20,
                 ),
               ),
@@ -58,14 +67,16 @@ class BranchManagerFieldCard extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'BRANCH M...',
+                    Text(
+                      'BRANCH MANAGER',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: 10.5,
                         fontWeight: FontWeight.w700,
-                        color: AppColors.textSubtitle,
+                        color: isDark
+                            ? AppDarkColors.textSubtitle
+                            : AppColors.textSubtitle,
                         letterSpacing: 0.3,
                       ),
                     ),
@@ -74,21 +85,27 @@ class BranchManagerFieldCard extends StatelessWidget {
                       selectedManager,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 13.5,
                         fontWeight: FontWeight.w700,
-                        color: AppColors.textPrimary,
+                        color: isDark
+                            ? AppDarkColors.textPrimary
+                            : AppColors.textPrimary,
                       ),
                     ),
                   ],
                 ),
               ),
               PopupMenuButton<String>(
-                color: AppColors.dropdownBackground,
+                color: isDark
+                    ? AppDarkColors.surfaceCard
+                    : AppColors.dropdownBackground,
                 surfaceTintColor: Colors.transparent,
-                icon: const Icon(
+                icon: Icon(
                   Icons.keyboard_arrow_down_rounded,
-                  color: AppColors.textSubtitle,
+                  color: isDark
+                      ? AppDarkColors.textSubtitle
+                      : AppColors.textSubtitle,
                   size: 20,
                 ),
                 padding: EdgeInsets.zero,
@@ -98,7 +115,14 @@ class BranchManagerFieldCard extends StatelessWidget {
                     .map(
                       (name) => PopupMenuItem(
                         value: name,
-                        child: Text(name),
+                        child: Text(
+                          name,
+                          style: TextStyle(
+                            color: isDark
+                                ? AppDarkColors.textPrimary
+                                : AppColors.textPrimary,
+                          ),
+                        ),
                       ),
                     )
                     .toList(),

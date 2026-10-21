@@ -14,14 +14,24 @@ class DailyAverageCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primaryTextColor = isDark ? AppDarkColors.textPrimary : AppColors.textPrimary;
+    final subtitleTextColor = isDark ? AppDarkColors.textSubtitle : AppColors.textSubtitle;
+    final placeholderTextColor = isDark ? AppDarkColors.textPlaceholder : AppColors.textPlaceholder;
+
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surfaceWhite,
+        color: isDark ? AppDarkColors.surfaceCard : AppColors.surfaceWhite,
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: AppColors.border, width: 1.2),
+        border: Border.all(
+          color: isDark ? AppDarkColors.border : AppColors.border,
+          width: 1.2,
+        ),
         boxShadow: [
           BoxShadow(
-            color: AppColors.textPrimary.withValues(alpha: 0.03),
+            color: isDark
+                ? Colors.black.withValues(alpha: 0.15)
+                : AppColors.textPrimary.withValues(alpha: 0.03),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -35,36 +45,42 @@ class DailyAverageCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
+              Text(
                 'DAILY AVERAGE',
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 0.5,
-                  color: AppColors.textSubtitle,
+                  color: subtitleTextColor,
                 ),
               ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4.5),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFE6F7F0),
+                  color: isDark
+                      ? AppDarkColors.pillActiveBg
+                      : const Color(0xFFE6F7F0),
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.arrow_outward_rounded,
                       size: 13,
-                      color: AppColors.primaryGreen,
+                      color: isDark
+                          ? AppDarkColors.whatsappGreen
+                          : AppColors.primaryGreen,
                     ),
                     const SizedBox(width: 4),
                     Text(
                       summary.badgeText,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 11.5,
                         fontWeight: FontWeight.w700,
-                        color: AppColors.primaryGreen,
+                        color: isDark
+                            ? AppDarkColors.whatsappGreen
+                            : AppColors.primaryGreen,
                       ),
                     ),
                   ],
@@ -82,20 +98,20 @@ class DailyAverageCard extends StatelessWidget {
             children: [
               Text(
                 '${summary.dailyAverage} Tasks',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 26,
                   fontWeight: FontWeight.w800,
-                  color: AppColors.textPrimary,
+                  color: primaryTextColor,
                   letterSpacing: -0.6,
                 ),
               ),
               const SizedBox(width: 6),
-              const Text(
+              Text(
                 '/ day',
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
-                  color: AppColors.textSubtitle,
+                  color: subtitleTextColor,
                 ),
               ),
             ],
@@ -117,15 +133,17 @@ class DailyAverageCard extends StatelessWidget {
             children: [
               Expanded(
                 child: _buildLegendPill(
-                  dotColor: AppColors.primaryGreen,
+                  isDark: isDark,
+                  dotColor: isDark ? AppDarkColors.whatsappGreen : AppColors.primaryGreen,
                   title: 'Completed',
                   value: '${summary.completedTasks} Tasks',
-                  valueColor: AppColors.textPrimary,
+                  valueColor: primaryTextColor,
                 ),
               ),
               const SizedBox(width: 8),
               Expanded(
                 child: _buildLegendPill(
+                  isDark: isDark,
                   dotColor: const Color(0xFFF97316),
                   title: 'Pending',
                   value: '${summary.pendingTasks} Tasks',
@@ -135,10 +153,11 @@ class DailyAverageCard extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: _buildLegendPill(
+                  isDark: isDark,
                   dotColor: const Color(0xFF2563EB),
                   title: 'In Progress',
                   value: '${summary.inProgressTasks} Tasks',
-                  valueColor: AppColors.textPrimary,
+                  valueColor: primaryTextColor,
                 ),
               ),
             ],
@@ -152,9 +171,9 @@ class DailyAverageCard extends StatelessWidget {
               Expanded(
                 child: RichText(
                   text: TextSpan(
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12.5,
-                      color: AppColors.textPrimary,
+                      color: primaryTextColor,
                     ),
                     children: [
                       const TextSpan(
@@ -172,18 +191,18 @@ class DailyAverageCard extends StatelessWidget {
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.access_time_rounded,
                     size: 13,
-                    color: AppColors.textPlaceholder,
+                    color: placeholderTextColor,
                   ),
                   const SizedBox(width: 4),
                   Text(
                     summary.lastUpdatedText,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w500,
-                      color: AppColors.textPlaceholder,
+                      color: placeholderTextColor,
                     ),
                   ),
                 ],
@@ -196,6 +215,7 @@ class DailyAverageCard extends StatelessWidget {
   }
 
   Widget _buildLegendPill({
+    required bool isDark,
     required Color dotColor,
     required String title,
     required String value,
@@ -204,9 +224,12 @@ class DailyAverageCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
+        color: isDark ? AppDarkColors.surfaceSecondary : const Color(0xFFF8FAFC),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFEDF2F7), width: 1),
+        border: Border.all(
+          color: isDark ? AppDarkColors.border : const Color(0xFFEDF2F7),
+          width: 1,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -227,10 +250,10 @@ class DailyAverageCard extends StatelessWidget {
                   title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
-                    color: AppColors.textSubtitle,
+                    color: isDark ? AppDarkColors.textSubtitle : AppColors.textSubtitle,
                   ),
                 ),
               ),

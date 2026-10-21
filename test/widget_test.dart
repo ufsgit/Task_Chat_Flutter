@@ -7,15 +7,21 @@
 
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:task_chat/login_page/login_view.dart';
 import 'package:task_chat/main.dart';
 
 void main() {
-  testWidgets('TaskChatApp smoke test', (WidgetTester tester) async {
+  testWidgets('FitmateApp smoke test', (WidgetTester tester) async {
     // Build our app and trigger a frame.
-    await tester.pumpWidget(const TaskChatApp());
+    await tester.pumpWidget(const FitmateApp());
 
-    // Verify that the title and login button exist.
-    expect(find.text('TaskChat'), findsOneWidget);
-    expect(find.text('Log In'), findsOneWidget);
+    // Initially shows SplashScreen with brand title
+    expect(find.text('Fitmate'), findsOneWidget);
+
+    // After 2-second splash screen completes, transitions to LoginPage
+    await tester.pump(const Duration(seconds: 2));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(LoginPage), findsOneWidget);
   });
 }

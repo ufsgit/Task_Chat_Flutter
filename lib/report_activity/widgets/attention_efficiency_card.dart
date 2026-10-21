@@ -13,17 +13,22 @@ class AttentionEfficiencyCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primaryTextColor = isDark ? AppDarkColors.textPrimary : AppColors.textPrimary;
+    final subtitleTextColor = isDark ? AppDarkColors.textSubtitle : AppColors.textSubtitle;
+    final greenColor = isDark ? AppDarkColors.whatsappGreen : AppColors.primaryGreen;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Section Title
-        const Text(
+        Text(
           'ATTENTION & EFFICIENCY',
           style: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w700,
             letterSpacing: 0.5,
-            color: AppColors.textSubtitle,
+            color: subtitleTextColor,
           ),
         ),
         const SizedBox(height: 10),
@@ -31,12 +36,17 @@ class AttentionEfficiencyCard extends StatelessWidget {
         // White Container Card
         Container(
           decoration: BoxDecoration(
-            color: AppColors.surfaceWhite,
+            color: isDark ? AppDarkColors.surfaceCard : AppColors.surfaceWhite,
             borderRadius: BorderRadius.circular(22),
-            border: Border.all(color: AppColors.border, width: 1.2),
+            border: Border.all(
+              color: isDark ? AppDarkColors.border : AppColors.border,
+              width: 1.2,
+            ),
             boxShadow: [
               BoxShadow(
-                color: AppColors.textPrimary.withValues(alpha: 0.03),
+                color: isDark
+                    ? Colors.black.withValues(alpha: 0.15)
+                    : AppColors.textPrimary.withValues(alpha: 0.03),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -52,13 +62,15 @@ class AttentionEfficiencyCard extends StatelessWidget {
                   Container(
                     width: 40,
                     height: 40,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFD1FAE5),
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? AppDarkColors.pillActiveBg
+                          : const Color(0xFFD1FAE5),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.check_rounded,
-                      color: AppColors.primaryGreen,
+                      color: greenColor,
                       size: 24,
                     ),
                   ),
@@ -69,19 +81,19 @@ class AttentionEfficiencyCard extends StatelessWidget {
                       children: [
                         Text(
                           data.title,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w800,
-                            color: AppColors.textPrimary,
+                            color: primaryTextColor,
                           ),
                         ),
                         const SizedBox(height: 2),
                         Text(
                           data.subtitle,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w500,
-                            color: AppColors.textSubtitle,
+                            color: subtitleTextColor,
                           ),
                         ),
                       ],
@@ -89,10 +101,10 @@ class AttentionEfficiencyCard extends StatelessWidget {
                   ),
                   Text(
                     data.status,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
-                      color: AppColors.primaryGreen,
+                      color: greenColor,
                     ),
                   ),
                 ],

@@ -16,24 +16,30 @@ class ActivitySearchBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFFE6EEF5),
+        color: isDark ? AppDarkColors.surfaceCard : const Color(0xFFE6EEF5),
         borderRadius: BorderRadius.circular(16),
+        border: isDark ? Border.all(color: AppDarkColors.border, width: 1) : null,
       ),
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: TextField(
         controller: controller,
+        textAlignVertical: TextAlignVertical.center,
         onChanged: onChanged,
-        style: const TextStyle(
-          color: AppColors.textPrimary,
+        style: TextStyle(
+          color: isDark ? AppDarkColors.textPrimary : AppColors.textPrimary,
           fontSize: 14.5,
           fontWeight: FontWeight.w500,
         ),
         decoration: InputDecoration(
           hintText: 'Search activity history...',
-          hintStyle: const TextStyle(
-            color: Color(0xFF64748B),
+          hintStyle: TextStyle(
+            color: isDark
+                ? AppDarkColors.textPlaceholder
+                : const Color(0xFF64748B),
             fontSize: 14.5,
             fontWeight: FontWeight.w400,
           ),
@@ -46,10 +52,12 @@ class ActivitySearchBar extends StatelessWidget {
                     controller.clear();
                     onClear?.call();
                   },
-                  child: const Icon(
+                  child: Icon(
                     Icons.close,
                     size: 18,
-                    color: Color(0xFF64748B),
+                    color: isDark
+                        ? AppDarkColors.textSubtitle
+                        : const Color(0xFF64748B),
                   ),
                 )
               : null,

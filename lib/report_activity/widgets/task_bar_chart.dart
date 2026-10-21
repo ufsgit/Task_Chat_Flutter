@@ -21,6 +21,13 @@ class TaskBarChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final placeholderColor = isDark ? AppDarkColors.textPlaceholder : AppColors.textPlaceholder;
+    final avgColor = isDark ? AppDarkColors.whatsappGreen : const Color(0xFF0F766E);
+    final dashedColor = isDark
+        ? AppDarkColors.whatsappGreen.withValues(alpha: 0.5)
+        : const Color(0xFF5EEAD4);
+
     return Column(
       children: [
         // Chart plotting area
@@ -39,7 +46,7 @@ class TaskBarChart extends StatelessWidget {
                     Expanded(
                       child: CustomPaint(
                         painter: _DashedLinePainter(
-                          color: const Color(0xFF5EEAD4),
+                          color: dashedColor,
                           dashWidth: 4,
                           dashSpace: 3,
                         ),
@@ -47,12 +54,12 @@ class TaskBarChart extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 6),
-                    const Text(
+                    Text(
                       'avg 14',
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFF0F766E),
+                        color: avgColor,
                       ),
                     ),
                   ],
@@ -65,14 +72,14 @@ class TaskBarChart extends StatelessWidget {
                 right: 0,
                 child: Text(
                   maxY.toInt().toString(),
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 10.5,
                     fontWeight: FontWeight.w500,
-                    color: AppColors.textPlaceholder,
+                    color: placeholderColor,
                   ),
                 ),
               ),
-              const Positioned(
+              Positioned(
                 bottom: 0,
                 right: 0,
                 child: Text(
@@ -80,7 +87,7 @@ class TaskBarChart extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 10.5,
                     fontWeight: FontWeight.w500,
-                    color: AppColors.textPlaceholder,
+                    color: placeholderColor,
                   ),
                 ),
               ),
@@ -94,7 +101,7 @@ class TaskBarChart extends StatelessWidget {
                     return Expanded(
                       child: Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 5),
-                        child: _buildStackedBar(item, chartHeight),
+                        child: _buildStackedBar(item, chartHeight, isDark),
                       ),
                     );
                   }).toList(),
@@ -120,24 +127,30 @@ class TaskBarChart extends StatelessWidget {
                             vertical: 1.5,
                           ),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFDCFCE7),
+                            color: isDark
+                                ? AppDarkColors.pillActiveBg
+                                : const Color(0xFFDCFCE7),
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
                             item.day,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w800,
-                              color: AppColors.primaryGreen,
+                              color: isDark
+                                  ? AppDarkColors.whatsappGreen
+                                  : AppColors.primaryGreen,
                             ),
                           ),
                         )
                       : Text(
                           item.day,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
-                            color: AppColors.textSubtitle,
+                            color: isDark
+                                ? AppDarkColors.textSubtitle
+                                : AppColors.textSubtitle,
                           ),
                         ),
                 ),
@@ -154,7 +167,7 @@ class TaskBarChart extends StatelessWidget {
     return totalHeight * (1.0 - ratio);
   }
 
-  Widget _buildStackedBar(DayTaskBarItem item, double totalHeight) {
+  Widget _buildStackedBar(DayTaskBarItem item, double totalHeight, bool isDark) {
     if (item.total <= 0) {
       return const SizedBox();
     }
@@ -165,8 +178,8 @@ class TaskBarChart extends StatelessWidget {
     final inProgressFlex = (item.inProgress * 1000).round();
 
     final completedColor = item.isPartial
-        ? const Color(0xFF99F6E4)
-        : AppColors.primaryGreen;
+        ? (isDark ? const Color(0xFF14532D) : const Color(0xFF99F6E4))
+        : (isDark ? AppDarkColors.whatsappGreen : AppColors.primaryGreen);
 
     final pendingColor = item.isPartial
         ? const Color(0xFFFED7AA)

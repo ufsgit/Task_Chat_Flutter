@@ -19,31 +19,41 @@ class StatusSelectorChips extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final statusList = options ?? availableStatusOptions;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Row(
       children: statusList.map((status) {
-        final isSelected =
-            selectedStatus.toLowerCase() == status.toLowerCase();
+        final isSelected = selectedStatus.toLowerCase() == status.toLowerCase();
 
         Color bgColor;
         Color textColor;
+        Color borderColor;
 
-        if (status == 'Completed') {
-          bgColor = isSelected
-              ? AppColors.whatsappGreen
-              : (options != null ? const Color(0xFFEFF6FF) : const Color(0xFFDCFCE7));
+        final unselectedBg = isDark ? AppDarkColors.surfaceCard : Colors.white;
+        final unselectedBorder = isDark
+            ? AppDarkColors.border
+            : const Color(0xFFCBD5E1);
+
+        final normalized = status.toLowerCase();
+        if (normalized == 'completed') {
+          bgColor = isSelected ? AppColors.whatsappGreen : unselectedBg;
+          textColor = isSelected
+              ? (isDark ? const Color(0xFF0B141B) : Colors.white)
+              : (isDark
+                    ? AppDarkColors.whatsappGreen
+                    : const Color(0xFF15803D));
+          borderColor = isSelected ? AppColors.whatsappGreen : unselectedBorder;
+        } else if (normalized == 'scheduled') {
+          bgColor = isSelected ? const Color(0xFFD97706) : unselectedBg;
           textColor = isSelected
               ? Colors.white
-              : (options != null ? const Color(0xFF334155) : const Color(0xFF15803D));
-        } else if (status == 'Scheduled') {
-          bgColor = isSelected ? const Color(0xFFD97706) : const Color(0xFFEFF6FF);
-          textColor = isSelected ? Colors.white : const Color(0xFF334155);
+              : (isDark ? const Color(0xFFF59E0B) : const Color(0xFFB45309));
+          borderColor = isSelected ? const Color(0xFFD97706) : unselectedBorder;
         } else {
           // Cancelled
-          bgColor = isSelected
-              ? const Color(0xFFEF4444)
-              : (options != null ? const Color(0xFFEFF6FF) : const Color(0xFFFEF2F2));
+          bgColor = isSelected ? const Color(0xFFEF4444) : unselectedBg;
           textColor = isSelected ? Colors.white : const Color(0xFFEF4444);
+          borderColor = isSelected ? const Color(0xFFEF4444) : unselectedBorder;
         }
 
         return Expanded(
@@ -58,6 +68,10 @@ class StatusSelectorChips extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: bgColor,
                   borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: borderColor,
+                    width: isSelected ? 1.0 : 1.0,
+                  ),
                 ),
                 child: Text(
                   status,

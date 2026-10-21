@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../core/theme.dart';
+import '../../core/widgets/fitmate_app_bar_title.dart';
 import '../activity_page.dart';
 import '../report_data.dart';
 import '../task_report_page.dart';
@@ -12,22 +12,17 @@ class ReportActivity extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scaffoldBg = Theme.of(context).scaffoldBackgroundColor;
+
     return Scaffold(
-      backgroundColor: AppColors.surfaceWhite,
+      backgroundColor: scaffoldBg,
       appBar: AppBar(
-        backgroundColor: AppColors.surfaceWhite,
+        backgroundColor: scaffoldBg,
         elevation: 0,
         scrolledUnderElevation: 0,
         titleSpacing: 20,
-        title: const Text(
-          'TaskChat',
-          style: TextStyle(
-            color: AppColors.brandGreen,
-            fontSize: 24,
-            fontWeight: FontWeight.w800,
-            letterSpacing: -0.5,
-          ),
-        ),
+        toolbarHeight: 68,
+        title: const FitmateAppBarTitle(),
       ),
       body: SafeArea(
         child: Padding(
