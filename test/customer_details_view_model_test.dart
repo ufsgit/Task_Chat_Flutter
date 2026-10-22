@@ -1,5 +1,10 @@
+import 'dart:convert';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:task_chat/customer_details/customer_details_model.dart';
+import 'package:task_chat/customer_details/customer_details_view.dart';
 import 'package:task_chat/customer_details/customer_details_view_model.dart';
 
 void main() {
@@ -41,6 +46,166 @@ void main() {
       vm.updateNotes('Client confirmed visit date');
       expect(notified, isTrue);
       expect(vm.customer.notes, 'Client confirmed visit date');
+    });
+
+    test('CustomerDetailsViewModel deleteCustomer sends DELETE request to /api/bookings/:id', () async {
+      final mockClient = MockClient((request) async {
+        expect(request.method, 'DELETE');
+        expect(request.url.path, '/api/bookings/101');
+        return http.Response(jsonEncode({'message': 'Booking deleted successfully'}), 200);
+      });
+
+      final vm = CustomerDetailsViewModel(
+        customer: initialCustomer,
+        client: mockClient,
+      );
+
+      final success = await vm.deleteCustomer();
+      expect(success, isTrue);
+      expect(vm.isDeleting, isFalse);
+      expect(vm.deleteError, isNull);
+    });
+
+    test('CustomerDetailsViewModel deleteCustomer handles error gracefully', () async {
+      final mockClient = MockClient((request) async {
+        expect(request.method, 'DELETE');
+        return http.Response(jsonEncode({'error': 'Booking not found or already deleted.'}), 404);
+      });
+
+      final vm = CustomerDetailsViewModel(
+        customer: initialCustomer,
+        client: mockClient,
+      );
+
+      final success = await vm.deleteCustomer();
+      expect(success, isFalse);
+      expect(vm.isDeleting, isFalse);
+      expect(vm.deleteError, 'Booking not found or already deleted.');
+    });
+
+    testWidgets('Tapping Delete Contact opens dialog and executes deleteCustomer', (WidgetTester tester) async {
+      int deleteCalls = 0;
+      final mockClient = MockClient((request) async {
+        if (request.method == 'DELETE') {
+          deleteCalls++;
+          return http.Response(jsonEncode({'message': 'Deleted'}), 200);
+        }
+        return http.Response('Not Found', 404);
+      });
+
+      final vm = CustomerDetailsViewModel(
+        customer: initialCustomer,
+        client: mockClient,
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: CustomerDetailsView(
+            customer: initialCustomer,
+            viewModel: vm,
+          ),
+        ),
+      );
+
+      // Open more menu
+      await tester.tap(find.byIcon(Icons.more_vert));
+      await tester.pumpAndSettle();
+
+      // Tap Delete Contact
+      expect(find.text('Delete Contact'), findsOneWidget);
+      await tester.tap(find.text('Delete Contact'));
+      await tester.pumpAndSettle();
+
+      // Verify AlertDialog is visible
+      expect(find.byType(AlertDialog), findsOneWidget);
+      expect(find.text('Are you sure you want to delete Rahul Krishnan?'), findsOneWidget);
+
+      // Tap Delete button in dialog
+      await tester.tap(find.widgetWithText(TextButton, 'Delete'));
+      await tester.pumpAndSettle();
+
+      expect(deleteCalls, 1);
+    });
+
+    test('CustomerDetailsViewModel updateCustomer sends PUT request to /api/bookings/:id', () async {
+      final mockClient = MockClient((request) async {
+        expect(request.method, 'PUT');
+        expect(request.url.path, '/api/bookings/101');
+        final decoded = jsonDecode(request.body) as Map<String, dynamic>;
+        expect(decoded['name'], 'Rahul K');
+        expect(decoded['mobile'], '+91 99999 88888');
+        expect(decoded['address'], 'Kochi, Kerala');
+        expect(decoded['notes'], 'Updated notes');
+        expect(decoded['documents'], isEmpty);
+        return http.Response(jsonEncode({'message': 'Booking updated successfully'}), 200);
+      });
+
+      final vm = CustomerDetailsViewModel(
+        customer: initialCustomer,
+        client: mockClient,
+      );
+
+      final success = await vm.updateCustomer(
+        name: 'Rahul K',
+        phoneNumber: '+91 99999 88888',
+        address: 'Kochi, Kerala',
+        notes: 'Updated notes',
+      );
+
+      expect(success, isTrue);
+      expect(vm.isUpdating, isFalse);
+      expect(vm.customer.name, 'Rahul K');
+      expect(vm.customer.phoneNumber, '+91 99999 88888');
+      expect(vm.customer.addressLine1, 'Kochi, Kerala');
+      expect(vm.customer.notes, 'Updated notes');
+    });
+
+    testWidgets('Tapping Edit Contact opens edit dialog and executes updateCustomer on save', (WidgetTester tester) async {
+      int putCalls = 0;
+      final mockClient = MockClient((request) async {
+        if (request.method == 'PUT') {
+          putCalls++;
+          return http.Response(jsonEncode({'message': 'Updated'}), 200);
+        }
+        return http.Response('Not Found', 404);
+      });
+
+      final vm = CustomerDetailsViewModel(
+        customer: initialCustomer,
+        client: mockClient,
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: CustomerDetailsView(
+            customer: initialCustomer,
+            viewModel: vm,
+          ),
+        ),
+      );
+
+      // Open more menu
+      await tester.tap(find.byIcon(Icons.more_vert));
+      await tester.pumpAndSettle();
+
+      // Tap Edit Contact
+      expect(find.text('Edit Contact'), findsOneWidget);
+      await tester.tap(find.text('Edit Contact'));
+      await tester.pumpAndSettle();
+
+      // Verify AlertDialog is visible
+      expect(find.byType(AlertDialog), findsOneWidget);
+      expect(find.widgetWithText(ElevatedButton, 'Save'), findsOneWidget);
+
+      // Enter updated name
+      await tester.enterText(find.widgetWithText(TextField, 'Rahul Krishnan'), 'Rahul Updated');
+
+      // Tap Save
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Save'));
+      await tester.pumpAndSettle();
+
+      expect(putCalls, 1);
+      expect(vm.customer.name, 'Rahul Updated');
     });
   });
 }

@@ -1,0 +1,17 @@
+{
+  "profile": "balanced",
+  "git": {
+    "auto_push": false,
+    "push_branches": false,
+    "commit_docs": false
+  },
+  "workflow": {
+    "research": true,
+    "plan_check": false,
+    "verifier": true,
+    "code_review": true,
+    "tdd": false,
+    "worktrees": false,
+    "compact_content": true
+  }
+}

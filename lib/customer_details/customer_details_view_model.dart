@@ -1,11 +1,172 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import '../api/api.dart';
+import '../login_page/token_storage.dart';
 import 'customer_details_model.dart';
 
-/// ViewModel managing state, status updates, and notes for Customer Details screen.
+/// ViewModel managing state, status updates, notes, and deletion for Customer Details screen.
 class CustomerDetailsViewModel extends ChangeNotifier {
+  final http.Client _client;
+  final TokenStorage? tokenStorage;
   CustomerDetailsModel customer;
 
-  CustomerDetailsViewModel({required this.customer});
+  bool _isDeleting = false;
+  String? _deleteError;
+  bool _isUpdating = false;
+  String? _updateError;
+
+  CustomerDetailsViewModel({
+    required this.customer,
+    http.Client? client,
+    this.tokenStorage,
+  })  : _client = client ?? http.Client();
+
+  bool get isDeleting => _isDeleting;
+  String? get deleteError => _deleteError;
+  bool get isUpdating => _isUpdating;
+  String? get updateError => _updateError;
+
+  /// Deletes customer booking from backend API (`DELETE /api/bookings/:id`).
+  Future<bool> deleteCustomer() async {
+    _isDeleting = true;
+    _deleteError = null;
+    notifyListeners();
+
+    try {
+      String? token;
+      try {
+        token = await (tokenStorage ?? TokenStorage())
+            .getToken()
+            .timeout(const Duration(milliseconds: 300));
+      } catch (_) {}
+
+      final uri = Uri.parse('${ApiConfig.bookings}/${customer.id}');
+      final headers = <String, String>{
+        'Accept': 'application/json',
+        if (token != null && token.isNotEmpty)
+          'authorization':
+              token.startsWith('Bearer ') ? token : 'Bearer $token',
+      };
+
+      final response = await _client
+          .delete(uri, headers: headers)
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return true;
+      } else {
+        String msg = 'Failed to delete customer (${response.statusCode})';
+        try {
+          final decoded = jsonDecode(response.body);
+          if (decoded is Map<String, dynamic>) {
+            if (decoded['error'] != null) {
+              msg = decoded['error'].toString();
+            } else if (decoded['message'] != null) {
+              msg = decoded['message'].toString();
+            }
+          }
+        } catch (_) {}
+        _deleteError = msg;
+        return false;
+      }
+    } catch (e) {
+      _deleteError = 'Network error: $e';
+      return false;
+    } finally {
+      _isDeleting = false;
+      notifyListeners();
+    }
+  }
+
+  /// Updates customer booking on backend API (`PUT /api/bookings/:id`).
+  Future<bool> updateCustomer({
+    String? name,
+    String? phoneNumber,
+    String? address,
+    String? notes,
+    String? status,
+    List<String>? documents,
+  }) async {
+    _isUpdating = true;
+    _updateError = null;
+    notifyListeners();
+
+    try {
+      String? token;
+      try {
+        token = await (tokenStorage ?? TokenStorage())
+            .getToken()
+            .timeout(const Duration(milliseconds: 300));
+      } catch (_) {}
+
+      final uri = Uri.parse('${ApiConfig.bookings}/${customer.id}');
+      final headers = <String, String>{
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        if (token != null && token.isNotEmpty)
+          'authorization':
+              token.startsWith('Bearer ') ? token : 'Bearer $token',
+      };
+
+      final updatedName = name ?? customer.name;
+      final updatedPhone = phoneNumber ?? customer.phoneNumber;
+      final updatedAddress = address ??
+          (customer.addressLine2.isNotEmpty
+              ? '${customer.addressLine1}, ${customer.addressLine2}'
+              : customer.addressLine1);
+      final updatedNotes = notes ?? customer.notes;
+      final updatedStatus = status ?? customer.status;
+      final updatedDocs = documents ?? customer.documents;
+
+      final body = jsonEncode({
+        'name': updatedName,
+        'mobile': updatedPhone,
+        'address': updatedAddress,
+        'notes': updatedNotes,
+        'status': updatedStatus.toUpperCase(),
+        'documents': updatedDocs,
+      });
+
+      final response = await _client
+          .put(uri, headers: headers, body: body)
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        customer = customer.copyWith(
+          name: updatedName,
+          phoneNumber: updatedPhone,
+          addressLine1: updatedAddress,
+          addressLine2: '',
+          notes: updatedNotes,
+          status: updatedStatus,
+          documents: updatedDocs,
+        );
+        notifyListeners();
+        return true;
+      } else {
+        String msg = 'Failed to update contact (${response.statusCode})';
+        try {
+          final decoded = jsonDecode(response.body);
+          if (decoded is Map<String, dynamic>) {
+            if (decoded['error'] != null) {
+              msg = decoded['error'].toString();
+            } else if (decoded['message'] != null) {
+              msg = decoded['message'].toString();
+            }
+          }
+        } catch (_) {}
+        _updateError = msg;
+        return false;
+      }
+    } catch (e) {
+      _updateError = 'Network error: $e';
+      return false;
+    } finally {
+      _isUpdating = false;
+      notifyListeners();
+    }
+  }
 
   /// Updates the status of the customer and updates scheduling flag accordingly.
   void updateStatus(String newStatus) {

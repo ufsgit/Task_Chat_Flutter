@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:task_chat/new_booking/add_booking.dart';
+import 'package:task_chat/new_booking/add_booking_view.dart';
 import '../core/theme.dart';
 import 'today_model.dart';
 import 'today_view_model.dart';
@@ -139,9 +139,12 @@ class _TodayPageState extends State<TodayPage> {
                   color: Colors.transparent,
                   child: InkWell(
                     borderRadius: BorderRadius.circular(20),
-                    onTap: () {
-                      Navigator.of(context, rootNavigator: true)
+                    onTap: () async {
+                      await Navigator.of(context, rootNavigator: true)
                           .push(SlideUpRoute(page: const add_booking()));
+                      if (mounted) {
+                        _viewModel.fetchBookings();
+                      }
                     },
                     child: Container(
                       width: 40,
@@ -164,12 +167,15 @@ class _TodayPageState extends State<TodayPage> {
                 const SizedBox(width: 8),
                 InkWell(
                   borderRadius: BorderRadius.circular(20),
-                  onTap: () {
-                    Navigator.of(context).push(
+                  onTap: () async {
+                    await Navigator.of(context).push(
                       SlideUpRoute(
                         page: const NotificationPage(showBottomBar: false),
                       ),
                     );
+                    if (mounted) {
+                      _viewModel.fetchBookings();
+                    }
                   },
                   child: Container(
                     width: 40,
@@ -393,6 +399,7 @@ class _TodayPageState extends State<TodayPage> {
                                                   .where((s) => s.isNotEmpty)
                                                   .join(', '),
                                               notes: booking.notes,
+                                              documents: booking.documents,
                                               hasBeenScheduled: booking.status
                                                           .toLowerCase() ==
                                                       'scheduled' ||
@@ -412,7 +419,7 @@ class _TodayPageState extends State<TodayPage> {
 
                                       final updatedStatus =
                                           await Navigator.of(context).push(
-                                        SlideUpRoute(
+                                        SlideRightRoute(
                                           page: CustomerDetailsPage(
                                             customer: customer,
                                           ),
@@ -424,6 +431,9 @@ class _TodayPageState extends State<TodayPage> {
                                           item['title'] ?? '',
                                           updatedStatus,
                                         );
+                                      }
+                                      if (mounted) {
+                                        _viewModel.fetchBookings();
                                       }
                                     },
                                   );

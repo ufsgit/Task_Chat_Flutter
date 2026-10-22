@@ -1,0 +1,498 @@
+import 'package:file_picker/file_picker.dart';
+import 'package:flutter/material.dart';
+import '../core/circular_back_button.dart';
+import '../core/theme.dart';
+import 'add_booking_view_model.dart';
+import 'area_view_model.dart';
+import 'lead_data.dart';
+import 'widgets/area_selector_dropdown.dart';
+import 'widgets/lead_document_upload_card.dart';
+import 'widgets/lead_form_card.dart';
+import 'widgets/lead_labeled_row.dart';
+import 'widgets/lead_stage_selector.dart';
+
+class add_booking extends StatefulWidget {
+  final LeadFormData? initialData;
+  final List<String>? stages;
+  final ValueChanged<LeadFormData>? onSave;
+  final VoidCallback? onCancel;
+  final AreaViewModel? areaViewModel;
+  final AddBookingViewModel? viewModel;
+
+  const add_booking({
+    super.key,
+    this.initialData,
+    this.stages,
+    this.onSave,
+    this.onCancel,
+    this.areaViewModel,
+    this.viewModel,
+  });
+
+  @override
+  State<add_booking> createState() => _add_bookingState();
+}
+
+class _add_bookingState extends State<add_booking> {
+  late final TextEditingController _nameController;
+  late final TextEditingController _mobileController;
+  late final TextEditingController _addressController;
+  late final TextEditingController _notesController;
+  late final AddBookingViewModel _viewModel;
+  late List<String> _documents;
+  bool _isLocalViewModel = false;
+
+  late List<String> _stages;
+  late int _selectedStageIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    final data = widget.initialData ?? initialLeadData;
+    _nameController = TextEditingController(text: data.name);
+    _mobileController = TextEditingController(text: data.mobile);
+    _addressController = TextEditingController(text: data.address);
+    _notesController = TextEditingController(text: data.notes);
+    _documents = List<String>.from(data.documents);
+
+    _stages = widget.stages ?? defaultLeadStages;
+    final stageIdx = _stages.indexOf(data.stage);
+    _selectedStageIndex = stageIdx != -1 ? stageIdx : 0;
+
+    if (widget.viewModel != null) {
+      _viewModel = widget.viewModel!;
+      _isLocalViewModel = false;
+    } else {
+      _viewModel = AddBookingViewModel(
+        areaViewModel: widget.areaViewModel,
+      );
+      _isLocalViewModel = true;
+      _viewModel.areaViewModel.fetchAreas();
+    }
+
+    if (data.areaId != null) {
+      _viewModel.areaViewModel.selectAreaById(data.areaId);
+    }
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _mobileController.dispose();
+    _addressController.dispose();
+    _notesController.dispose();
+    if (_isLocalViewModel) {
+      _viewModel.dispose();
+    }
+    super.dispose();
+  }
+
+  Future<void> _handleSave() async {
+    final selectedStage =
+        (_selectedStageIndex >= 0 && _selectedStageIndex < _stages.length)
+        ? _stages[_selectedStageIndex]
+        : (_stages.isNotEmpty ? _stages[0] : 'NEW');
+
+    final result = LeadFormData(
+      name: _nameController.text.trim(),
+      mobile: _mobileController.text.trim(),
+      address: _addressController.text.trim(),
+      notes: _notesController.text.trim(),
+      stage: selectedStage,
+      areaId: _viewModel.areaViewModel.selectedAreaId,
+      areaName: _viewModel.areaViewModel.selectedAreaName,
+      documents: _documents,
+    );
+
+    final saveResult = await _viewModel.saveBooking(result);
+
+    if (!mounted) return;
+
+    if (saveResult.isSuccess) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Booking saved successfully!',
+            style: TextStyle(fontFamily: 'Helvetica Neue'),
+          ),
+          backgroundColor: AppColors.whatsappGreen,
+          behavior: SnackBarBehavior.floating,
+          duration: Duration(seconds: 2),
+        ),
+      );
+
+      if (widget.onSave != null) {
+        widget.onSave!(result);
+      } else {
+        Navigator.of(context).pop(result);
+      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            saveResult.errorMessage ?? 'Failed to save booking',
+            style: const TextStyle(fontFamily: 'Helvetica Neue'),
+          ),
+          backgroundColor: const Color(0xFFEF4444),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  void _handleCancel() {
+    if (widget.onCancel != null) {
+      widget.onCancel!();
+    } else {
+      Navigator.of(context).pop();
+    }
+  }
+
+  Future<void> _handlePickDocuments() async {
+    bool hasPicked = false;
+    try {
+      final files = await FilePicker.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf', 'docx', 'doc', 'png', 'jpg', 'jpeg'],
+      );
+
+      if (files.isNotEmpty) {
+        hasPicked = true;
+        setState(() {
+          for (final file in files) {
+            final name = file.name;
+            final docPath = name.startsWith('/') ? name : '/uploads/$name';
+            if (!_documents.contains(docPath)) {
+              _documents.add(docPath);
+            }
+          }
+        });
+      }
+    } catch (e) {
+      debugPrint('FilePicker not ready: $e');
+    }
+
+    if (!hasPicked && mounted) {
+      await _showManualDocumentDialog();
+    }
+  }
+
+  Future<void> _showManualDocumentDialog() async {
+    final docController = TextEditingController(text: 'site_plan.pdf');
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primaryTextColor =
+        isDark ? AppDarkColors.textPrimary : AppColors.textPrimary;
+    final secondaryTextColor =
+        isDark ? AppDarkColors.textSubtitle : AppColors.textSubtitle;
+
+    final addedDoc = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: isDark ? AppDarkColors.surfaceCard : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          'Attach Document',
+          style: TextStyle(
+            fontFamily: 'Helvetica Neue',
+            fontWeight: FontWeight.w700,
+            fontSize: 18,
+            color: primaryTextColor,
+          ),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Enter document name or URL:',
+              style: TextStyle(fontSize: 13, color: secondaryTextColor),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: docController,
+              autofocus: true,
+              style: TextStyle(color: primaryTextColor, fontSize: 14),
+              decoration: InputDecoration(
+                hintText: 'e.g. site_plan.pdf',
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              children: [
+                ActionChip(
+                  label: const Text('site_plan.pdf'),
+                  onPressed: () => docController.text = 'site_plan.pdf',
+                ),
+                ActionChip(
+                  label: const Text('floor_plan.pdf'),
+                  onPressed: () => docController.text = 'floor_plan.pdf',
+                ),
+              ],
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text('Cancel', style: TextStyle(color: secondaryTextColor)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(docController.text.trim()),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.whatsappGreen,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: const Text('Attach'),
+          ),
+        ],
+      ),
+    );
+
+    if (addedDoc != null && addedDoc.isNotEmpty) {
+      final docPath =
+          addedDoc.startsWith('/') ? addedDoc : '/uploads/$addedDoc';
+      setState(() {
+        if (!_documents.contains(docPath)) {
+          _documents.add(docPath);
+        }
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primaryTextColor = isDark
+        ? AppDarkColors.textPrimary
+        : const Color(0xFF0F172A);
+    final subtitleTextColor = isDark
+        ? AppDarkColors.textSubtitle
+        : const Color(0xFF475569);
+    final placeholderColor = isDark
+        ? AppDarkColors.textPlaceholder
+        : const Color(0xFF94A3B8);
+    final scaffoldBg = Theme.of(context).scaffoldBackgroundColor;
+
+    return Scaffold(
+      backgroundColor: scaffoldBg,
+      appBar: AppBar(
+        backgroundColor: scaffoldBg,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        leadingWidth: 58,
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 16.0),
+          child: Center(child: CircularBackButton(onBack: _handleCancel)),
+        ),
+        title: Text(
+          'New booking',
+          style: TextStyle(
+            color: primaryTextColor,
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        titleSpacing: 8,
+      ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 1. Name Card
+              LeadFormCard(
+                child: TextField(
+                  controller: _nameController,
+                  style: TextStyle(
+                    fontSize: 15.5,
+                    fontWeight: FontWeight.w500,
+                    color: primaryTextColor,
+                  ),
+                  decoration: InputDecoration(
+                    hintText: 'Full Name',
+                    hintStyle: TextStyle(color: placeholderColor),
+                    border: InputBorder.none,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
+
+              // 2. Mobile Card
+              LeadFormCard(
+                child: LeadLabeledRow(
+                  label: 'Mobile',
+                  controller: _mobileController,
+                  hintText: 'Mobile number',
+                  keyboardType: TextInputType.phone,
+                ),
+              ),
+              const SizedBox(height: 14),
+
+              // 3. Address & Notes Card
+              LeadFormCard(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16.0,
+                  vertical: 12.0,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    LeadLabeledRow(
+                      label: 'Address',
+                      controller: _addressController,
+                      hintText: 'Address',
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 12.0),
+                      child: Divider(
+                        height: 1,
+                        thickness: 0.6,
+                        color: isDark
+                            ? AppDarkColors.divider
+                            : const Color(0xFFF1F5F9),
+                      ),
+                    ),
+                    Text(
+                      'Notes',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: primaryTextColor,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _notesController,
+                      maxLines: 4,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: isDark
+                            ? AppDarkColors.textPrimary
+                            : const Color(0xFF334155),
+                      ),
+                      decoration: InputDecoration(
+                        hintText:
+                            'Add client requirements, background, or preferred contact time...',
+                        hintStyle: TextStyle(
+                          color: placeholderColor,
+                          fontSize: 13.5,
+                          height: 1.4,
+                        ),
+                        border: InputBorder.none,
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 14),
+
+              // 4. Area Selector Card
+              AreaSelectorDropdown(viewModel: _viewModel.areaViewModel),
+              const SizedBox(height: 14),
+
+              // 5. Attach Documents Card
+              LeadDocumentUploadCard(
+                documents: _documents,
+                onTap: _handlePickDocuments,
+                onRemove: (doc) {
+                  setState(() {
+                    _documents.remove(doc);
+                  });
+                },
+              ),
+              const SizedBox(height: 22),
+
+              // 6. Lead Stage Selector
+              LeadStageSelector(
+                stages: _stages,
+                selectedIndex: _selectedStageIndex,
+                onStageSelected: (index) {
+                  setState(() {
+                    _selectedStageIndex = index;
+                  });
+                },
+              ),
+              const SizedBox(height: 28),
+
+              // 5. Save Lead Button
+              ListenableBuilder(
+                listenable: _viewModel,
+                builder: (context, _) {
+                  return SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: ElevatedButton(
+                      onPressed: _viewModel.isSubmitting ? null : _handleSave,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.whatsappGreen,
+                        foregroundColor: isDark
+                            ? const Color(0xFF0B141B)
+                            : Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                      child: _viewModel.isSubmitting
+                          ? const SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.5,
+                                valueColor:
+                                    AlwaysStoppedAnimation<Color>(Colors.white),
+                              ),
+                            )
+                          : const Text(
+                              'Save',
+                              style: TextStyle(
+                                fontFamily: 'Helvetica Neue',
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 14),
+
+              // 6. Cancel Button (pure text with no background)
+              Center(
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: _handleCancel,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16.0,
+                      vertical: 8.0,
+                    ),
+                    child: Text(
+                      'Cancel',
+                      style: TextStyle(
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.w600,
+                        color: subtitleTextColor,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}

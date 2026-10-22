@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../api/api.dart';
 import '../core/theme.dart';
+import '../login_page/token_storage.dart';
 import 'today_model.dart';
 
 /// Centralized in-memory list for Today chat items, populated dynamically from the API.
@@ -56,8 +57,10 @@ void updateChatItemStatus({
 /// ViewModel managing state, search, filters, and API data fetching for TodayPage.
 class TodayViewModel extends ChangeNotifier {
   final http.Client _client;
+  final TokenStorage? tokenStorage;
 
-  TodayViewModel({http.Client? client}) : _client = client ?? http.Client();
+  TodayViewModel({http.Client? client, this.tokenStorage})
+      : _client = client ?? http.Client();
 
   bool _isLoading = false;
   String? _errorMessage;
@@ -130,23 +133,29 @@ class TodayViewModel extends ChangeNotifier {
     _errorMessage = null;
     notifyListeners();
 
+    String? token;
     try {
-      // First try ApiConfig.booking, fallback to ApiConfig.bookings on 404
+      token = await (tokenStorage ?? TokenStorage())
+          .getToken()
+          .timeout(const Duration(milliseconds: 300));
+    } catch (_) {
+      // Ignored in test environment if platform channel is absent or times out
+    }
+
+    try {
+      final headers = <String, String>{
+        'Accept': 'application/json',
+        if (token != null && token.isNotEmpty)
+          'authorization':
+              token.startsWith('Bearer ') ? token : 'Bearer $token',
+      };
+
       var response = await _client
           .get(
-            Uri.parse(ApiConfig.booking),
-            headers: {'Accept': 'application/json'},
+            Uri.parse(ApiConfig.bookings),
+            headers: headers,
           )
           .timeout(const Duration(seconds: 10));
-
-      if (response.statusCode == 404) {
-        response = await _client
-            .get(
-              Uri.parse(ApiConfig.bookings),
-              headers: {'Accept': 'application/json'},
-            )
-            .timeout(const Duration(seconds: 10));
-      }
 
       if (response.statusCode >= 200 && response.statusCode < 300) {
         final decoded = json.decode(response.body);

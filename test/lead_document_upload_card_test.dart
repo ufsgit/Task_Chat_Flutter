@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:task_chat/new_booking/add_booking.dart';
+import 'package:task_chat/new_booking/add_booking_view.dart';
 import 'package:task_chat/new_booking/widgets/lead_document_upload_card.dart';
 
 void main() {

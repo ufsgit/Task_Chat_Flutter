@@ -71,7 +71,8 @@ void main() {
 
     // Tap on Settings nav item icon
     await tester.tap(find.byIcon(Icons.settings));
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
 
     // Verify SettingsPage content is visible
     expect(find.text('RM'), findsOneWidget);

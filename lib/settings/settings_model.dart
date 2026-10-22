@@ -47,6 +47,20 @@ class UserProfileData {
     }
   }
 
+  /// Loads the persisted UserModel from SharedPreferences.
+  static Future<UserModel?> loadUser() async {
+    try {
+      final prefs = await SharedPreferences.getInstance()
+          .timeout(const Duration(seconds: 1));
+      final raw = prefs.getString(_prefKey);
+      if (raw == null || raw.isEmpty) return null;
+      final map = jsonDecode(raw) as Map<String, dynamic>;
+      return UserModel.fromJson(map);
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// Clears stored user session from SharedPreferences on logout.
   static Future<void> clear() async {
     try {

@@ -89,7 +89,7 @@ void main() {
       expect(result.isSuperAdmin, isTrue); // roleId 2 is Coordinator
     });
 
-    test('failed login sets error message', () async {
+    test('failed login on 401 sets error message to Invalid login', () async {
       final mockClient = MockClient((request) async {
         return http.Response(
           jsonEncode({'error': 'Invalid credentials or user is not authorized for mobile login (role 2 or 3).'}),
@@ -103,6 +103,19 @@ void main() {
 
       expect(result.isSuccess, isFalse);
       expect(result.errorMessage, 'Invalid login');
+    });
+
+    test('network exception returns Connection failed message', () async {
+      final mockClient = MockClient((request) async {
+        throw http.ClientException('Network unreachable');
+      });
+
+      final vm = LoginViewModel(client: mockClient);
+      final result = await vm.login(username: 'test', password: 'password');
+
+      expect(result.isSuccess, isFalse);
+      expect(result.errorMessage, 'Connection failed. Please check your network.');
+      expect(vm.errorMessage, 'Connection failed. Please check your network.');
     });
   });
 }

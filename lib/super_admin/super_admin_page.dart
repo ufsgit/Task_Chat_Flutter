@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:task_chat/new_booking/add_booking.dart';
+import 'package:task_chat/new_booking/add_booking_view.dart';
 import '../core/slide_up_route.dart';
 import '../core/theme.dart';
 import '../core/widgets/fitmate_app_bar_title.dart';

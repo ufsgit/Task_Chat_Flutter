@@ -401,8 +401,9 @@ class _SettingsViewState extends State<SettingsView> {
               ),
             ),
             ElevatedButton(
-              onPressed: () {
-                _viewModel.logout();
+              onPressed: () async {
+                await _viewModel.logout();
+                if (!context.mounted) return;
                 Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
                   MaterialPageRoute(builder: (_) => const LoginPage()),
                   (route) => false,

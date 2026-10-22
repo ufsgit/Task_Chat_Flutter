@@ -1,13 +1,24 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../bottom_navigator/bottom_navigator.dart';
 import '../core/theme.dart';
 import '../core/widgets/fitmate_logo.dart';
+import '../login_page/login_model.dart';
 import '../login_page/login_view.dart';
+import '../login_page/token_storage.dart';
+import '../settings/settings_model.dart';
 
-/// 2-second splash screen displaying the Fitmate brand logo and typography
-/// before navigating smoothly to the LoginPage.
+/// 1-second splash screen displaying the Fitmate brand logo and typography
+/// before verifying the auth token and navigating to HomePage or LoginPage.
 class SplashScreen extends StatefulWidget {
-  const SplashScreen({super.key});
+  final TokenStorage? tokenStorage;
+  final Widget Function(BuildContext, UserModel?)? homeBuilder;
+
+  const SplashScreen({
+    super.key,
+    this.tokenStorage,
+    this.homeBuilder,
+  });
 
   @override
   State<SplashScreen> createState() => _SplashScreenState();
@@ -40,18 +51,44 @@ class _SplashScreenState extends State<SplashScreen>
 
     _animController.forward();
 
-    // 2-second splash screen delay
-    _timer = Timer(const Duration(seconds: 1), _navigateToLogin);
+    // 1-second splash screen delay before checking session
+    _timer = Timer(const Duration(seconds: 1), _checkAuthAndNavigate);
   }
 
-  void _navigateToLogin() {
+  Future<void> _checkAuthAndNavigate() async {
     if (!mounted) return;
 
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(
-        builder: (_) => const LoginPage(),
-      ),
-    );
+    final tokenStorage = widget.tokenStorage ?? TokenStorage();
+    String? token;
+    try {
+      token = await tokenStorage.getToken();
+    } catch (_) {
+      token = null;
+    }
+
+    if (!mounted) return;
+
+    if (token != null && token.isNotEmpty) {
+      final user = await UserProfileData.loadUser();
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (ctx) =>
+              widget.homeBuilder != null
+                  ? widget.homeBuilder!(ctx, user)
+                  : HomePage(
+                      isCoordinator: user?.isCoordinator ?? false,
+                      user: user,
+                    ),
+        ),
+      );
+    } else {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (_) => const LoginPage(),
+        ),
+      );
+    }
   }
 
   @override

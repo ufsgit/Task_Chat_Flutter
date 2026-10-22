@@ -9,12 +9,17 @@ import '../settings/settings_model.dart';
 import '../settings/settings_view.dart';
 import '../super_admin/super_admin_page.dart';
 import '../today/today_view.dart';
+import '../today/today_view_model.dart';
+
+/// Backwards-compatible alias for navigation routing.
+typedef HomePage = BottomNavigator;
 
 /// Main navigation shell holding the pages and floating bottom navigation bar.
 class BottomNavigator extends StatefulWidget {
   final int initialIndex;
   final bool isCoordinator;
   final UserModel? user;
+  final TodayViewModel? todayViewModel;
 
   const BottomNavigator({
     super.key,
@@ -22,6 +27,7 @@ class BottomNavigator extends StatefulWidget {
     bool? isCoordinator,
     bool? isSuperAdmin,
     this.user,
+    this.todayViewModel,
   }) : isCoordinator = isCoordinator ?? isSuperAdmin ?? false;
 
   bool get isSuperAdmin => isCoordinator;
@@ -33,23 +39,46 @@ class BottomNavigator extends StatefulWidget {
 class _BottomNavigatorState extends State<BottomNavigator> {
   late int _selectedIndex;
   late final List<Widget> _pages;
+  late final TodayViewModel _todayViewModel;
+  bool _isLocalTodayViewModel = false;
 
   @override
   void initState() {
     super.initState();
     _selectedIndex = widget.initialIndex;
+    if (widget.todayViewModel != null) {
+      _todayViewModel = widget.todayViewModel!;
+      _isLocalTodayViewModel = false;
+    } else {
+      _todayViewModel = TodayViewModel();
+      _isLocalTodayViewModel = true;
+    }
+
     final profile = widget.user != null
         ? UserProfileData.fromUserModel(widget.user!)
         : null;
     _pages = [
-      widget.isCoordinator ? const CoordinatorPage() : const TodayPage(),
+      widget.isCoordinator
+          ? const CoordinatorPage()
+          : TodayPage(viewModel: _todayViewModel),
       DashboardPage(onBack: () => _onItemTapped(0)),
       const ReportActivity(),
       SettingsPage(profile: profile),
     ];
   }
 
+  @override
+  void dispose() {
+    if (_isLocalTodayViewModel) {
+      _todayViewModel.dispose();
+    }
+    super.dispose();
+  }
+
   void _onItemTapped(int index) {
+    if (index == 0 && !widget.isCoordinator) {
+      _todayViewModel.fetchBookings();
+    }
     setState(() {
       _selectedIndex = index;
     });

@@ -8,14 +8,16 @@ void main() {
     await tester.pumpWidget(
       const MaterialApp(
         home: Scaffold(
-          body: CustomerDocumentsCard(),
+          body: CustomerDocumentsCard(
+            documents: ['/uploads/site_plan.pdf'],
+          ),
         ),
       ),
     );
 
     expect(find.text('Documents'), findsOneWidget);
     expect(find.text('Upload'), findsOneWidget);
-    expect(find.text('Door_Design_Specs...'), findsOneWidget);
+    expect(find.text('site_plan.pdf'), findsOneWidget);
     expect(find.text('2.4 MB • Updated yesterday'), findsOneWidget);
     expect(find.text('View'), findsOneWidget);
     expect(find.byIcon(Icons.description_outlined), findsOneWidget);

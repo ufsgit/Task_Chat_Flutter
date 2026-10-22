@@ -65,6 +65,213 @@ class _CustomerDetailsViewState extends State<CustomerDetailsView> {
     }
   }
 
+  Future<void> _handleDeleteContact() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text(
+          'Delete Contact',
+          style: TextStyle(
+            fontFamily: 'Helvetica Neue',
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        content: Text(
+          'Are you sure you want to delete ${_viewModel.customer.name}?',
+          style: const TextStyle(fontFamily: 'Helvetica Neue'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(fontFamily: 'Helvetica Neue'),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: TextButton.styleFrom(
+              foregroundColor: const Color(0xFFEF4444),
+            ),
+            child: const Text(
+              'Delete',
+              style: TextStyle(
+                fontFamily: 'Helvetica Neue',
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      final success = await _viewModel.deleteCustomer();
+      if (!mounted) return;
+
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Contact deleted successfully'),
+            backgroundColor: AppColors.whatsappGreen,
+          ),
+        );
+        Navigator.of(context).pop('DELETED');
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(_viewModel.deleteError ?? 'Failed to delete contact'),
+            backgroundColor: const Color(0xFFEF4444),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _handleEditContact() async {
+    final nameController = TextEditingController(
+      text: _viewModel.customer.name,
+    );
+    final phoneController = TextEditingController(
+      text: _viewModel.customer.phoneNumber,
+    );
+    final initialAddress = _viewModel.customer.addressLine2.isNotEmpty
+        ? '${_viewModel.customer.addressLine1}, ${_viewModel.customer.addressLine2}'
+        : _viewModel.customer.addressLine1;
+    final addressController = TextEditingController(text: initialAddress);
+    final notesController = TextEditingController(
+      text: _viewModel.customer.notes,
+    );
+
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primaryTextColor = isDark
+        ? AppDarkColors.textPrimary
+        : AppColors.textPrimary;
+    final secondaryTextColor = isDark
+        ? AppDarkColors.textSecondary
+        : AppColors.textSecondary;
+    final cardBg = isDark ? AppDarkColors.surfaceCard : Colors.white;
+
+    final updated = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: cardBg,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          'Edit Contact',
+          style: TextStyle(
+            fontFamily: 'Helvetica Neue',
+            fontWeight: FontWeight.w700,
+            fontSize: 18,
+            color: primaryTextColor,
+          ),
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameController,
+                style: TextStyle(color: primaryTextColor),
+                decoration: const InputDecoration(
+                  labelText: 'Name',
+                  hintText: 'Customer Name',
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: phoneController,
+                keyboardType: TextInputType.phone,
+                style: TextStyle(color: primaryTextColor),
+                decoration: const InputDecoration(
+                  labelText: 'Phone',
+                  hintText: 'Phone Number',
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: addressController,
+                maxLines: 2,
+                style: TextStyle(color: primaryTextColor),
+                decoration: const InputDecoration(
+                  labelText: 'Address',
+                  hintText: 'Address',
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: notesController,
+                maxLines: 2,
+                style: TextStyle(color: primaryTextColor),
+                decoration: const InputDecoration(
+                  labelText: 'Notes',
+                  hintText: 'Notes',
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(
+              'Cancel',
+              style: TextStyle(
+                fontFamily: 'Helvetica Neue',
+                color: secondaryTextColor,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.whatsappGreen,
+              foregroundColor: Colors.white,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: const Text(
+              'Save',
+              style: TextStyle(
+                fontFamily: 'Helvetica Neue',
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (updated == true && mounted) {
+      final success = await _viewModel.updateCustomer(
+        name: nameController.text.trim(),
+        phoneNumber: phoneController.text.trim(),
+        address: addressController.text.trim(),
+        notes: notesController.text.trim(),
+      );
+
+      if (!mounted) return;
+
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Contact updated successfully'),
+            backgroundColor: AppColors.whatsappGreen,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(_viewModel.updateError ?? 'Failed to update contact'),
+            backgroundColor: const Color(0xFFEF4444),
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -122,18 +329,24 @@ class _CustomerDetailsViewState extends State<CustomerDetailsView> {
                   size: 22,
                 ),
                 onSelected: (value) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Action: $value'),
-                      duration: const Duration(seconds: 1),
-                    ),
-                  );
+                  if (value == 'Delete') {
+                    _handleDeleteContact();
+                  } else if (value == 'Edit' || value == 'Edit Contact') {
+                    _handleEditContact();
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Action: $value'),
+                        duration: const Duration(seconds: 1),
+                      ),
+                    );
+                  }
                 },
                 itemBuilder: (context) => [
                   PopupMenuItem(
                     value: 'Edit',
                     child: Text(
-                      'Edit Info',
+                      'Edit Contact',
                       style: TextStyle(
                         fontFamily: 'Helvetica Neue',
                         color: primaryTextColor,
@@ -161,31 +374,46 @@ class _CustomerDetailsViewState extends State<CustomerDetailsView> {
             ),
           ),
           body: SafeArea(
-            child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // 1. Customer Name & Inquiry Header Card
-                  CustomerHeaderCard(customer: customer),
+            child: Stack(
+              children: [
+                SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 16,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // 1. Customer Name & Inquiry Header Card
+                      CustomerHeaderCard(customer: customer),
 
-                  const SizedBox(height: 16),
+                      const SizedBox(height: 16),
 
-                  // 2. Contact Phone, Actions, Address & Notes Card
-                  ContactActionsCard(customer: customer),
+                      // 2. Contact Phone, Actions, Address & Notes Card
+                      ContactActionsCard(customer: customer),
 
-                  const SizedBox(height: 16),
+                      const SizedBox(height: 16),
 
-                  // 3. Attached Documents Card
-                  const CustomerDocumentsCard(),
+                      // 3. Attached Documents Card
+                      CustomerDocumentsCard(documents: customer.documents),
 
-                  const SizedBox(height: 24),
+                      const SizedBox(height: 24),
 
-                  // 4. Full-width Update Status Button opens the Update Status Page
-                  UpdateStatusButton(onTap: _openUpdateStatusPage),
-                ],
-              ),
+                      // 4. Full-width Update Status Button opens the Update Status Page
+                      UpdateStatusButton(onTap: _openUpdateStatusPage),
+                    ],
+                  ),
+                ),
+                if (_viewModel.isDeleting)
+                  Container(
+                    color: Colors.black.withValues(alpha: 0.35),
+                    alignment: Alignment.center,
+                    child: const CircularProgressIndicator(
+                      color: AppColors.whatsappGreen,
+                    ),
+                  ),
+              ],
             ),
           ),
         );

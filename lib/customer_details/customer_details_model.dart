@@ -10,6 +10,7 @@ class CustomerDetailsModel {
   final String addressLine2;
   final String notes;
   final bool hasBeenScheduled;
+  final List<String> documents;
 
   const CustomerDetailsModel({
     required this.id,
@@ -21,6 +22,7 @@ class CustomerDetailsModel {
     required this.addressLine2,
     this.notes = '',
     this.hasBeenScheduled = false,
+    this.documents = const [],
   });
 
   CustomerDetailsModel copyWith({
@@ -33,6 +35,7 @@ class CustomerDetailsModel {
     String? addressLine2,
     String? notes,
     bool? hasBeenScheduled,
+    List<String>? documents,
   }) {
     return CustomerDetailsModel(
       id: id ?? this.id,
@@ -44,6 +47,7 @@ class CustomerDetailsModel {
       addressLine2: addressLine2 ?? this.addressLine2,
       notes: notes ?? this.notes,
       hasBeenScheduled: hasBeenScheduled ?? this.hasBeenScheduled,
+      documents: documents ?? this.documents,
     );
   }
 
@@ -53,6 +57,7 @@ class CustomerDetailsModel {
     String? location,
     String? tagText,
     String? id,
+    List<String>? documents,
   }) {
     final resolvedStatus =
         (tagText != null && tagText.isNotEmpty) ? tagText : 'New';
@@ -73,6 +78,7 @@ class CustomerDetailsModel {
       addressLine2: 'Springfield, OR 97477',
       notes: '',
       hasBeenScheduled: isScheduledOrCompleted,
+      documents: documents ?? const [],
     );
   }
 }

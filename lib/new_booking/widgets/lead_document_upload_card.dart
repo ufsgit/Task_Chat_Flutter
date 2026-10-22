@@ -3,11 +3,18 @@ import '../../core/theme.dart';
 import 'lead_form_card.dart';
 
 /// Reusable UI widget for the document upload option in New Booking.
-/// Provides a dashed upload area with file format guidance and size limit badge.
+/// Provides a list of attached documents and a dashed upload area with file format guidance.
 class LeadDocumentUploadCard extends StatelessWidget {
+  final List<String> documents;
   final VoidCallback? onTap;
+  final ValueChanged<String>? onRemove;
 
-  const LeadDocumentUploadCard({super.key, this.onTap});
+  const LeadDocumentUploadCard({
+    super.key,
+    this.documents = const [],
+    this.onTap,
+    this.onRemove,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -36,7 +43,7 @@ class LeadDocumentUploadCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header row with "Attach Documents" and "Max 10MB" badge
+          // Header row with "Attach Documents" and count or "Max 10MB" badge
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.center,
@@ -70,6 +77,80 @@ class LeadDocumentUploadCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 14),
+
+          // Attached documents list
+          if (documents.isNotEmpty) ...[
+            ...documents.map((doc) {
+              final fileName = doc.split('/').last;
+              return Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: uploadBoxBg,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: isDark ? AppDarkColors.border : const Color(0xFFE2E8F0),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEF4444).withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Center(
+                        child: Icon(
+                          Icons.picture_as_pdf_outlined,
+                          color: Color(0xFFEF4444),
+                          size: 18,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            fileName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: primaryTextColor,
+                            ),
+                          ),
+                          Text(
+                            doc,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: subtitleColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (onRemove != null)
+                      IconButton(
+                        icon: const Icon(Icons.close, size: 18),
+                        color: subtitleColor,
+                        splashRadius: 18,
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                        onPressed: () => onRemove!(doc),
+                      ),
+                  ],
+                ),
+              );
+            }),
+            const SizedBox(height: 4),
+          ],
 
           // Dotted upload drop/tap zone
           Material(

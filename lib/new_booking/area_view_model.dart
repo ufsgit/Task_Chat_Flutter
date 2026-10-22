@@ -1,0 +1,177 @@
+import 'dart:convert';
+import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
+import 'package:task_chat/login_page/token_storage.dart';
+import '../api/api.dart';
+import 'area_model.dart';
+
+/// ViewModel managing state, API fetching, and selection for area dropdowns.
+class AreaViewModel extends ChangeNotifier {
+  final http.Client _client;
+
+  bool _isLoading = false;
+  String? _errorMessage;
+  List<AreaItem> _areas = [];
+  AreaItem? _selectedArea;
+  String _type;
+  String _search;
+  int _page;
+  int _limit;
+
+  AreaViewModel({
+    http.Client? client,
+    String defaultType = 'area',
+    String defaultSearch = '',
+    int defaultPage = 1,
+    int defaultLimit = 20,
+    AreaItem? initialArea,
+  }) : _client = client ?? http.Client(),
+       _type = defaultType,
+       _search = defaultSearch,
+       _page = defaultPage,
+       _limit = defaultLimit,
+       _selectedArea = initialArea;
+
+  bool get isLoading => _isLoading;
+  String? get errorMessage => _errorMessage;
+  List<AreaItem> get areas => _areas;
+  AreaItem? get selectedArea => _selectedArea;
+  int? get selectedAreaId => _selectedArea?.id;
+  String? get selectedAreaName => _selectedArea?.name;
+  String get type => _type;
+  String get search => _search;
+  int get page => _page;
+  int get limit => _limit;
+
+  /// Fetches dropdown items from API with type, search, page, and limit.
+  /// (Does not touch parentId as specified).
+  Future<void> fetchAreas({
+    String? type,
+    String? search,
+    int? page,
+    int? limit,
+  }) async {
+    final token = await TokenStorage().getToken();
+    final activeType = type ?? _type;
+    _type = activeType;
+    if (search != null) _search = search;
+    if (page != null) _page = page;
+    if (limit != null) _limit = limit;
+
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      Uri uri = Uri.parse(ApiConfig.area_listing);
+      final Map<String, String> queryParams = Map<String, String>.from(
+        uri.queryParameters,
+      );
+
+      // Add modified parameters: type, search, page, limit (do NOT touch parentId)
+      queryParams['type'] = _type;
+      queryParams['page'] = _page.toString();
+      queryParams['limit'] = _limit.toString();
+
+      if (_search.trim().isNotEmpty) {
+        queryParams['search'] = _search.trim();
+      } else {
+        queryParams.remove('search');
+      }
+
+      uri = uri.replace(queryParameters: queryParams);
+
+      final headers = <String, String>{
+        'Accept': 'application/json',
+        if (token != null && token.isNotEmpty)
+          'authorization': token.startsWith('Bearer ')
+              ? token
+              : 'Bearer $token',
+      };
+
+      final response = await _client
+          .get(uri, headers: headers)
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final decoded = jsonDecode(response.body);
+        if (decoded is Map<String, dynamic>) {
+          final parsed = AreaDropdownResponse.fromJson(decoded);
+          _areas = parsed.data;
+          if (parsed.type.isNotEmpty) {
+            _type = parsed.type;
+          }
+
+          if (_selectedArea != null) {
+            final matchIndex = _areas.indexWhere(
+              (a) => a.id == _selectedArea!.id,
+            );
+            if (matchIndex != -1) {
+              _selectedArea = _areas[matchIndex];
+            }
+          }
+        } else {
+          _errorMessage = 'Invalid response format';
+        }
+      } else {
+        _errorMessage = 'Failed to load areas (${response.statusCode})';
+      }
+    } catch (e) {
+      _errorMessage = 'Network error: $e';
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  /// Sets search query and re-fetches from page 1.
+  void setSearch(String query) {
+    if (_search != query) {
+      _search = query;
+      _page = 1;
+      fetchAreas(search: query, page: 1);
+    }
+  }
+
+  /// Sets page number and re-fetches.
+  void setPage(int newPage) {
+    if (_page != newPage && newPage > 0) {
+      _page = newPage;
+      fetchAreas(page: newPage);
+    }
+  }
+
+  /// Sets page limit and re-fetches from page 1.
+  void setLimit(int newLimit) {
+    if (_limit != newLimit && newLimit > 0) {
+      _limit = newLimit;
+      _page = 1;
+      fetchAreas(limit: newLimit, page: 1);
+    }
+  }
+
+  /// Sets the currently selected area.
+  void selectArea(AreaItem? area) {
+    if (_selectedArea != area) {
+      _selectedArea = area;
+      notifyListeners();
+    }
+  }
+
+  /// Selects an area by its ID.
+  void selectAreaById(int? id) {
+    if (id == null) {
+      selectArea(null);
+      return;
+    }
+    final match = _areas.where((a) => a.id == id).firstOrNull;
+    if (match != null) {
+      selectArea(match);
+    }
+  }
+
+  /// Clears the current area selection.
+  void clearSelection() {
+    selectArea(null);
+  }
+}

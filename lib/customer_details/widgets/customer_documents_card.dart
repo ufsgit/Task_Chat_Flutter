@@ -3,11 +3,13 @@ import '../../core/theme.dart';
 
 /// Documents section card displaying attached files for the customer.
 class CustomerDocumentsCard extends StatelessWidget {
+  final List<String> documents;
   final VoidCallback? onUpload;
-  final VoidCallback? onView;
+  final ValueChanged<String>? onView;
 
   const CustomerDocumentsCard({
     super.key,
+    this.documents = const [],
     this.onUpload,
     this.onView,
   });
@@ -87,120 +89,142 @@ class CustomerDocumentsCard extends StatelessWidget {
           ),
           const SizedBox(height: 12),
 
-          // Document item card
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: isDark
-                  ? AppDarkColors.surfaceSecondary
-                  : const Color(0xFFF8FAFC),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                color: isDark
-                    ? AppDarkColors.border
-                    : const Color(0xFFF1F5F9),
+          if (documents.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8.0),
+              child: Text(
+                'No documents attached',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w400,
+                  color: subtitleText,
+                ),
               ),
-            ),
-            child: Row(
-              children: [
-                // File icon thumbnail
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: isDark
-                        ? const Color(0xFF38161A)
-                        : const Color(0xFFFEF2F2),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: isDark
-                          ? const Color(0xFF451A1D)
-                          : const Color(0xFFFEE2E2),
-                    ),
-                  ),
-                  child: const Center(
-                    child: Icon(
-                      Icons.description_outlined,
-                      color: Color(0xFFEF4444),
-                      size: 20,
-                    ),
-                  ),
+            )
+          else
+            ...documents.map((doc) {
+            final fileName = doc.split('/').last.isNotEmpty
+                ? doc.split('/').last
+                : doc;
+            return Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: isDark
+                    ? AppDarkColors.surfaceSecondary
+                    : const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: isDark
+                      ? AppDarkColors.border
+                      : const Color(0xFFF1F5F9),
                 ),
-                const SizedBox(width: 12),
-
-                // File name & size/meta
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Door Design Specs',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 13.5,
-                          fontWeight: FontWeight.w700,
-                          color: primaryText,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        '2.4 MB • Updated yesterday',
-                        style: TextStyle(
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.w400,
-                          color: subtitleText,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 8),
-
-                // View button
-                InkWell(
-                  onTap: onView ?? () {},
-                  borderRadius: BorderRadius.circular(8),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 5,
-                    ),
+              ),
+              child: Row(
+                children: [
+                  // File icon thumbnail
+                  Container(
+                    width: 40,
+                    height: 40,
                     decoration: BoxDecoration(
                       color: isDark
-                          ? const Color(0xFF0F3822)
-                          : const Color(0xFFECFDF5),
-                      borderRadius: BorderRadius.circular(8),
+                          ? const Color(0xFF38161A)
+                          : const Color(0xFFFEF2F2),
+                      borderRadius: BorderRadius.circular(10),
                       border: Border.all(
                         color: isDark
-                            ? const Color(0xFF166534)
-                            : const Color(0xFFA7F3D0),
+                            ? const Color(0xFF451A1D)
+                            : const Color(0xFFFEE2E2),
                       ),
                     ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
+                    child: const Center(
+                      child: Icon(
+                        Icons.description_outlined,
+                        color: Color(0xFFEF4444),
+                        size: 20,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+
+                  // File name & size/meta
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(
-                          Icons.visibility_outlined,
-                          size: 14,
-                          color: greenColor,
-                        ),
-                        const SizedBox(width: 4),
                         Text(
-                          'View',
+                          fileName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: greenColor,
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w700,
+                            color: primaryText,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '2.4 MB • Updated yesterday',
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w400,
+                            color: subtitleText,
                           ),
                         ),
                       ],
                     ),
                   ),
-                ),
-              ],
-            ),
-          ),
+                  const SizedBox(width: 8),
+
+                  // View button
+                  InkWell(
+                    onTap: () {
+                      if (onView != null) {
+                        onView!(doc);
+                      }
+                    },
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 5,
+                      ),
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? const Color(0xFF0F3822)
+                            : const Color(0xFFECFDF5),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: isDark
+                              ? const Color(0xFF166534)
+                              : const Color(0xFFA7F3D0),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.visibility_outlined,
+                            size: 14,
+                            color: greenColor,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'View',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: greenColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
         ],
       ),
     );

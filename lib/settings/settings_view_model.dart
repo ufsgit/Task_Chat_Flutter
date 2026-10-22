@@ -1,13 +1,18 @@
 import 'package:flutter/foundation.dart';
+import '../login_page/token_storage.dart';
 import 'settings_model.dart';
 
 /// ViewModel managing settings business logic, user profile state, and logout actions.
 class SettingsViewModel extends ChangeNotifier {
+  final TokenStorage _tokenStorage;
   UserProfileData? _profile;
   bool _isLoading = false;
 
-  SettingsViewModel({UserProfileData? initialProfile})
-      : _profile = initialProfile;
+  SettingsViewModel({
+    UserProfileData? initialProfile,
+    TokenStorage? tokenStorage,
+  })  : _profile = initialProfile,
+        _tokenStorage = tokenStorage ?? TokenStorage();
 
   UserProfileData? get profile => _profile;
   bool get isLoading => _isLoading;
@@ -42,12 +47,13 @@ class SettingsViewModel extends ChangeNotifier {
     }
   }
 
-  /// Clears stored user session from SharedPreferences on logout.
+  /// Clears stored user session from SharedPreferences and deletes auth token on logout.
   Future<void> logout() async {
     _isLoading = true;
     notifyListeners();
     try {
       await UserProfileData.clear();
+      await _tokenStorage.deleteToken();
       _profile = null;
     } finally {
       _isLoading = false;

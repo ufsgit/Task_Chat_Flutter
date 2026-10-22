@@ -5,13 +5,19 @@ class LeadFormData {
   final String address;
   final String notes;
   final String stage;
+  final int? areaId;
+  final String? areaName;
+  final List<String> documents;
 
   const LeadFormData({
     this.name = '',
     this.mobile = '',
     this.address = '',
     this.notes = '',
-    this.stage = 'New booking',
+    this.stage = 'NEW',
+    this.areaId,
+    this.areaName,
+    this.documents = const [],
   });
 
   LeadFormData copyWith({
@@ -20,6 +26,9 @@ class LeadFormData {
     String? address,
     String? notes,
     String? stage,
+    int? areaId,
+    String? areaName,
+    List<String>? documents,
   }) {
     return LeadFormData(
       name: name ?? this.name,
@@ -27,6 +36,9 @@ class LeadFormData {
       address: address ?? this.address,
       notes: notes ?? this.notes,
       stage: stage ?? this.stage,
+      areaId: areaId ?? this.areaId,
+      areaName: areaName ?? this.areaName,
+      documents: documents ?? this.documents,
     );
   }
 
@@ -35,16 +47,39 @@ class LeadFormData {
     'mobile': mobile,
     'address': address,
     'notes': notes,
-    'status': stage,
+    'status': _formatStatus(stage),
+    'areaId': areaId,
+    'areaName': areaName ?? '',
+    'documents': documents,
   };
 
-  factory LeadFormData.fromJson(Map<String, dynamic> json) => LeadFormData(
-    name: json['name'] as String? ?? '',
-    mobile: json['mobile'] as String? ?? '',
-    address: json['address'] as String? ?? '',
-    notes: json['notes'] as String? ?? '',
-    stage: json['status'] as String? ?? 'New Booking',
-  );
+  static String _formatStatus(String status) {
+    final lower = status.toLowerCase().trim();
+    if (lower == 'new booking' || lower == 'new lead' || lower == 'new') {
+      return 'NEW';
+    }
+    return status.toUpperCase();
+  }
+
+  factory LeadFormData.fromJson(Map<String, dynamic> json) {
+    final rawDocs = json['documents'];
+    final docsList = rawDocs is List
+        ? rawDocs.map((e) => e.toString()).toList()
+        : <String>[];
+
+    return LeadFormData(
+      name: json['name'] as String? ?? '',
+      mobile: json['mobile'] as String? ?? '',
+      address: json['address'] as String? ?? '',
+      notes: json['notes'] as String? ?? '',
+      stage: json['status'] as String? ?? 'NEW',
+      areaId: json['areaId'] is int
+          ? json['areaId'] as int
+          : int.tryParse(json['areaId']?.toString() ?? ''),
+      areaName: json['areaName'] as String?,
+      documents: docsList,
+    );
+  }
 }
 
 /// Available pipeline stages for a lead.
@@ -59,4 +94,5 @@ const LeadFormData initialLeadData = LeadFormData(
   address: '',
   notes: '',
   stage: 'New Booking',
+  documents: [],
 );

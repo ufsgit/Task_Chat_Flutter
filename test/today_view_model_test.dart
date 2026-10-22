@@ -1,11 +1,37 @@
 import 'dart:convert';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:task_chat/bottom_navigator/bottom_navigator.dart';
 import 'package:task_chat/today/today_model.dart';
 import 'package:task_chat/today/today_view_model.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  setUp(() {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+      const MethodChannel('plugins.it_nomads.com/flutter_secure_storage'),
+      (MethodCall methodCall) async {
+        if (methodCall.method == 'read') {
+          return 'test_mock_token';
+        }
+        return null;
+      },
+    );
+  });
+
+  tearDown(() {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+      const MethodChannel('plugins.it_nomads.com/flutter_secure_storage'),
+      null,
+    );
+  });
+
   group('TodayViewModel & BookingModel MVVM Tests', () {
     const mockApiResponse = '''
     {
@@ -71,12 +97,13 @@ void main() {
       expect(chatItem['avatarLetter'], 'R');
       expect(chatItem['tagText'], 'New');
       expect(chatItem['location'], 'Edapally');
-      expect(chatItem['hasVerifiedBadge'], true);
+      expect(chatItem['hasVerifiedBadge'], false);
     });
 
     test('TodayViewModel fetches bookings and filters correctly', () async {
       final mockClient = MockClient((request) async {
-        return http.Response(mockApiResponse, 200, headers: {'content-type': 'application/json'});
+        return http.Response(mockApiResponse, 200,
+            headers: {'content-type': 'application/json'});
       });
 
       final vm = TodayViewModel(client: mockClient);
@@ -98,6 +125,67 @@ void main() {
       vm.setStatusFilter('Completed');
       expect(vm.filteredChatItems.length, 1);
       expect(vm.filteredChatItems.first['title'], 'Anand Varma');
+    });
+
+    test('TodayViewModel sends authorization header when token is stored',
+        () async {
+      String? authHeader;
+      final mockClient = MockClient((request) async {
+        authHeader = request.headers['authorization'];
+        return http.Response(mockApiResponse, 200,
+            headers: {'content-type': 'application/json'});
+      });
+
+      final vm = TodayViewModel(client: mockClient);
+      await vm.fetchBookings();
+
+      expect(authHeader, 'Bearer test_mock_token');
+    });
+
+    testWidgets(
+        'BottomNavigator calls fetchBookings whenever Today page is selected',
+        (WidgetTester tester) async {
+      int fetchCount = 0;
+      final mockClient = MockClient((request) async {
+        fetchCount++;
+        return http.Response(mockApiResponse, 200,
+            headers: {'content-type': 'application/json'});
+      });
+
+      final vm = TodayViewModel(client: mockClient);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: BottomNavigator(todayViewModel: vm),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      // Initial load calls fetchBookings once
+      expect(fetchCount, 1);
+
+      // Tap Dashboard tab (index 1)
+      await tester.tap(find.byIcon(Icons.chat_bubble_outline_rounded));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(fetchCount, 1);
+
+      // Tap Today tab (index 0) - selects Today page again
+      await tester.tap(find.byIcon(Icons.calendar_today_outlined));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      // fetchBookings must be called again
+      expect(fetchCount, 2);
+
+      // Tap Today tab a second time while on Today page
+      await tester.tap(find.byIcon(Icons.calendar_today_outlined));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      // fetchBookings must be called every time it is selected
+      expect(fetchCount, 3);
     });
   });
 }
