@@ -9,7 +9,7 @@ import '../today/widgets/chat_list_item_tile.dart';
 import '../today/widgets/filter_chips_bar.dart';
 import '../today/widgets/search_input_field.dart';
 import '../update_status/update_status_data.dart';
-import 'super_admin_data.dart';
+import 'cordinator_data.dart';
 import 'widgets/super_admin_filter_bottom_sheet.dart';
 
 /// Coordinator (formerly Super Admin) screen matching the design.

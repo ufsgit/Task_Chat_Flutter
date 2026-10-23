@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:task_chat/super_admin/super_admin_page.dart';
-import 'package:task_chat/super_admin/widgets/super_admin_filter_bottom_sheet.dart';
+import 'package:task_chat/Coordinator/cordinator_page.dart';
+import 'package:task_chat/Coordinator/widgets/super_admin_filter_bottom_sheet.dart';
 
 void main() {
   testWidgets(

@@ -1,10 +1,10 @@
 # Project: Fitmate (Task Chat)
 
 ## Executive Summary
-Fitmate is a mobile and web application built with Flutter designed for lead management, customer booking coordination, task tracking, and field activity reporting. It connects coordinators, super admins, and field staff with customer CRM profiles, dynamic booking statuses, document attachments, and performance analytics.
+Fitmate is a mobile application built with Flutter designed for customer booking coordination, task tracking, and field activity reporting. It connects coordinators, super admins, and field staff with customer CRM profiles, dynamic booking statuses, document attachments, and performance analytics.
 
 ## Core Problem & Value Proposition
-- Eliminates manual WhatsApp/call coordination friction by centralizing client interactions, contact links, and documents.
+- Handles booking of clients.
 - Provides real-time booking status transitions (New, Scheduled, Completed, Cancelled).
 - Offers comprehensive reporting and performance dashboards for branch managers and coordinators.
 

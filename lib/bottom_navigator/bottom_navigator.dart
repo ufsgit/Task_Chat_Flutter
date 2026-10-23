@@ -7,7 +7,7 @@ import '../report_activity/main/report_activity.dart';
 import '../login_page/login_model.dart';
 import '../settings/settings_model.dart';
 import '../settings/settings_view.dart';
-import '../super_admin/super_admin_page.dart';
+import '../Coordinator/cordinator_page.dart';
 import '../today/today_view.dart';
 import '../today/today_view_model.dart';
 
