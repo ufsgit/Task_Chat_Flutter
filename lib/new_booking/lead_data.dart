@@ -7,6 +7,7 @@ class LeadFormData {
   final String stage;
   final int? areaId;
   final String? areaName;
+  final String? district;
   final List<String> documents;
 
   const LeadFormData({
@@ -17,6 +18,7 @@ class LeadFormData {
     this.stage = 'NEW',
     this.areaId,
     this.areaName,
+    this.district,
     this.documents = const [],
   });
 
@@ -28,6 +30,7 @@ class LeadFormData {
     String? stage,
     int? areaId,
     String? areaName,
+    String? district,
     List<String>? documents,
   }) {
     return LeadFormData(
@@ -38,6 +41,7 @@ class LeadFormData {
       stage: stage ?? this.stage,
       areaId: areaId ?? this.areaId,
       areaName: areaName ?? this.areaName,
+      district: district ?? this.district,
       documents: documents ?? this.documents,
     );
   }
@@ -50,6 +54,7 @@ class LeadFormData {
     'status': _formatStatus(stage),
     'areaId': areaId,
     'areaName': areaName ?? '',
+    if (district != null && district!.isNotEmpty) 'district': district,
     'documents': documents,
   };
 
@@ -77,6 +82,7 @@ class LeadFormData {
           ? json['areaId'] as int
           : int.tryParse(json['areaId']?.toString() ?? ''),
       areaName: json['areaName'] as String?,
+      district: json['district']?.toString() ?? json['districtName']?.toString(),
       documents: docsList,
     );
   }

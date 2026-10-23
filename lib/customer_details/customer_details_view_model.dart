@@ -36,9 +36,10 @@ class CustomerDetailsViewModel extends ChangeNotifier {
     try {
       String? token;
       try {
+        final isTest = TokenStorage.isTestEnvironment;
         token = await (tokenStorage ?? TokenStorage())
             .getToken()
-            .timeout(const Duration(milliseconds: 300));
+            .timeout(isTest ? const Duration(milliseconds: 50) : const Duration(seconds: 5));
       } catch (_) {}
 
       final uri = Uri.parse('${ApiConfig.bookings}/${customer.id}');
@@ -95,9 +96,10 @@ class CustomerDetailsViewModel extends ChangeNotifier {
     try {
       String? token;
       try {
+        final isTest = TokenStorage.isTestEnvironment;
         token = await (tokenStorage ?? TokenStorage())
             .getToken()
-            .timeout(const Duration(milliseconds: 300));
+            .timeout(isTest ? const Duration(milliseconds: 50) : const Duration(seconds: 5));
       } catch (_) {}
 
       final uri = Uri.parse('${ApiConfig.bookings}/${customer.id}');
@@ -183,5 +185,11 @@ class CustomerDetailsViewModel extends ChangeNotifier {
   void updateNotes(String newNotes) {
     customer = customer.copyWith(notes: newNotes);
     notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _client.close();
+    super.dispose();
   }
 }

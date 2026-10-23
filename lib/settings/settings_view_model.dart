@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import '../login_page/token_storage.dart';
+import '../today/today_view_model.dart';
 import 'settings_model.dart';
 
 /// ViewModel managing settings business logic, user profile state, and logout actions.
@@ -54,6 +55,7 @@ class SettingsViewModel extends ChangeNotifier {
     try {
       await UserProfileData.clear();
       await _tokenStorage.deleteToken();
+      todayChatItems.clear();
       _profile = null;
     } finally {
       _isLoading = false;

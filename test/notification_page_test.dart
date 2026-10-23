@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:task_chat/core/circular_back_button.dart';
+import 'package:task_chat/core/widgets/circular_back_button.dart';
 import 'package:task_chat/customer_details/customer_details_view.dart';
 import 'package:task_chat/notification_page/notification_page.dart';
 import 'package:task_chat/notification_page/widgets/notification_item_tile.dart';

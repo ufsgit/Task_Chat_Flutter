@@ -141,7 +141,7 @@ class _TodayPageState extends State<TodayPage> {
                     borderRadius: BorderRadius.circular(20),
                     onTap: () async {
                       await Navigator.of(context, rootNavigator: true)
-                          .push(SlideUpRoute(page: const add_booking()));
+                          .push(SlideUpRoute(page: const add_booking(isCoordinator: false)));
                       if (mounted) {
                         _viewModel.fetchBookings();
                       }
@@ -431,8 +431,6 @@ class _TodayPageState extends State<TodayPage> {
                                           item['title'] ?? '',
                                           updatedStatus,
                                         );
-                                      }
-                                      if (mounted) {
                                         _viewModel.fetchBookings();
                                       }
                                     },

@@ -30,9 +30,9 @@ class CustomerHeaderCard extends StatelessWidget {
         dot: isDark ? AppDarkColors.newText : AppColors.newText,
       ),
       'scheduled' || 'in-progress' || 'in progress' => (
-        bg: isDark ? const Color(0xFF1A334A) : const Color(0xFFE0F2FE),
-        text: isDark ? const Color(0xFF53BDEB) : const Color(0xFF0284C7),
-        dot: isDark ? const Color(0xFF53BDEB) : const Color(0xFF0284C7),
+        bg: isDark ? AppDarkColors.scheduledBg : AppColors.scheduledBg,
+        text: isDark ? AppDarkColors.scheduledText : AppColors.scheduledText,
+        dot: isDark ? AppDarkColors.scheduledText : AppColors.scheduledText,
       ),
       _ => (
         bg: isDark ? const Color(0xFF1F2C34) : const Color(0xFFF0F9FF),

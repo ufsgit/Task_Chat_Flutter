@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/theme.dart';
-import '../update_status_data.dart';
+import '../branch_manager/branch_manager_update_status_logic.dart';
 
 /// Reusable status chip selector for Completed, Scheduled, and Cancelled.
 /// Notice: The 'New' option has been completely removed per requirements.

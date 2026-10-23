@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../core/circular_back_button.dart';
+import '../../core/widgets/circular_back_button.dart';
 import '../../core/theme.dart';
 
 /// Reusable header displaying circular back button, customer initial avatar, and name.

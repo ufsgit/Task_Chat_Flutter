@@ -135,9 +135,10 @@ class TodayViewModel extends ChangeNotifier {
 
     String? token;
     try {
+      final isTest = TokenStorage.isTestEnvironment;
       token = await (tokenStorage ?? TokenStorage())
           .getToken()
-          .timeout(const Duration(milliseconds: 300));
+          .timeout(isTest ? const Duration(milliseconds: 50) : const Duration(seconds: 5));
     } catch (_) {
       // Ignored in test environment if platform channel is absent or times out
     }
@@ -198,5 +199,11 @@ class TodayViewModel extends ChangeNotifier {
     );
     _chatItems = List<Map<String, dynamic>>.from(todayChatItems);
     notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _client.close();
+    super.dispose();
   }
 }

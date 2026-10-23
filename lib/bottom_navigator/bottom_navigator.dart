@@ -7,7 +7,7 @@ import '../report_activity/main/report_activity.dart';
 import '../login_page/login_model.dart';
 import '../settings/settings_model.dart';
 import '../settings/settings_view.dart';
-import '../Coordinator/cordinator_page.dart';
+import '../Coordinator/coordinator_view.dart';
 import '../today/today_view.dart';
 import '../today/today_view_model.dart';
 
@@ -28,7 +28,7 @@ class BottomNavigator extends StatefulWidget {
     bool? isSuperAdmin,
     this.user,
     this.todayViewModel,
-  }) : isCoordinator = isCoordinator ?? isSuperAdmin ?? false;
+  }) : isCoordinator = isCoordinator ?? false;
 
   bool get isSuperAdmin => isCoordinator;
 
@@ -65,6 +65,10 @@ class _BottomNavigatorState extends State<BottomNavigator> {
       const ReportActivity(),
       SettingsPage(profile: profile),
     ];
+
+    if (widget.isCoordinator) {
+      _todayViewModel.fetchBookings();
+    }
   }
 
   @override
@@ -76,7 +80,7 @@ class _BottomNavigatorState extends State<BottomNavigator> {
   }
 
   void _onItemTapped(int index) {
-    if (index == 0 && !widget.isCoordinator) {
+    if (index == 0) {
       _todayViewModel.fetchBookings();
     }
     setState(() {
@@ -286,7 +290,7 @@ class _FloatingBottomBarState extends State<FloatingBottomBar> {
                               child: _buildNavItem(
                                 index: 0,
                                 icon: Icons.calendar_today_outlined,
-                                label: "Today's",
+                                label: "Today",
                               ),
                             ),
                           ),
@@ -350,11 +354,7 @@ class _FloatingBottomBarState extends State<FloatingBottomBar> {
         mainAxisSize: MainAxisSize.min,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            icon,
-            size: 21,
-            color: isSelected ? activeColor : inactiveColor,
-          ),
+          Icon(icon, size: 21, color: isSelected ? activeColor : inactiveColor),
           const SizedBox(height: 3),
           AnimatedDefaultTextStyle(
             duration: const Duration(milliseconds: 180),

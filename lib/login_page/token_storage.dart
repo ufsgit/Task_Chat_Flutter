@@ -1,14 +1,30 @@
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class TokenStorage {
   static final Map<String, String> _memoryCache = {};
   static bool useMemoryOnly = false;
+
+  /// Safely checks if the code is executing in a unit or widget test runner.
+  /// Prevents UnsupportedError: Platform._environment on Android and iOS.
+  static bool get isTestEnvironment {
+    if (useMemoryOnly) return true;
+    if (kIsWeb) return false;
+    try {
+      if (Platform.isAndroid || Platform.isIOS) return false;
+      return Platform.environment.containsKey('FLUTTER_TEST');
+    } catch (_) {
+      return false;
+    }
+  }
+
   final FlutterSecureStorage _storage;
   static const String _primaryKey = 'access_token';
   static const String _legacyKey = 'access-token';
 
   TokenStorage({FlutterSecureStorage? storage})
-      : _storage = storage ?? const FlutterSecureStorage();
+    : _storage = storage ?? const FlutterSecureStorage();
 
   Future<void> savetoken(String token) async {
     _memoryCache[_primaryKey] = token;
@@ -47,4 +63,3 @@ class TokenStorage {
     } catch (_) {}
   }
 }
-

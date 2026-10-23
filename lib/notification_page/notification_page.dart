@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../bottom_navigator/bottom_navigator.dart';
-import '../core/circular_back_button.dart';
+import '../core/widgets/circular_back_button.dart';
 import '../core/theme.dart';
 import '../customer_details/customer_details_model.dart';
 import '../customer_details/customer_details_view.dart';

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'circular_back_button.dart';
+import 'widgets/circular_back_button.dart';
 
 /// Centralized color palette and theme configurations for Fitmate.
 /// Contains only the colors actively used across the app.
@@ -48,6 +48,10 @@ abstract final class AppColors {
   // In-Progress
   static const Color inProgressBg = Color(0xFFE0F2FE);
   static const Color inProgressText = Color(0xFF0284C7);
+
+  // Scheduled / Amber Orange
+  static const Color scheduledBg = Color(0xFFFEF3C7);
+  static const Color scheduledText = Color(0xFFD97706);
 
   // Chips & Filters
   static const Color chipPendingBg = Color(0xFFD4F4DD);
@@ -457,6 +461,8 @@ abstract final class AppDarkColors {
   static const Color newText = Color(0xFF38BDF8);
   static const Color inProgressBg = Color(0xFF112240);
   static const Color inProgressText = Color(0xFF38BDF8);
+  static const Color scheduledBg = Color(0xFF452B0E);
+  static const Color scheduledText = Color(0xFFFBBF24);
 
   // Chips & Avatar backgrounds
   static const Color chipPendingBg = Color(0xFF0D281E);

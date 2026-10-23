@@ -49,6 +49,11 @@ class AddBookingViewModel extends ChangeNotifier {
     if (data.address.trim().isEmpty) {
       return 'Please enter address';
     }
+    if (data.areaId == null ||
+        data.areaName == null ||
+        data.areaName!.trim().isEmpty) {
+      return 'Please select an area';
+    }
     return null;
   }
 
@@ -130,5 +135,12 @@ class AddBookingViewModel extends ChangeNotifier {
       notifyListeners();
       return SaveBookingResult.failure(errorMsg);
     }
+  }
+
+  @override
+  void dispose() {
+    _client.close();
+    areaViewModel.dispose();
+    super.dispose();
   }
 }

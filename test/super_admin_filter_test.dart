@@ -61,4 +61,37 @@ void main() {
     expect(find.text('Status: Completed'), findsOneWidget);
     expect(find.text('Manager: Sarah Jenkins'), findsOneWidget);
   });
+
+  test('CoordinatorViewModel manages filters, search, and state properly in MVVM', () {
+    final vm = CoordinatorViewModel();
+    expect(vm.selectedFilterIndex, 0);
+    expect(vm.selectedStatusFilter, 'All');
+    expect(vm.selectedManagerFilter, 'All');
+    expect(vm.hasActiveFilters, isFalse);
+
+    // Filter index
+    vm.setFilterIndex(1);
+    expect(vm.selectedFilterIndex, 1);
+
+    // Apply status and manager filter
+    vm.applyFilters('Completed', 'Sarah Jenkins');
+    expect(vm.selectedStatusFilter, 'Completed');
+    expect(vm.selectedManagerFilter, 'Sarah Jenkins');
+    expect(vm.hasActiveFilters, isTrue);
+
+    // Reset filters
+    vm.resetFilters();
+    expect(vm.selectedStatusFilter, 'All');
+    expect(vm.selectedManagerFilter, 'All');
+    expect(vm.hasActiveFilters, isFalse);
+
+    // Search query
+    vm.searchController.text = 'non_existent_query_xyz';
+    expect(vm.filteredChatItems, isEmpty);
+
+    vm.clearSearch();
+    expect(vm.searchController.text, isEmpty);
+
+    vm.dispose();
+  });
 }

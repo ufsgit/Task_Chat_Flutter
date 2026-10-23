@@ -4,6 +4,5 @@ abstract final class ApiConfig {
   static const String mobileLogin = '$baseUrl/api/auth/mobile-login';
   static const String bookings = '$baseUrl/api/bookings';
   static const String area_listing = '$baseUrl/api/dropdowns';
-
-
+  static const String statusUpdate = '$baseUrl/api/status';
 }

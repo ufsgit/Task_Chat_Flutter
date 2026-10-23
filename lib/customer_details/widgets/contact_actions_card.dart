@@ -22,31 +22,7 @@ class ContactActionsCard extends StatefulWidget {
 }
 
 class _ContactActionsCardState extends State<ContactActionsCard> {
-  late final TextEditingController _notesController;
-  final FocusNode _notesFocusNode = FocusNode();
-
   @override
-  void initState() {
-    super.initState();
-    _notesController = TextEditingController(text: widget.customer.notes);
-  }
-
-  @override
-  void didUpdateWidget(covariant ContactActionsCard oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.customer.notes != widget.customer.notes &&
-        _notesController.text != widget.customer.notes) {
-      _notesController.text = widget.customer.notes;
-    }
-  }
-
-  @override
-  void dispose() {
-    _notesController.dispose();
-    _notesFocusNode.dispose();
-    super.dispose();
-  }
-
   @override
   Widget build(BuildContext context) {
     final customer = widget.customer;
@@ -188,48 +164,37 @@ class _ContactActionsCardState extends State<ContactActionsCard> {
           ),
           const SizedBox(height: 8),
 
-          // Clean Note Container matching screenshot
-          GestureDetector(
-            onTap: () => _notesFocusNode.requestFocus(),
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              decoration: BoxDecoration(
-                color: isDark
-                    ? AppDarkColors.surfaceSecondary
-                    : const Color(0xFFF7F8FA),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                  color: isDark ? AppDarkColors.border : AppColors.border,
-                  width: 1,
-                ),
+          // Clean Note Container (Read-only display)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: isDark
+                  ? AppDarkColors.surfaceSecondary
+                  : const Color(0xFFF7F8FA),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: isDark ? AppDarkColors.border : AppColors.border,
+                width: 1,
               ),
-              child: TextField(
-                controller: _notesController,
-                focusNode: _notesFocusNode,
-                maxLines: null,
-                minLines: 3,
-                style: TextStyle(
-                  fontFamily: 'Helvetica Neue',
-                  fontSize: 14,
-                  fontWeight: FontWeight.w400,
-                  color: primaryText,
-                  height: 1.45,
-                ),
-                decoration: InputDecoration(
-                  isDense: true,
-                  contentPadding: EdgeInsets.zero,
-                  border: InputBorder.none,
-                  hintText: 'Add notes or client details...',
-                  hintStyle: TextStyle(
-                    fontFamily: 'Helvetica Neue',
-                    fontSize: 14,
-                    fontWeight: FontWeight.w400,
-                    color: isDark
-                        ? AppDarkColors.textPlaceholder
-                        : AppColors.textPlaceholder,
-                  ),
-                ),
+            ),
+            child: Text(
+              customer.notes.trim().isNotEmpty
+                  ? customer.notes.trim()
+                  : 'No notes added',
+              style: TextStyle(
+                fontFamily: 'Helvetica Neue',
+                fontSize: 14,
+                fontWeight: FontWeight.w400,
+                color: customer.notes.trim().isNotEmpty
+                    ? primaryText
+                    : (isDark
+                          ? AppDarkColors.textPlaceholder
+                          : AppColors.textPlaceholder),
+                height: 1.45,
+                fontStyle: customer.notes.trim().isNotEmpty
+                    ? FontStyle.normal
+                    : FontStyle.italic,
               ),
             ),
           ),
@@ -339,10 +304,7 @@ Future<void> openWhatsApp(String phoneNumber) async {
   //final webUri = Uri.parse('https://wa.me/$whatsappNumber');
 
   try {
-    await launchUrl(
-      nativeUri,
-      mode: LaunchMode.externalApplication,
-    );
+    await launchUrl(nativeUri, mode: LaunchMode.externalApplication);
     // if (!launched) {
     //   await launchUrl(webUri, mode: LaunchMode.externalApplication);
     // }

@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:task_chat/new_booking/add_booking_view.dart';
 import 'package:task_chat/new_booking/add_booking_view_model.dart';
 import 'package:task_chat/new_booking/area_model.dart';
@@ -14,6 +15,7 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   setUp(() {
+    SharedPreferences.setMockInitialValues({});
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(
       const MethodChannel('plugins.it_nomads.com/flutter_secure_storage'),
@@ -39,19 +41,27 @@ void main() {
       final viewModel = AddBookingViewModel();
 
       expect(
-        viewModel.validate(const LeadFormData(name: '', mobile: '123', address: 'Kochi')),
+        viewModel.validate(const LeadFormData(name: '', mobile: '123', address: 'Kochi', areaId: 1, areaName: 'Edapally')),
         'Please enter customer name',
       );
       expect(
-        viewModel.validate(const LeadFormData(name: 'Rahul', mobile: '', address: 'Kochi')),
+        viewModel.validate(const LeadFormData(name: 'Rahul', mobile: '', address: 'Kochi', areaId: 1, areaName: 'Edapally')),
         'Please enter mobile number',
       );
       expect(
-        viewModel.validate(const LeadFormData(name: 'Rahul', mobile: '123', address: '')),
+        viewModel.validate(const LeadFormData(name: 'Rahul', mobile: '123', address: '', areaId: 1, areaName: 'Edapally')),
         'Please enter address',
       );
       expect(
         viewModel.validate(const LeadFormData(name: 'Rahul', mobile: '123', address: 'Kochi')),
+        'Please select an area',
+      );
+      expect(
+        viewModel.validate(const LeadFormData(name: 'Rahul', mobile: '123', address: 'Kochi', areaId: null, areaName: 'Edapally')),
+        'Please select an area',
+      );
+      expect(
+        viewModel.validate(const LeadFormData(name: 'Rahul', mobile: '123', address: 'Kochi', areaId: 1, areaName: 'Edapally')),
         isNull,
       );
     });
@@ -123,6 +133,8 @@ void main() {
         name: 'Incomplete',
         mobile: '123',
         address: 'Street',
+        areaId: 1,
+        areaName: 'Edapally',
       );
 
       final result = await viewModel.saveBooking(formData);
@@ -141,6 +153,8 @@ void main() {
         name: 'Rahul',
         mobile: '123',
         address: 'Kochi',
+        areaId: 1,
+        areaName: 'Edapally',
       );
 
       final result = await viewModel.saveBooking(formData);
@@ -219,6 +233,86 @@ void main() {
       expect(savedLead!.documents, isEmpty);
       expect(savedLead!.toJson()['status'], 'NEW');
       expect(savedLead!.toJson()['documents'], isEmpty);
+    });
+
+    testWidgets('renders District dropdown when isCoordinator is true and selects district', (WidgetTester tester) async {
+      final mockClient = MockClient((request) async {
+        return http.Response(jsonEncode({'status': 'success', 'data': {'id': 99}}), 200);
+      });
+
+      final areaVm = AreaViewModel(
+        client: mockClient,
+        initialArea: const AreaItem(id: 1, name: 'Edapally'),
+      );
+      final bookingVm = AddBookingViewModel(client: mockClient, areaViewModel: areaVm);
+
+      LeadFormData? savedLead;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: add_booking(
+              isCoordinator: true,
+              viewModel: bookingVm,
+              initialData: const LeadFormData(
+                name: 'Jane Coordinator',
+                mobile: '9998887776',
+                address: 'Marine Drive, Kochi',
+              ),
+              onSave: (lead) => savedLead = lead,
+            ),
+          ),
+        ),
+      );
+
+      // Verify District dropdown is present
+      expect(find.byKey(const Key('district_selector_dropdown')), findsOneWidget);
+      expect(find.text('District'), findsOneWidget);
+      expect(find.text('Ernakulam'), findsOneWidget);
+
+      // Tap District dropdown to open options
+      await tester.tap(find.byKey(const Key('district_selector_dropdown')));
+      await tester.pumpAndSettle();
+
+      // Verify all 3 hardcoded districts are displayed
+      expect(find.text('Thiruvananthapuram'), findsOneWidget);
+      expect(find.text('Kozhikode'), findsOneWidget);
+
+      // Select Kozhikode
+      await tester.tap(find.text('Kozhikode').last);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Kozhikode'), findsOneWidget);
+
+      // Tap Save
+      await tester.ensureVisible(find.text('Save'));
+      await tester.pump();
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      expect(savedLead, isNotNull);
+      expect(savedLead!.district, 'Kozhikode');
+      expect(savedLead!.toJson()['district'], 'Kozhikode');
+    });
+
+    testWidgets('does NOT render District dropdown when isCoordinator is false', (WidgetTester tester) async {
+      final mockClient = MockClient((request) async => http.Response('{}', 200));
+      final areaVm = AreaViewModel(client: mockClient);
+      final bookingVm = AddBookingViewModel(client: mockClient, areaViewModel: areaVm);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: add_booking(
+              isCoordinator: false,
+              viewModel: bookingVm,
+            ),
+          ),
+        ),
+      );
+
+      expect(find.byKey(const Key('district_selector_dropdown')), findsNothing);
+      expect(find.text('District'), findsNothing);
     });
   });
 }

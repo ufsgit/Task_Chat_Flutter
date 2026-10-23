@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
@@ -8,6 +9,7 @@ import 'area_model.dart';
 /// ViewModel managing state, API fetching, and selection for area dropdowns.
 class AreaViewModel extends ChangeNotifier {
   final http.Client _client;
+  Timer? _debounceTimer;
 
   bool _isLoading = false;
   String? _errorMessage;
@@ -124,12 +126,15 @@ class AreaViewModel extends ChangeNotifier {
     }
   }
 
-  /// Sets search query and re-fetches from page 1.
+  /// Sets search query with 300ms debounce and re-fetches from page 1.
   void setSearch(String query) {
     if (_search != query) {
       _search = query;
       _page = 1;
-      fetchAreas(search: query, page: 1);
+      _debounceTimer?.cancel();
+      _debounceTimer = Timer(const Duration(milliseconds: 300), () {
+        fetchAreas(search: query, page: 1);
+      });
     }
   }
 
@@ -173,5 +178,12 @@ class AreaViewModel extends ChangeNotifier {
   /// Clears the current area selection.
   void clearSelection() {
     selectArea(null);
+  }
+
+  @override
+  void dispose() {
+    _debounceTimer?.cancel();
+    _client.close();
+    super.dispose();
   }
 }

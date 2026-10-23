@@ -1,11 +1,13 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import '../core/circular_back_button.dart';
+import '../core/widgets/circular_back_button.dart';
 import '../core/theme.dart';
+import '../settings/settings_model.dart';
 import 'add_booking_view_model.dart';
 import 'area_view_model.dart';
 import 'lead_data.dart';
 import 'widgets/area_selector_dropdown.dart';
+import 'widgets/district_selector_dropdown.dart';
 import 'widgets/lead_document_upload_card.dart';
 import 'widgets/lead_form_card.dart';
 import 'widgets/lead_labeled_row.dart';
@@ -18,6 +20,7 @@ class add_booking extends StatefulWidget {
   final VoidCallback? onCancel;
   final AreaViewModel? areaViewModel;
   final AddBookingViewModel? viewModel;
+  final bool? isCoordinator;
 
   const add_booking({
     super.key,
@@ -27,6 +30,7 @@ class add_booking extends StatefulWidget {
     this.onCancel,
     this.areaViewModel,
     this.viewModel,
+    this.isCoordinator,
   });
 
   @override
@@ -44,6 +48,8 @@ class _add_bookingState extends State<add_booking> {
 
   late List<String> _stages;
   late int _selectedStageIndex;
+  late bool _isCoordinator;
+  String? _selectedDistrict;
 
   @override
   void initState() {
@@ -59,19 +65,36 @@ class _add_bookingState extends State<add_booking> {
     final stageIdx = _stages.indexOf(data.stage);
     _selectedStageIndex = stageIdx != -1 ? stageIdx : 0;
 
+    _isCoordinator = widget.isCoordinator ?? false;
+    _selectedDistrict = data.district ?? defaultHardcodedDistricts.first;
+    if (widget.isCoordinator == null) {
+      _loadCoordinatorRole();
+    }
+
     if (widget.viewModel != null) {
       _viewModel = widget.viewModel!;
       _isLocalViewModel = false;
     } else {
-      _viewModel = AddBookingViewModel(
-        areaViewModel: widget.areaViewModel,
-      );
+      _viewModel = AddBookingViewModel(areaViewModel: widget.areaViewModel);
       _isLocalViewModel = true;
       _viewModel.areaViewModel.fetchAreas();
     }
 
     if (data.areaId != null) {
       _viewModel.areaViewModel.selectAreaById(data.areaId);
+    }
+  }
+
+  Future<void> _loadCoordinatorRole() async {
+    final user = await UserProfileData.loadUser();
+    if (mounted && user != null) {
+      setState(() {
+        _isCoordinator = user.roleId == 2;
+        if (user.districtName != null &&
+            defaultHardcodedDistricts.contains(user.districtName)) {
+          _selectedDistrict = user.districtName;
+        }
+      });
     }
   }
 
@@ -101,6 +124,7 @@ class _add_bookingState extends State<add_booking> {
       stage: selectedStage,
       areaId: _viewModel.areaViewModel.selectedAreaId,
       areaName: _viewModel.areaViewModel.selectedAreaName,
+      district: _isCoordinator ? _selectedDistrict : null,
       documents: _documents,
     );
 
@@ -149,15 +173,13 @@ class _add_bookingState extends State<add_booking> {
   }
 
   Future<void> _handlePickDocuments() async {
-    bool hasPicked = false;
     try {
       final files = await FilePicker.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['pdf', 'docx', 'doc', 'png', 'jpg', 'jpeg'],
       );
 
-      if (files.isNotEmpty) {
-        hasPicked = true;
+      if (files.isNotEmpty && mounted) {
         setState(() {
           for (final file in files) {
             final name = file.name;
@@ -169,102 +191,7 @@ class _add_bookingState extends State<add_booking> {
         });
       }
     } catch (e) {
-      debugPrint('FilePicker not ready: $e');
-    }
-
-    if (!hasPicked && mounted) {
-      await _showManualDocumentDialog();
-    }
-  }
-
-  Future<void> _showManualDocumentDialog() async {
-    final docController = TextEditingController(text: 'site_plan.pdf');
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final primaryTextColor =
-        isDark ? AppDarkColors.textPrimary : AppColors.textPrimary;
-    final secondaryTextColor =
-        isDark ? AppDarkColors.textSubtitle : AppColors.textSubtitle;
-
-    final addedDoc = await showDialog<String>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: isDark ? AppDarkColors.surfaceCard : Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(
-          'Attach Document',
-          style: TextStyle(
-            fontFamily: 'Helvetica Neue',
-            fontWeight: FontWeight.w700,
-            fontSize: 18,
-            color: primaryTextColor,
-          ),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Enter document name or URL:',
-              style: TextStyle(fontSize: 13, color: secondaryTextColor),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: docController,
-              autofocus: true,
-              style: TextStyle(color: primaryTextColor, fontSize: 14),
-              decoration: InputDecoration(
-                hintText: 'e.g. site_plan.pdf',
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              children: [
-                ActionChip(
-                  label: const Text('site_plan.pdf'),
-                  onPressed: () => docController.text = 'site_plan.pdf',
-                ),
-                ActionChip(
-                  label: const Text('floor_plan.pdf'),
-                  onPressed: () => docController.text = 'floor_plan.pdf',
-                ),
-              ],
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: Text('Cancel', style: TextStyle(color: secondaryTextColor)),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(ctx).pop(docController.text.trim()),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.whatsappGreen,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-            child: const Text('Attach'),
-          ),
-        ],
-      ),
-    );
-
-    if (addedDoc != null && addedDoc.isNotEmpty) {
-      final docPath =
-          addedDoc.startsWith('/') ? addedDoc : '/uploads/$addedDoc';
-      setState(() {
-        if (!_documents.contains(docPath)) {
-          _documents.add(docPath);
-        }
-      });
+      debugPrint('FilePicker error: $e');
     }
   }
 
@@ -395,9 +322,21 @@ class _add_bookingState extends State<add_booking> {
                   ],
                 ),
               ),
-              const SizedBox(height: 14),
+              // 4. District Selector Card (for Coordinator role)
+              if (_isCoordinator) ...[
+                DistrictSelectorDropdown(
+                  selectedDistrict: _selectedDistrict,
+                  districts: defaultHardcodedDistricts,
+                  onDistrictSelected: (district) {
+                    setState(() {
+                      _selectedDistrict = district;
+                    });
+                  },
+                ),
+                const SizedBox(height: 14),
+              ],
 
-              // 4. Area Selector Card
+              // 5. Area Selector Card
               AreaSelectorDropdown(viewModel: _viewModel.areaViewModel),
               const SizedBox(height: 14),
 
@@ -450,8 +389,9 @@ class _add_bookingState extends State<add_booking> {
                               height: 22,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2.5,
-                                valueColor:
-                                    AlwaysStoppedAnimation<Color>(Colors.white),
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  Colors.white,
+                                ),
                               ),
                             )
                           : const Text(

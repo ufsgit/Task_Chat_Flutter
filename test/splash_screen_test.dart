@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:task_chat/bottom_navigator/bottom_navigator.dart';
 import 'package:task_chat/login_page/login_view.dart';
 import 'package:task_chat/login_page/token_storage.dart';
 import 'package:task_chat/splash/splash_screen.dart';

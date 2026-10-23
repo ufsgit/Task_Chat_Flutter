@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/theme.dart';
-import '../update_status_data.dart';
+import '../coordinators/coordinator_update_status_logic.dart';
 
 /// Reusable Branch Manager dropdown selection card for Super Admin.
 class BranchManagerFieldCard extends StatelessWidget {
