@@ -1,10 +1,12 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../core/widgets/circular_back_button.dart';
 import '../core/theme.dart';
 import '../settings/settings_model.dart';
 import 'add_booking_view_model.dart';
 import 'area_view_model.dart';
+import 'district_view_model.dart';
 import 'lead_data.dart';
 import 'widgets/area_selector_dropdown.dart';
 import 'widgets/district_selector_dropdown.dart';
@@ -19,6 +21,7 @@ class add_booking extends StatefulWidget {
   final ValueChanged<LeadFormData>? onSave;
   final VoidCallback? onCancel;
   final AreaViewModel? areaViewModel;
+  final DistrictViewModel? districtViewModel;
   final AddBookingViewModel? viewModel;
   final bool? isCoordinator;
 
@@ -29,6 +32,7 @@ class add_booking extends StatefulWidget {
     this.onSave,
     this.onCancel,
     this.areaViewModel,
+    this.districtViewModel,
     this.viewModel,
     this.isCoordinator,
   });
@@ -67,17 +71,37 @@ class _add_bookingState extends State<add_booking> {
 
     _isCoordinator = widget.isCoordinator ?? false;
     _selectedDistrict = data.district ?? defaultHardcodedDistricts.first;
-    if (widget.isCoordinator == null) {
-      _loadCoordinatorRole();
-    }
 
     if (widget.viewModel != null) {
       _viewModel = widget.viewModel!;
       _isLocalViewModel = false;
     } else {
-      _viewModel = AddBookingViewModel(areaViewModel: widget.areaViewModel);
+      _viewModel = AddBookingViewModel(
+        areaViewModel: widget.areaViewModel,
+        districtViewModel: widget.districtViewModel,
+      );
       _isLocalViewModel = true;
-      _viewModel.areaViewModel.fetchAreas();
+    }
+
+    if (data.district != null && data.district!.isNotEmpty) {
+      _viewModel.districtViewModel.selectDistrictByName(data.district);
+    }
+
+    if (_isCoordinator) {
+      _viewModel.areaViewModel.isCoordinator = true;
+      final dId = _viewModel.districtViewModel.selectedDistrictId;
+      _viewModel.areaViewModel.fetchAreas(
+        isCoordinator: true,
+        districtId: dId,
+      );
+      _viewModel.districtViewModel.fetchDistricts();
+    } else {
+      _viewModel.areaViewModel.isCoordinator = false;
+      _viewModel.areaViewModel.fetchAreas(isCoordinator: false);
+    }
+
+    if (widget.isCoordinator == null) {
+      _loadCoordinatorRole();
     }
 
     if (data.areaId != null) {
@@ -88,13 +112,23 @@ class _add_bookingState extends State<add_booking> {
   Future<void> _loadCoordinatorRole() async {
     final user = await UserProfileData.loadUser();
     if (mounted && user != null) {
+      final isCoord = user.roleId == 2;
       setState(() {
-        _isCoordinator = user.roleId == 2;
-        if (user.districtName != null &&
-            defaultHardcodedDistricts.contains(user.districtName)) {
+        _isCoordinator = isCoord;
+        _viewModel.areaViewModel.isCoordinator = isCoord;
+        if (user.districtName != null && user.districtName!.isNotEmpty) {
           _selectedDistrict = user.districtName;
+          _viewModel.districtViewModel.selectDistrictByName(user.districtName);
         }
       });
+      if (isCoord) {
+        final dId = _viewModel.districtViewModel.selectedDistrictId;
+        _viewModel.districtViewModel.fetchDistricts();
+        _viewModel.areaViewModel.fetchAreas(
+          isCoordinator: true,
+          districtId: dId,
+        );
+      }
     }
   }
 
@@ -261,6 +295,10 @@ class _add_bookingState extends State<add_booking> {
                   controller: _mobileController,
                   hintText: 'Mobile number',
                   keyboardType: TextInputType.phone,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'[0-9+\- ]')),
+                  ],
+                  maxLength: 15,
                 ),
               ),
               const SizedBox(height: 14),
@@ -324,13 +362,44 @@ class _add_bookingState extends State<add_booking> {
               ),
               // 4. District Selector Card (for Coordinator role)
               if (_isCoordinator) ...[
-                DistrictSelectorDropdown(
-                  selectedDistrict: _selectedDistrict,
-                  districts: defaultHardcodedDistricts,
-                  onDistrictSelected: (district) {
-                    setState(() {
-                      _selectedDistrict = district;
-                    });
+                ListenableBuilder(
+                  listenable: _viewModel.districtViewModel,
+                  builder: (context, _) {
+                    final districtVm = _viewModel.districtViewModel;
+                    final currentSelected = _selectedDistrict ??
+                        districtVm.selectedDistrictName ??
+                        districtVm.districts.firstOrNull?.name;
+
+                    return DistrictSelectorDropdown(
+                      selectedDistrict: currentSelected,
+                      districtItems: districtVm.districts,
+                      isLoading: districtVm.isLoading,
+                      onDistrictSelected: (district) {
+                        setState(() {
+                          _selectedDistrict = district;
+                        });
+                        districtVm.selectDistrictByName(district);
+                        final selectedItem = districtVm.selectedDistrict;
+                        if (selectedItem != null && selectedItem.id > 0) {
+                          _viewModel.areaViewModel.fetchAreas(
+                            isCoordinator: true,
+                            districtId: selectedItem.id,
+                          );
+                        }
+                      },
+                      onDistrictItemSelected: (item) {
+                        setState(() {
+                          _selectedDistrict = item.name;
+                        });
+                        districtVm.selectDistrict(item);
+                        if (item.id > 0) {
+                          _viewModel.areaViewModel.fetchAreas(
+                            isCoordinator: true,
+                            districtId: item.id,
+                          );
+                        }
+                      },
+                    );
                   },
                 ),
                 const SizedBox(height: 14),

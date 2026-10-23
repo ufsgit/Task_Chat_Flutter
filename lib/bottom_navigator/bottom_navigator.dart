@@ -8,6 +8,7 @@ import '../login_page/login_model.dart';
 import '../settings/settings_model.dart';
 import '../settings/settings_view.dart';
 import '../Coordinator/coordinator_view.dart';
+import '../Coordinator/coordinator_view_model.dart';
 import '../today/today_view.dart';
 import '../today/today_view_model.dart';
 
@@ -20,6 +21,7 @@ class BottomNavigator extends StatefulWidget {
   final bool isCoordinator;
   final UserModel? user;
   final TodayViewModel? todayViewModel;
+  final CoordinatorViewModel? coordinatorViewModel;
 
   const BottomNavigator({
     super.key,
@@ -28,6 +30,7 @@ class BottomNavigator extends StatefulWidget {
     bool? isSuperAdmin,
     this.user,
     this.todayViewModel,
+    this.coordinatorViewModel,
   }) : isCoordinator = isCoordinator ?? false;
 
   bool get isSuperAdmin => isCoordinator;
@@ -40,7 +43,9 @@ class _BottomNavigatorState extends State<BottomNavigator> {
   late int _selectedIndex;
   late final List<Widget> _pages;
   late final TodayViewModel _todayViewModel;
+  late final CoordinatorViewModel _coordinatorViewModel;
   bool _isLocalTodayViewModel = false;
+  bool _isLocalCoordinatorViewModel = false;
 
   @override
   void initState() {
@@ -54,21 +59,25 @@ class _BottomNavigatorState extends State<BottomNavigator> {
       _isLocalTodayViewModel = true;
     }
 
+    if (widget.coordinatorViewModel != null) {
+      _coordinatorViewModel = widget.coordinatorViewModel!;
+      _isLocalCoordinatorViewModel = false;
+    } else {
+      _coordinatorViewModel = CoordinatorViewModel();
+      _isLocalCoordinatorViewModel = true;
+    }
+
     final profile = widget.user != null
         ? UserProfileData.fromUserModel(widget.user!)
         : null;
     _pages = [
       widget.isCoordinator
-          ? const CoordinatorPage()
+          ? CoordinatorPage(viewModel: _coordinatorViewModel)
           : TodayPage(viewModel: _todayViewModel),
       DashboardPage(onBack: () => _onItemTapped(0)),
       const ReportActivity(),
       SettingsPage(profile: profile),
     ];
-
-    if (widget.isCoordinator) {
-      _todayViewModel.fetchBookings();
-    }
   }
 
   @override
@@ -76,12 +85,19 @@ class _BottomNavigatorState extends State<BottomNavigator> {
     if (_isLocalTodayViewModel) {
       _todayViewModel.dispose();
     }
+    if (_isLocalCoordinatorViewModel) {
+      _coordinatorViewModel.dispose();
+    }
     super.dispose();
   }
 
   void _onItemTapped(int index) {
     if (index == 0) {
-      _todayViewModel.fetchBookings();
+      if (widget.isCoordinator) {
+        _coordinatorViewModel.fetchBookings();
+      } else {
+        _todayViewModel.fetchBookings();
+      }
     }
     setState(() {
       _selectedIndex = index;
@@ -94,11 +110,20 @@ class _BottomNavigatorState extends State<BottomNavigator> {
 
     return Scaffold(
       backgroundColor: currentBgColor,
-      body: IndexedStack(index: _selectedIndex, children: _pages),
-      bottomNavigationBar: FloatingBottomBar(
-        selectedIndex: _selectedIndex,
-        onTap: _onItemTapped,
-        backgroundColor: currentBgColor,
+      extendBody: true,
+      body: Stack(
+        children: [
+          IndexedStack(index: _selectedIndex, children: _pages),
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: FloatingBottomBar(
+              selectedIndex: _selectedIndex,
+              onTap: _onItemTapped,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -167,9 +192,6 @@ class _FloatingBottomBarState extends State<FloatingBottomBar> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final outerBg =
-        widget.backgroundColor ??
-        (isDark ? AppDarkColors.scaffoldBackground : AppColors.surfaceWhite);
     final barBg = isDark ? AppDarkColors.surfaceCard : AppColors.surfaceWhite;
     final barBorder = isDark ? AppDarkColors.border : AppColors.border;
     final activePillDecoration = isDark
@@ -205,129 +227,123 @@ class _FloatingBottomBarState extends State<FloatingBottomBar> {
             borderRadius: BorderRadius.circular(22),
           );
 
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      color: outerBg,
-      child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 0, 20, 14),
-          child: Container(
-            height: 68,
-            decoration: BoxDecoration(
-              color: barBg,
-              borderRadius: BorderRadius.circular(34),
-              border: Border.all(color: barBorder, width: 1),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.08),
-                  blurRadius: 20,
-                  offset: const Offset(0, 8),
-                ),
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: isDark ? 0.15 : 0.04),
-                  blurRadius: 6,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final totalWidth = constraints.maxWidth;
-                final slotWidth = totalWidth / 4;
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 14),
+        child: Container(
+          height: 68,
+          decoration: BoxDecoration(
+            color: barBg,
+            borderRadius: BorderRadius.circular(34),
+            border: Border.all(color: barBorder, width: 1),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.08),
+                blurRadius: 20,
+                offset: const Offset(0, 8),
+              ),
+              BoxShadow(
+                color: Colors.black.withValues(alpha: isDark ? 0.15 : 0.04),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final totalWidth = constraints.maxWidth;
+              final slotWidth = totalWidth / 4;
 
-                return GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onHorizontalDragStart: (details) {
-                    setState(() {
-                      _isDragging = true;
-                      _hoveredIndex = widget.selectedIndex;
-                    });
-                    _handleDragUpdate(details.localPosition, totalWidth);
-                  },
-                  onHorizontalDragUpdate: (details) {
-                    _handleDragUpdate(details.localPosition, totalWidth);
-                  },
-                  onHorizontalDragEnd: (_) => _handleDragEnd(),
-                  onHorizontalDragCancel: _handleDragEnd,
-                  onTapUp: (details) {
-                    final index = (details.localPosition.dx / slotWidth)
-                        .clamp(0.0, 3.999)
-                        .floor();
-                    _handleTapItem(index);
-                  },
-                  child: Stack(
-                    children: [
-                      // Sliding pill background involving both the icon and the label
-                      AnimatedPositioned(
-                        duration: const Duration(milliseconds: 220),
-                        curve: Curves.easeOutCubic,
-                        left: _activeDisplayIndex * slotWidth + 4,
-                        top: 4,
-                        bottom: 4,
-                        width: slotWidth - 8,
-                        child: isDark
-                            ? ClipRRect(
-                                borderRadius: BorderRadius.circular(22),
-                                child: BackdropFilter(
-                                  filter: ImageFilter.blur(
-                                    sigmaX: 8,
-                                    sigmaY: 8,
-                                  ),
-                                  child: Container(
-                                    decoration: activePillDecoration,
-                                  ),
+              return GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onHorizontalDragStart: (details) {
+                  setState(() {
+                    _isDragging = true;
+                    _hoveredIndex = widget.selectedIndex;
+                  });
+                  _handleDragUpdate(details.localPosition, totalWidth);
+                },
+                onHorizontalDragUpdate: (details) {
+                  _handleDragUpdate(details.localPosition, totalWidth);
+                },
+                onHorizontalDragEnd: (_) => _handleDragEnd(),
+                onHorizontalDragCancel: _handleDragEnd,
+                onTapUp: (details) {
+                  final index = (details.localPosition.dx / slotWidth)
+                      .clamp(0.0, 3.999)
+                      .floor();
+                  _handleTapItem(index);
+                },
+                child: Stack(
+                  children: [
+                    // Sliding pill background involving both the icon and the label
+                    AnimatedPositioned(
+                      duration: const Duration(milliseconds: 220),
+                      curve: Curves.easeOutCubic,
+                      left: _activeDisplayIndex * slotWidth + 4,
+                      top: 4,
+                      bottom: 4,
+                      width: slotWidth - 8,
+                      child: isDark
+                          ? ClipRRect(
+                              borderRadius: BorderRadius.circular(22),
+                              child: BackdropFilter(
+                                filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+                                child: Container(
+                                  decoration: activePillDecoration,
                                 ),
-                              )
-                            : Container(decoration: activePillDecoration),
-                      ),
+                              ),
+                            )
+                          : Container(decoration: activePillDecoration),
+                    ),
 
-                      // Items layer: Icon on top, Label underneath
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Center(
-                              child: _buildNavItem(
-                                index: 0,
-                                icon: Icons.calendar_today_outlined,
-                                label: "Today",
-                              ),
+                    // Items layer: Icon on top, Label underneath
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Center(
+                            child: _buildNavItem(
+                              index: 0,
+                              icon: Icons.calendar_today_outlined,
+                              label: "Today",
                             ),
                           ),
-                          Expanded(
-                            child: Center(
-                              child: _buildNavItem(
-                                index: 1,
-                                icon: Icons.chat_bubble_outline_rounded,
-                                label: 'Dashboard',
-                              ),
+                        ),
+                        Expanded(
+                          child: Center(
+                            child: _buildNavItem(
+                              index: 1,
+                              icon: Icons.chat_bubble_outline_rounded,
+                              label: 'Dashboard',
                             ),
                           ),
-                          Expanded(
-                            child: Center(
-                              child: _buildNavItem(
-                                index: 2,
-                                icon: Icons.bar_chart_rounded,
-                                label: 'Report',
-                              ),
+                        ),
+                        Expanded(
+                          child: Center(
+                            child: _buildNavItem(
+                              index: 2,
+                              icon: Icons.bar_chart_rounded,
+                              label: 'Report',
                             ),
                           ),
-                          Expanded(
-                            child: Center(
-                              child: _buildNavItem(
-                                index: 3,
-                                icon: Icons.settings,
-                                label: 'Settings',
-                              ),
+                        ),
+                        Expanded(
+                          child: Center(
+                            child: _buildNavItem(
+                              index: 3,
+                              icon: Icons.settings,
+                              label: 'Settings',
                             ),
                           ),
-                        ],
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              );
+            },
           ),
         ),
       ),

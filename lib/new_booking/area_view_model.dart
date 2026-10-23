@@ -11,6 +11,8 @@ class AreaViewModel extends ChangeNotifier {
   final http.Client _client;
   Timer? _debounceTimer;
 
+  bool isCoordinator;
+  int? districtId;
   bool _isLoading = false;
   String? _errorMessage;
   List<AreaItem> _areas = [];
@@ -22,6 +24,8 @@ class AreaViewModel extends ChangeNotifier {
 
   AreaViewModel({
     http.Client? client,
+    this.isCoordinator = false,
+    this.districtId,
     String defaultType = 'area',
     String defaultSearch = '',
     int defaultPage = 1,
@@ -45,15 +49,20 @@ class AreaViewModel extends ChangeNotifier {
   int get page => _page;
   int get limit => _limit;
 
-  /// Fetches dropdown items from API with type, search, page, and limit.
-  /// (Does not touch parentId as specified).
+  /// Fetches dropdown items from API.
+  /// For coordinator, uses ApiConfig.coordinator_area_listing ($baseUrl/api/dropdowns/areas).
+  /// For branch manager, uses ApiConfig.area_listing ($baseUrl/api/dropdowns).
   Future<void> fetchAreas({
+    bool? isCoordinator,
+    int? districtId,
     String? type,
     String? search,
     int? page,
     int? limit,
   }) async {
     final token = await TokenStorage().getToken();
+    if (isCoordinator != null) this.isCoordinator = isCoordinator;
+    if (districtId != null) this.districtId = districtId;
     final activeType = type ?? _type;
     _type = activeType;
     if (search != null) _search = search;
@@ -65,20 +74,37 @@ class AreaViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      Uri uri = Uri.parse(ApiConfig.area_listing);
+      final endpoint = this.isCoordinator
+          ? ApiConfig.coordinator_area_listing
+          : ApiConfig.area_listing;
+
+      Uri uri = Uri.parse(endpoint);
       final Map<String, String> queryParams = Map<String, String>.from(
         uri.queryParameters,
       );
 
-      // Add modified parameters: type, search, page, limit (do NOT touch parentId)
-      queryParams['type'] = _type;
-      queryParams['page'] = _page.toString();
-      queryParams['limit'] = _limit.toString();
-
-      if (_search.trim().isNotEmpty) {
-        queryParams['search'] = _search.trim();
+      if (this.isCoordinator) {
+        // Coordinator area endpoint: supports districtId/parentId, page, limit, search
+        if (this.districtId != null && this.districtId! > 0) {
+          queryParams['districtId'] = this.districtId.toString();
+        }
+        queryParams['page'] = _page.toString();
+        queryParams['limit'] = _limit.toString();
+        if (_search.trim().isNotEmpty) {
+          queryParams['search'] = _search.trim();
+        } else {
+          queryParams.remove('search');
+        }
       } else {
-        queryParams.remove('search');
+        // Branch Manager standard area parameters (do NOT touch parentId)
+        queryParams['type'] = _type;
+        queryParams['page'] = _page.toString();
+        queryParams['limit'] = _limit.toString();
+        if (_search.trim().isNotEmpty) {
+          queryParams['search'] = _search.trim();
+        } else {
+          queryParams.remove('search');
+        }
       }
 
       uri = uri.replace(queryParameters: queryParams);
@@ -110,6 +136,8 @@ class AreaViewModel extends ChangeNotifier {
             );
             if (matchIndex != -1) {
               _selectedArea = _areas[matchIndex];
+            } else if (this.isCoordinator && _areas.isNotEmpty) {
+              _selectedArea = null;
             }
           }
         } else {

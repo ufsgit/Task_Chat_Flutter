@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import '../../core/theme.dart';
+import '../district_model.dart';
 import 'lead_form_card.dart';
 
-/// Available hardcoded districts for Coordinator role.
+/// Available hardcoded districts for Coordinator role as fallback.
 const List<String> defaultHardcodedDistricts = [
   'Ernakulam',
   'Thiruvananthapuram',
   'Kozhikode',
+  'Thrissur',
+  'Kannur',
 ];
 
 /// A dropdown selector widget for District selection displayed for Coordinator role.
@@ -14,7 +17,10 @@ const List<String> defaultHardcodedDistricts = [
 class DistrictSelectorDropdown extends StatelessWidget {
   final String? selectedDistrict;
   final List<String> districts;
+  final List<DistrictItem>? districtItems;
   final ValueChanged<String>? onDistrictSelected;
+  final ValueChanged<DistrictItem>? onDistrictItemSelected;
+  final bool isLoading;
   final String label;
   final double labelWidth;
 
@@ -22,7 +28,10 @@ class DistrictSelectorDropdown extends StatelessWidget {
     super.key,
     this.selectedDistrict,
     this.districts = defaultHardcodedDistricts,
+    this.districtItems,
     this.onDistrictSelected,
+    this.onDistrictItemSelected,
+    this.isLoading = false,
     this.label = 'District',
     this.labelWidth = 80,
   });
@@ -109,17 +118,33 @@ class DistrictSelectorDropdown extends StatelessWidget {
               maxHeight: 240,
             ),
             padding: EdgeInsets.zero,
-            onSelected: (String district) {
+            onSelected: (String districtName) {
               if (onDistrictSelected != null) {
-                onDistrictSelected!(district);
+                onDistrictSelected!(districtName);
+              }
+              if (onDistrictItemSelected != null && districtItems != null) {
+                final match = districtItems!
+                    .where((d) => d.name == districtName)
+                    .firstOrNull;
+                if (match != null) {
+                  onDistrictItemSelected!(match);
+                }
               }
             },
             itemBuilder: (BuildContext popupContext) {
-              return districts.map((district) {
-                final isSelected = selectedDistrict == district;
+              final items = districtItems != null && districtItems!.isNotEmpty
+                  ? districtItems!
+                  : districts
+                      .map((name) => DistrictItem(id: 0, name: name))
+                      .toList();
+
+              return items.map((districtItem) {
+                final isSelected = selectedDistrict != null &&
+                    selectedDistrict!.toLowerCase() ==
+                        districtItem.name.toLowerCase();
 
                 return PopupMenuItem<String>(
-                  value: district,
+                  value: districtItem.name,
                   height: 44,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 8,
@@ -142,7 +167,7 @@ class DistrictSelectorDropdown extends StatelessWidget {
                       children: [
                         Expanded(
                           child: Text(
-                            district,
+                            districtItem.name,
                             style: TextStyle(
                               fontFamily: _fontFamily,
                               fontSize: 14.5,
@@ -192,11 +217,21 @@ class DistrictSelectorDropdown extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                Icon(
-                  Icons.keyboard_arrow_down_rounded,
-                  color: placeholderColor,
-                  size: 22,
-                ),
+                if (isLoading)
+                  const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: AppColors.whatsappGreen,
+                    ),
+                  )
+                else
+                  Icon(
+                    Icons.keyboard_arrow_down_rounded,
+                    color: placeholderColor,
+                    size: 22,
+                  ),
               ],
             ),
           ),

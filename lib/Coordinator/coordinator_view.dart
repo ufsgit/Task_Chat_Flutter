@@ -5,9 +5,11 @@ import '../core/theme.dart';
 import '../core/widgets/fitmate_app_bar_title.dart';
 import '../customer_details/customer_details_model.dart';
 import '../customer_details/customer_details_view.dart';
+import '../today/today_model.dart';
 import '../today/widgets/chat_list_item_tile.dart';
 import '../today/widgets/filter_chips_bar.dart';
 import '../today/widgets/search_input_field.dart';
+import '../today/widgets/today_skeleton_loading.dart';
 import 'coordinator_view_model.dart';
 import 'widgets/super_admin_filter_bottom_sheet.dart';
 
@@ -42,6 +44,7 @@ class _CoordinatorViewState extends State<CoordinatorView> {
       _viewModel = CoordinatorViewModel();
       _internalViewModel = true;
     }
+    _viewModel.fetchBookings();
   }
 
   @override
@@ -137,7 +140,7 @@ class _CoordinatorViewState extends State<CoordinatorView> {
                       SlideUpRoute(page: const add_booking(isCoordinator: true)),
                     );
                     if (mounted) {
-                      _viewModel.refresh();
+                      _viewModel.fetchBookings();
                     }
                   },
                   child: Container(
@@ -273,72 +276,131 @@ class _CoordinatorViewState extends State<CoordinatorView> {
 
                 const SizedBox(height: 8),
 
-                // Lead Chat Items List with extra 'Branch Manager' badge
+                // Lead Chat Items List with extra 'Branch Manager' badge & Pull-to-refresh
                 Expanded(
-                  child: filtered.isEmpty
-                      ? const Center(
-                          child: Text(
-                            'No tasks found',
-                            style: TextStyle(
-                              color: AppColors.textSubtitle,
-                              fontSize: 14,
-                            ),
-                          ),
-                        )
-                      : ListView.separated(
-                          physics: const BouncingScrollPhysics(),
-                          itemCount: filtered.length,
-                          separatorBuilder: (context, index) => const Divider(
-                            height: 1,
-                            thickness: 1,
-                            color: AppColors.divider,
-                            indent: 78,
-                          ),
-                          itemBuilder: (context, index) {
-                            final item = filtered[index];
-                            return ChatListItemTile(
-                              title: item['title'] ?? '',
-                              avatarLetter: item['avatarLetter'] ?? '',
-                              avatarBgColor:
-                                  item['avatarBgColor'] ?? AppColors.surfaceGrey,
-                              avatarTextColor:
-                                  item['avatarTextColor'] ??
-                                  AppColors.textSecondary,
-                              avatarBorderColor: item['avatarBorderColor'],
-                              hasVerifiedBadge: item['hasVerifiedBadge'] ?? false,
-                              date: item['date'] ?? '',
-                              tagText: item['tagText'] ?? '',
-                              tagBgColor:
-                                  item['tagBgColor'] ?? AppColors.completedBg,
-                              tagTextColor:
-                                  item['tagTextColor'] ?? AppColors.completedText,
-                              location: item['location'] ?? '',
-                              extraBadgeText:
-                                  item['branchManager'] ??
-                                  item['role'] ??
-                                  'Branch Manager',
-                              onTap: () async {
-                                final customer = CustomerDetailsData.fromChatInfo(
-                                  name: item['title']?.toString() ?? 'Customer',
-                                  location: item['location']?.toString(),
-                                  tagText: item['tagText']?.toString(),
-                                  id: item['id']?.toString(),
-                                );
-                                await Navigator.of(context).push(
-                                  SlideUpRoute(
-                                    page: CustomerDetailsPage(
-                                      customer: customer,
-                                      isCoordinator: true,
+                  child: RefreshIndicator(
+                    onRefresh: _viewModel.fetchBookings,
+                    color: AppColors.primaryGreen,
+                    child: _viewModel.isLoading && filtered.isEmpty
+                        ? const TodaySkeletonLoading()
+                        : filtered.isEmpty
+                            ? ListView(
+                                physics: const AlwaysScrollableScrollPhysics(),
+                                children: const [
+                                  SizedBox(height: 120),
+                                  Center(
+                                    child: Text(
+                                      'No tasks found',
+                                      style: TextStyle(
+                                        color: AppColors.textSubtitle,
+                                        fontSize: 14,
+                                      ),
                                     ),
                                   ),
-                                );
-                                if (mounted) {
-                                  _viewModel.refresh();
-                                }
-                              },
-                            );
-                          },
-                        ),
+                                ],
+                              )
+                            : ListView.separated(
+                                physics: const AlwaysScrollableScrollPhysics(),
+                                padding: const EdgeInsets.only(bottom: 100),
+                                itemCount: filtered.length,
+                                separatorBuilder: (context, index) => const Divider(
+                                  height: 1,
+                                  thickness: 1,
+                                  color: AppColors.divider,
+                                  indent: 78,
+                                ),
+                                itemBuilder: (context, index) {
+                                  final item = filtered[index];
+                                  return ChatListItemTile(
+                                    title: item['title'] ?? '',
+                                    avatarLetter: item['avatarLetter'] ?? '',
+                                    avatarBgColor:
+                                        item['avatarBgColor'] ?? AppColors.surfaceGrey,
+                                    avatarTextColor:
+                                        item['avatarTextColor'] ??
+                                        AppColors.textSecondary,
+                                    avatarBorderColor: item['avatarBorderColor'],
+                                    hasVerifiedBadge: item['hasVerifiedBadge'] ?? false,
+                                    date: item['date'] ?? '',
+                                    tagText: item['tagText'] ?? '',
+                                    tagBgColor:
+                                        item['tagBgColor'] ?? AppColors.completedBg,
+                                    tagTextColor:
+                                        item['tagTextColor'] ?? AppColors.completedText,
+                                    location: item['location'] ?? '',
+                                    extraBadgeText:
+                                        item['branchManager'] ??
+                                        item['role'] ??
+                                        'Branch Manager',
+                                    onTap: () async {
+                                      final booking = item['booking'] as BookingModel?;
+                                      final customer = booking != null
+                                          ? CustomerDetailsData(
+                                              id: booking.id.toString(),
+                                              name: booking.name,
+                                              inquiry: booking.notes.isNotEmpty
+                                                  ? booking.notes
+                                                  : 'Steel door enquiry',
+                                              status: booking.status.isNotEmpty
+                                                  ? '${booking.status[0].toUpperCase()}${booking.status.substring(1).toLowerCase()}'
+                                                  : 'New',
+                                              phoneNumber: booking.mobile,
+                                              addressLine1: booking.address,
+                                              addressLine2: [
+                                                booking.areaName,
+                                                booking.districtName,
+                                                booking.stateName,
+                                              ]
+                                                  .where((s) => s.isNotEmpty)
+                                                  .join(', '),
+                                              notes: booking.notes,
+                                              documents: booking.documents,
+                                              hasBeenScheduled: booking.status
+                                                          .toLowerCase() ==
+                                                      'scheduled' ||
+                                                  booking.status
+                                                          .toLowerCase() ==
+                                                      'completed',
+                                              branchHeadId: booking.branchHeadId,
+                                              branchHeadName: booking.branchHeadName ??
+                                                  item['branchManager']?.toString(),
+                                            )
+                                          : CustomerDetailsData.fromChatInfo(
+                                              name: item['title']?.toString() ??
+                                                  'Customer',
+                                              location: item['location']
+                                                  ?.toString(),
+                                              tagText: item['tagText']
+                                                  ?.toString(),
+                                              id: item['id']?.toString(),
+                                              branchHeadId: item['branchHeadId'] is int
+                                                  ? item['branchHeadId'] as int
+                                                  : null,
+                                              branchHeadName: item['branchManager']?.toString() ??
+                                                  item['branchHeadName']?.toString(),
+                                            );
+                                      final updatedStatus = await Navigator.of(context).push(
+                                        SlideRightRoute(
+                                          page: CustomerDetailsPage(
+                                            customer: customer,
+                                            isCoordinator: true,
+                                          ),
+                                        ),
+                                      );
+                                      if (updatedStatus is String && mounted) {
+                                        _viewModel.updateStatus(
+                                          item['title'] ?? '',
+                                          updatedStatus,
+                                        );
+                                        _viewModel.fetchBookings();
+                                      } else if (mounted) {
+                                        _viewModel.fetchBookings();
+                                      }
+                                    },
+                                  );
+                                },
+                              ),
+                  ),
                 ),
               ],
             ),

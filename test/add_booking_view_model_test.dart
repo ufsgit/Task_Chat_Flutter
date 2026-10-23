@@ -9,6 +9,7 @@ import 'package:task_chat/new_booking/add_booking_view.dart';
 import 'package:task_chat/new_booking/add_booking_view_model.dart';
 import 'package:task_chat/new_booking/area_model.dart';
 import 'package:task_chat/new_booking/area_view_model.dart';
+import 'package:task_chat/new_booking/district_view_model.dart';
 import 'package:task_chat/new_booking/lead_data.dart';
 
 void main() {
@@ -37,11 +38,11 @@ void main() {
   });
 
   group('AddBookingViewModel POST /api/bookings MVVM Tests', () {
-    test('validate checks for required fields', () {
+    test('validate checks for required fields and valid mobile format', () {
       final viewModel = AddBookingViewModel();
 
       expect(
-        viewModel.validate(const LeadFormData(name: '', mobile: '123', address: 'Kochi', areaId: 1, areaName: 'Edapally')),
+        viewModel.validate(const LeadFormData(name: '', mobile: '9876543210', address: 'Kochi', areaId: 1, areaName: 'Edapally')),
         'Please enter customer name',
       );
       expect(
@@ -49,19 +50,39 @@ void main() {
         'Please enter mobile number',
       );
       expect(
-        viewModel.validate(const LeadFormData(name: 'Rahul', mobile: '123', address: '', areaId: 1, areaName: 'Edapally')),
+        viewModel.validate(const LeadFormData(name: 'Rahul', mobile: '   ', address: 'Kochi', areaId: 1, areaName: 'Edapally')),
+        'Please enter mobile number',
+      );
+      expect(
+        viewModel.validate(const LeadFormData(name: 'Rahul', mobile: '12345', address: 'Kochi', areaId: 1, areaName: 'Edapally')),
+        'Please enter a valid 10-digit mobile number',
+      );
+      expect(
+        viewModel.validate(const LeadFormData(name: 'Rahul', mobile: 'abcdefghij', address: 'Kochi', areaId: 1, areaName: 'Edapally')),
+        'Please enter a valid 10-digit mobile number',
+      );
+      expect(
+        viewModel.validate(const LeadFormData(name: 'Rahul', mobile: '9876543210', address: '', areaId: 1, areaName: 'Edapally')),
         'Please enter address',
       );
       expect(
-        viewModel.validate(const LeadFormData(name: 'Rahul', mobile: '123', address: 'Kochi')),
+        viewModel.validate(const LeadFormData(name: 'Rahul', mobile: '9876543210', address: 'Kochi')),
         'Please select an area',
       );
       expect(
-        viewModel.validate(const LeadFormData(name: 'Rahul', mobile: '123', address: 'Kochi', areaId: null, areaName: 'Edapally')),
+        viewModel.validate(const LeadFormData(name: 'Rahul', mobile: '9876543210', address: 'Kochi', areaId: null, areaName: 'Edapally')),
         'Please select an area',
       );
       expect(
-        viewModel.validate(const LeadFormData(name: 'Rahul', mobile: '123', address: 'Kochi', areaId: 1, areaName: 'Edapally')),
+        viewModel.validate(const LeadFormData(name: 'Rahul', mobile: '9876543210', address: 'Kochi', areaId: 1, areaName: 'Edapally')),
+        isNull,
+      );
+      expect(
+        viewModel.validate(const LeadFormData(name: 'Rahul', mobile: '+91 94471 22334', address: 'Kochi', areaId: 1, areaName: 'Edapally')),
+        isNull,
+      );
+      expect(
+        viewModel.validate(const LeadFormData(name: 'Rahul', mobile: '09876543210', address: 'Kochi', areaId: 1, areaName: 'Edapally')),
         isNull,
       );
     });
@@ -131,7 +152,7 @@ void main() {
       final viewModel = AddBookingViewModel(client: mockClient);
       const formData = LeadFormData(
         name: 'Incomplete',
-        mobile: '123',
+        mobile: '9876543210',
         address: 'Street',
         areaId: 1,
         areaName: 'Edapally',
@@ -151,7 +172,7 @@ void main() {
       final viewModel = AddBookingViewModel(client: mockClient);
       const formData = LeadFormData(
         name: 'Rahul',
-        mobile: '123',
+        mobile: '9876543210',
         address: 'Kochi',
         areaId: 1,
         areaName: 'Edapally',
@@ -161,6 +182,54 @@ void main() {
 
       expect(result.isSuccess, false);
       expect(viewModel.errorMessage, contains('Network unreachable'));
+    });
+  });
+
+  group('DistrictViewModel MVVM Tests', () {
+    test('initializes with default fallback districts', () {
+      final vm = DistrictViewModel();
+      expect(vm.districts, isNotEmpty);
+      expect(vm.districts.first.name, 'Ernakulam');
+      expect(vm.selectedDistrict?.name, 'Ernakulam');
+    });
+
+    test('fetchDistricts updates districts from API', () async {
+      final mockClient = MockClient((request) async {
+        if (request.url.path.endsWith('/api/dropdowns/districts')) {
+          return http.Response(
+            jsonEncode({
+              'type': 'district',
+              'page': 1,
+              'limit': 20,
+              'count': 3,
+              'data': [
+                {'id': 1, 'name': 'Ernakulam'},
+                {'id': 2, 'name': 'Thiruvananthapuram'},
+                {'id': 3, 'name': 'Kozhikode'},
+              ],
+            }),
+            200,
+          );
+        }
+        return http.Response('Not Found', 404);
+      });
+
+      final vm = DistrictViewModel(client: mockClient);
+      await vm.fetchDistricts();
+
+      expect(vm.isLoading, false);
+      expect(vm.errorMessage, isNull);
+      expect(vm.districts.length, 3);
+      expect(vm.districts.map((d) => d.name), containsAll(['Ernakulam', 'Thiruvananthapuram', 'Kozhikode']));
+    });
+
+    test('selectDistrictByName sets active district', () {
+      final vm = DistrictViewModel();
+      vm.selectDistrictByName('Kozhikode');
+      expect(vm.selectedDistrictName, 'Kozhikode');
+
+      vm.selectDistrictByName('Thrissur');
+      expect(vm.selectedDistrictName, 'Thrissur');
     });
   });
 
@@ -237,6 +306,36 @@ void main() {
 
     testWidgets('renders District dropdown when isCoordinator is true and selects district', (WidgetTester tester) async {
       final mockClient = MockClient((request) async {
+        if (request.url.path.endsWith('/api/dropdowns/districts')) {
+          return http.Response(
+            jsonEncode({
+              'type': 'district',
+              'page': 1,
+              'limit': 20,
+              'count': 3,
+              'data': [
+                {'id': 1, 'name': 'Ernakulam'},
+                {'id': 2, 'name': 'Thiruvananthapuram'},
+                {'id': 3, 'name': 'Kozhikode'},
+              ],
+            }),
+            200,
+          );
+        }
+        if (request.url.path.endsWith('/api/dropdowns/areas') || request.url.path.endsWith('/api/dropdowns')) {
+          return http.Response(
+            jsonEncode({
+              'type': 'area',
+              'page': 1,
+              'limit': 20,
+              'count': 1,
+              'data': [
+                {'id': 1, 'name': 'Edapally'},
+              ],
+            }),
+            200,
+          );
+        }
         return http.Response(jsonEncode({'status': 'success', 'data': {'id': 99}}), 200);
       });
 
@@ -313,6 +412,68 @@ void main() {
 
       expect(find.byKey(const Key('district_selector_dropdown')), findsNothing);
       expect(find.text('District'), findsNothing);
+    });
+
+    test('AreaViewModel uses coordinator_area_listing when isCoordinator is true and parses response body', () async {
+      String? requestedUrl;
+      final mockClient = MockClient((request) async {
+        requestedUrl = request.url.toString();
+        return http.Response(
+          jsonEncode({
+            'type': 'district',
+            'page': 1,
+            'limit': 20,
+            'count': 5,
+            'data': [
+              {
+                'id': 1,
+                'name': 'Ernakulam',
+              },
+            ],
+          }),
+          200,
+        );
+      });
+
+      final areaVm = AreaViewModel(client: mockClient, isCoordinator: true);
+      await areaVm.fetchAreas(districtId: 1);
+
+      expect(requestedUrl, contains('/api/dropdowns/areas'));
+      expect(requestedUrl, contains('districtId=1'));
+      expect(areaVm.areas.length, 1);
+      expect(areaVm.areas.first.id, 1);
+      expect(areaVm.areas.first.name, 'Ernakulam');
+    });
+
+    test('AreaViewModel uses area_listing when isCoordinator is false', () async {
+      String? requestedUrl;
+      final mockClient = MockClient((request) async {
+        requestedUrl = request.url.toString();
+        return http.Response(
+          jsonEncode({
+            'type': 'area',
+            'page': 1,
+            'limit': 20,
+            'count': 1,
+            'data': [
+              {
+                'id': 3,
+                'name': 'Aluva',
+              },
+            ],
+          }),
+          200,
+        );
+      });
+
+      final areaVm = AreaViewModel(client: mockClient, isCoordinator: false);
+      await areaVm.fetchAreas();
+
+      expect(requestedUrl, contains('/api/dropdowns?'));
+      expect(requestedUrl, isNot(contains('/api/dropdowns/areas')));
+      expect(areaVm.areas.length, 1);
+      expect(areaVm.areas.first.id, 3);
+      expect(areaVm.areas.first.name, 'Aluva');
     });
   });
 }

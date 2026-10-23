@@ -22,7 +22,7 @@ class SlideRightRoute<T> extends PageRouteBuilder<T> {
             child: child,
           );
         },
-        transitionDuration: const Duration(milliseconds: 320),
+        transitionDuration: const Duration(milliseconds: 500),
         reverseTransitionDuration: const Duration(milliseconds: 280),
       );
 }

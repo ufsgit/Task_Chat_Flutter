@@ -1,9 +1,43 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
+import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:task_chat/bottom_navigator/bottom_navigator.dart';
+import 'package:task_chat/login_page/token_storage.dart';
 import 'package:task_chat/Coordinator/cordinator_page.dart';
 import 'package:task_chat/Coordinator/widgets/super_admin_filter_bottom_sheet.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+    TokenStorage.useMemoryOnly = true;
+    TokenStorage().savetoken('test_mock_token');
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+      const MethodChannel('plugins.it_nomads.com/flutter_secure_storage'),
+      (MethodCall methodCall) async {
+        if (methodCall.method == 'read') {
+          return 'test_mock_token';
+        }
+        return null;
+      },
+    );
+  });
+
+  tearDown(() {
+    TokenStorage.useMemoryOnly = false;
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+      const MethodChannel('plugins.it_nomads.com/flutter_secure_storage'),
+      null,
+    );
+  });
+
   testWidgets(
       'SuperAdminPage renders search bar and filter button with Status and Branch Manager options',
       (WidgetTester tester) async {
@@ -94,4 +128,92 @@ void main() {
 
     vm.dispose();
   });
+
+  test('CoordinatorViewModel fetchBookings loads from API and maps branch manager', () async {
+    final mockClient = MockClient((request) async {
+      if (request.url.path.endsWith('/api/bookings')) {
+        return http.Response(
+          jsonEncode({
+            'status': 'success',
+            'data': [
+              {
+                'id': 101,
+                'name': 'Customer One',
+                'mobile': '9876543210',
+                'address': 'MG Road',
+                'notes': 'Urgent requirement',
+                'status': 'NEW',
+                'loginName': 'Sarah Jenkins',
+                'areaName': 'Edapally',
+                'districtName': 'Ernakulam',
+                'documents': [],
+              },
+            ],
+          }),
+          200,
+        );
+      }
+      return http.Response('Not Found', 404);
+    });
+
+    final vm = CoordinatorViewModel(client: mockClient);
+    await vm.fetchBookings();
+
+    expect(vm.isLoading, false);
+    expect(vm.errorMessage, isNull);
+    expect(vm.bookings.length, 1);
+    expect(vm.filteredChatItems.length, 1);
+    expect(vm.filteredChatItems.first['title'], 'Customer One');
+    expect(vm.filteredChatItems.first['branchManager'], 'Sarah Jenkins');
+    expect(vm.filteredChatItems.first['role'], 'Branch Manager');
+  });
+
+  testWidgets('BottomNavigator calls fetchBookings on CoordinatorViewModel for coordinator', (tester) async {
+    var fetchCalled = 0;
+    final mockClient = MockClient((request) async {
+      fetchCalled++;
+      return http.Response(
+        jsonEncode({
+          'status': 'success',
+          'data': [],
+        }),
+        200,
+      );
+    });
+
+    final vm = CoordinatorViewModel(client: mockClient);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: BottomNavigator(
+          isCoordinator: true,
+          coordinatorViewModel: vm,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(fetchCalled, greaterThanOrEqualTo(1));
+  });
+
+  test('CoordinatorViewModel ignores concurrent fetchBookings calls when already loading', () async {
+    int requestCount = 0;
+    final mockClient = MockClient((request) async {
+      requestCount++;
+      await Future.delayed(const Duration(milliseconds: 50));
+      return http.Response(
+        jsonEncode({'status': 'success', 'data': []}),
+        200,
+      );
+    });
+
+    final vm = CoordinatorViewModel(client: mockClient);
+    final future1 = vm.fetchBookings();
+    final future2 = vm.fetchBookings();
+    await Future.wait([future1, future2]);
+
+    expect(requestCount, 1);
+  });
 }
+

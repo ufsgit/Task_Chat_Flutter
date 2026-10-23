@@ -129,6 +129,7 @@ class TodayViewModel extends ChangeNotifier {
 
   /// Fetches bookings from the backend API.
   Future<void> fetchBookings() async {
+    if (_isLoading) return;
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();

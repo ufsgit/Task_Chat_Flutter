@@ -25,8 +25,8 @@ class ReportActivity extends StatelessWidget {
         title: const FitmateAppBarTitle(),
       ),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(16.0, 12.0, 16.0, 100.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [

@@ -11,6 +11,8 @@ class CustomerDetailsModel {
   final String notes;
   final bool hasBeenScheduled;
   final List<String> documents;
+  final int? branchHeadId;
+  final String? branchHeadName;
 
   const CustomerDetailsModel({
     required this.id,
@@ -23,6 +25,8 @@ class CustomerDetailsModel {
     this.notes = '',
     this.hasBeenScheduled = false,
     this.documents = const [],
+    this.branchHeadId,
+    this.branchHeadName,
   });
 
   CustomerDetailsModel copyWith({
@@ -36,6 +40,8 @@ class CustomerDetailsModel {
     String? notes,
     bool? hasBeenScheduled,
     List<String>? documents,
+    int? branchHeadId,
+    String? branchHeadName,
   }) {
     return CustomerDetailsModel(
       id: id ?? this.id,
@@ -48,6 +54,8 @@ class CustomerDetailsModel {
       notes: notes ?? this.notes,
       hasBeenScheduled: hasBeenScheduled ?? this.hasBeenScheduled,
       documents: documents ?? this.documents,
+      branchHeadId: branchHeadId ?? this.branchHeadId,
+      branchHeadName: branchHeadName ?? this.branchHeadName,
     );
   }
 
@@ -58,6 +66,8 @@ class CustomerDetailsModel {
     String? tagText,
     String? id,
     List<String>? documents,
+    int? branchHeadId,
+    String? branchHeadName,
   }) {
     final resolvedStatus =
         (tagText != null && tagText.isNotEmpty) ? tagText : 'New';
@@ -79,6 +89,8 @@ class CustomerDetailsModel {
       notes: '',
       hasBeenScheduled: isScheduledOrCompleted,
       documents: documents ?? const [],
+      branchHeadId: branchHeadId,
+      branchHeadName: branchHeadName,
     );
   }
 }

@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:task_chat/bottom_navigator/bottom_navigator.dart';
+import 'package:task_chat/Coordinator/coordinator_view_model.dart';
 import 'package:task_chat/today/today_model.dart';
 import 'package:task_chat/today/today_view_model.dart';
 
@@ -187,5 +188,39 @@ void main() {
       // fetchBookings must be called every time it is selected
       expect(fetchCount, 3);
     });
+
+    test('TodayViewModel ignores concurrent fetchBookings calls when already loading', () async {
+      int requestCount = 0;
+      final mockClient = MockClient((request) async {
+        requestCount++;
+        await Future.delayed(const Duration(milliseconds: 50));
+        return http.Response(mockApiResponse, 200,
+            headers: {'content-type': 'application/json'});
+      });
+
+      final vm = TodayViewModel(client: mockClient);
+      final future1 = vm.fetchBookings();
+      final future2 = vm.fetchBookings();
+      await Future.wait([future1, future2]);
+
+      expect(requestCount, 1);
+    });
+
+    testWidgets('BottomNavigator configures extendBody true on Scaffold', (tester) async {
+      final mock = MockClient((_) async => http.Response('{"data":[]}', 200));
+      final vm = TodayViewModel(client: mock);
+      final cvm = CoordinatorViewModel(client: mock);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: BottomNavigator(todayViewModel: vm, coordinatorViewModel: cvm),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      final scaffold = tester.widget<Scaffold>(find.byType(Scaffold).first);
+      expect(scaffold.extendBody, true);
+    });
   });
 }
+

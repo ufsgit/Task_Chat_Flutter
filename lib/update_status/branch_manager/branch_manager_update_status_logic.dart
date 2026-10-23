@@ -49,6 +49,9 @@ class StatusUpdateRequest {
   final String notes;
   final int createdBy;
   final String createdByName;
+  final String? branchManager;
+  final int? branchManagerId;
+  final String? branchManagerName;
 
   const StatusUpdateRequest({
     required this.clientId,
@@ -58,6 +61,9 @@ class StatusUpdateRequest {
     required this.notes,
     required this.createdBy,
     required this.createdByName,
+    this.branchManager,
+    this.branchManagerId,
+    this.branchManagerName,
   });
 
   Map<String, dynamic> toJson() => {
@@ -68,6 +74,11 @@ class StatusUpdateRequest {
     'notes': notes,
     'createdBy': createdBy,
     'createdByName': createdByName,
+    if (branchManager != null && branchManager!.isNotEmpty)
+      'branchManager': branchManager,
+    if (branchManagerId != null) 'branchManagerId': branchManagerId,
+    if (branchManagerName != null && branchManagerName!.isNotEmpty)
+      'branchManagerName': branchManagerName,
   };
 
   factory StatusUpdateRequest.fromJson(Map<String, dynamic> json) {

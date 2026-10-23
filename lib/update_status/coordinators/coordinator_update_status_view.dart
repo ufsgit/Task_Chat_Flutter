@@ -57,6 +57,7 @@ class _CoordinatorUpdateStatusViewState
       );
       _internalVm = true;
     }
+    _viewModel.loadBranchManagers();
   }
 
   @override
@@ -121,6 +122,8 @@ class _CoordinatorUpdateStatusViewState
                   BranchManagerFieldCard(
                     selectedManager: _viewModel.selectedBranchManager,
                     onManagerChanged: _viewModel.setBranchManager,
+                    managers: _viewModel.availableManagers,
+                    isLoading: _viewModel.isLoadingManagers,
                   ),
 
                   const SizedBox(height: 20),

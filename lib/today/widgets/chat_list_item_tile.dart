@@ -199,6 +199,21 @@ class ChatListItemTile extends StatelessWidget {
   }
 
   Widget _buildAvatar(bool isDark) {
-    return const UserCircleAvatar(size: 48);
+    final colors = getAvatarColorsForName(
+      title.isNotEmpty ? title : avatarLetter,
+    );
+    final bg = (avatarBgColor != AppColors.surfaceGrey && avatarBgColor != Colors.transparent)
+        ? avatarBgColor
+        : colors.background;
+    final fg = (avatarTextColor != AppColors.textSecondary)
+        ? avatarTextColor
+        : colors.icon;
+
+    return UserCircleAvatar(
+      size: 48,
+      backgroundColor: bg,
+      iconColor: fg,
+      name: title.isNotEmpty ? title : avatarLetter,
+    );
   }
 }

@@ -67,7 +67,7 @@ class CustomerHeaderCard extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           // 1. WhatsApp-style circular profile avatar
-          const UserCircleAvatar(size: 64),
+          UserCircleAvatar(size: 64, name: customer.name),
           const SizedBox(height: 12),
 
           // 2. Customer Name & Status Badge Row
@@ -144,10 +144,7 @@ class CustomerHeaderCard extends StatelessWidget {
 
             // 4. Address Row (recessed container matching screenshot)
             Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 14,
-                vertical: 12,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               decoration: BoxDecoration(
                 color: colors.surfaceSecondary,
                 borderRadius: BorderRadius.circular(14),

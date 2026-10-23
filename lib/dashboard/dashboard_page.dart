@@ -33,7 +33,7 @@ class _DashboardPageState extends State<DashboardPage> {
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+          padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 100.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [

@@ -18,13 +18,17 @@ class CoordinatorUpdateStatusViewModel extends ChangeNotifier {
   late String _selectedBranchManager;
   late bool _hasBeenScheduled;
   bool _isSaving = false;
+  bool _isLoadingManagers = false;
   String? _errorMessage;
+  List<BranchHeadUser> _branchManagers = [];
 
   CoordinatorUpdateStatusViewModel({
     required this.customer,
     http.Client? client,
     TokenStorage? tokenStorage,
     CoordinatorUpdateStatusLogic? logic,
+    bool autoLoadManagers = false,
+    String? initialBranchManager,
   })  : _shouldCloseClient = client == null && logic == null,
         _logic = logic ??
             CoordinatorUpdateStatusLogic(
@@ -45,7 +49,20 @@ class CoordinatorUpdateStatusViewModel extends ChangeNotifier {
 
     _notesController = TextEditingController(text: '');
     _scheduleDate = '10/24/2024';
-    _selectedBranchManager = availableBranchManagers.first;
+    final resolvedInitialManager = (initialBranchManager != null &&
+            initialBranchManager.trim().isNotEmpty)
+        ? initialBranchManager.trim()
+        : ((customer.branchHeadName != null &&
+                customer.branchHeadName!.trim().isNotEmpty)
+            ? customer.branchHeadName!.trim()
+            : null);
+
+    _selectedBranchManager = resolvedInitialManager ??
+        availableBranchManagers.first;
+
+    if (autoLoadManagers) {
+      loadBranchManagers();
+    }
   }
 
   // Getters
@@ -55,7 +72,67 @@ class CoordinatorUpdateStatusViewModel extends ChangeNotifier {
   String get selectedBranchManager => _selectedBranchManager;
   bool get hasBeenScheduled => _hasBeenScheduled;
   bool get isSaving => _isSaving;
+  bool get isLoadingManagers => _isLoadingManagers;
   String? get errorMessage => _errorMessage;
+  List<BranchHeadUser> get branchManagers => _branchManagers;
+
+  List<String> get availableManagers {
+    final list = _branchManagers.isNotEmpty
+        ? _branchManagers.map((m) => m.name).toList()
+        : List<String>.from(availableBranchManagers);
+    if (_selectedBranchManager.isNotEmpty && !list.contains(_selectedBranchManager)) {
+      list.insert(0, _selectedBranchManager);
+    }
+    return list;
+  }
+
+  /// Fetches branch head managers from API and updates available options.
+  Future<void> loadBranchManagers() async {
+    _isLoadingManagers = true;
+    notifyListeners();
+
+    try {
+      final managers = await _logic.fetchBranchManagers();
+      if (managers.isNotEmpty) {
+        _branchManagers = managers;
+        final names = _branchManagers.map((m) => m.name).toList();
+
+        // If customer has an assigned branch head, match it
+        BranchHeadUser? matched;
+        if (customer.branchHeadId != null) {
+          matched = _branchManagers
+              .where((m) => m.id == customer.branchHeadId)
+              .firstOrNull;
+        }
+
+        final targetName = (customer.branchHeadName != null &&
+                customer.branchHeadName!.trim().isNotEmpty)
+            ? customer.branchHeadName!.trim()
+            : null;
+
+        if (matched == null && targetName != null) {
+          matched = _branchManagers
+              .where((m) =>
+                  m.name.toLowerCase().trim() == targetName.toLowerCase() ||
+                  m.username.toLowerCase().trim() == targetName.toLowerCase())
+              .firstOrNull;
+        }
+
+        if (matched != null) {
+          _selectedBranchManager = matched.name;
+        } else if (targetName != null) {
+          _selectedBranchManager = targetName;
+        } else if (!names.contains(_selectedBranchManager)) {
+          _selectedBranchManager = names.first;
+        }
+      }
+    } catch (_) {
+      // Ignored - fallback to availableBranchManagers
+    } finally {
+      _isLoadingManagers = false;
+      notifyListeners();
+    }
+  }
 
   List<String> get availableOptions =>
       getAvailableStatusOptions(hasBeenScheduled: _hasBeenScheduled);
@@ -87,6 +164,27 @@ class CoordinatorUpdateStatusViewModel extends ChangeNotifier {
     }
   }
 
+  BranchHeadUser? get selectedBranchHead {
+    if (_branchManagers.isEmpty) return null;
+    if (customer.branchHeadId != null) {
+      final byId = _branchManagers
+          .where((m) => m.id == customer.branchHeadId)
+          .firstOrNull;
+      if (byId != null &&
+          byId.name.toLowerCase().trim() ==
+              _selectedBranchManager.toLowerCase().trim()) {
+        return byId;
+      }
+    }
+    return _branchManagers
+        .where((m) =>
+            m.name.toLowerCase().trim() ==
+                _selectedBranchManager.toLowerCase().trim() ||
+            m.username.toLowerCase().trim() ==
+                _selectedBranchManager.toLowerCase().trim())
+        .firstOrNull;
+  }
+
   /// Saves the status update to the backend API and shows user feedback.
   Future<bool> saveStatus(BuildContext context) async {
     if (_isSaving) return false;
@@ -96,12 +194,17 @@ class CoordinatorUpdateStatusViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
+      final selectedBm = selectedBranchHead;
+      final bmId = selectedBm?.id ?? customer.branchHeadId;
+      final bmName = selectedBm?.name ?? _selectedBranchManager;
       final success = await _logic.submitStatusUpdate(
         customer: customer,
         status: _selectedStatus,
         scheduleDate: _scheduleDate,
         notes: _notesController.text,
         branchManager: _selectedBranchManager,
+        branchManagerId: bmId,
+        branchManagerName: bmName,
       );
 
       if (success) {

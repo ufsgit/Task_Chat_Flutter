@@ -345,6 +345,7 @@ class _TodayPageState extends State<TodayPage> {
                               )
                             : ListView.separated(
                                 physics: const AlwaysScrollableScrollPhysics(),
+                                padding: const EdgeInsets.only(bottom: 100),
                                 itemCount: filtered.length,
                                 separatorBuilder: (context, index) => Padding(
                                   padding: const EdgeInsets.symmetric(
@@ -406,6 +407,9 @@ class _TodayPageState extends State<TodayPage> {
                                                   booking.status
                                                           .toLowerCase() ==
                                                       'completed',
+                                              branchHeadId: booking.branchHeadId,
+                                              branchHeadName: booking.branchHeadName ??
+                                                  item['branchManager']?.toString(),
                                             )
                                           : CustomerDetailsData.fromChatInfo(
                                               name: item['title']?.toString() ??
@@ -415,6 +419,11 @@ class _TodayPageState extends State<TodayPage> {
                                               tagText: item['tagText']
                                                   ?.toString(),
                                               id: item['id']?.toString(),
+                                              branchHeadId: item['branchHeadId'] is int
+                                                  ? item['branchHeadId'] as int
+                                                  : null,
+                                              branchHeadName: item['branchManager']?.toString() ??
+                                                  item['branchHeadName']?.toString(),
                                             );
 
                                       final updatedStatus =

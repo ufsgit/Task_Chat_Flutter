@@ -97,7 +97,7 @@ class _SettingsViewState extends State<SettingsView> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+      padding: const EdgeInsets.fromLTRB(16.0, 12.0, 16.0, 100.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

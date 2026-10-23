@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../core/theme.dart';
 
 /// Reusable form row containing a fixed-width label and an input field.
@@ -8,6 +9,8 @@ class LeadLabeledRow extends StatelessWidget {
   final String hintText;
   final TextInputType keyboardType;
   final double labelWidth;
+  final List<TextInputFormatter>? inputFormatters;
+  final int? maxLength;
 
   const LeadLabeledRow({
     super.key,
@@ -16,6 +19,8 @@ class LeadLabeledRow extends StatelessWidget {
     required this.hintText,
     this.keyboardType = TextInputType.text,
     this.labelWidth = 80,
+    this.inputFormatters,
+    this.maxLength,
   });
 
   @override
@@ -39,6 +44,9 @@ class LeadLabeledRow extends StatelessWidget {
           child: TextField(
             controller: controller,
             keyboardType: keyboardType,
+            inputFormatters: inputFormatters,
+            maxLength: maxLength,
+            buildCounter: (context, {required currentLength, required isFocused, maxLength}) => null,
             style: TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.w500,
@@ -46,6 +54,7 @@ class LeadLabeledRow extends StatelessWidget {
             ),
             decoration: InputDecoration(
               hintText: hintText,
+              counterText: '',
               hintStyle: TextStyle(
                 color: isDark
                     ? AppDarkColors.textPlaceholder

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../core/theme.dart';
+import '../core/widgets/user_circle_avatar.dart';
 
 /// Data model representing a booking lead from /api/booking.
 class BookingModel {
@@ -12,6 +13,8 @@ class BookingModel {
   final int? loginRoleId;
   final int? loginId;
   final String? loginName;
+  final int? branchHeadId;
+  final String? branchHeadName;
   final int? stateId;
   final String stateName;
   final int? districtId;
@@ -32,6 +35,8 @@ class BookingModel {
     this.loginRoleId,
     this.loginId,
     this.loginName,
+    this.branchHeadId,
+    this.branchHeadName,
     this.stateId,
     required this.stateName,
     this.districtId,
@@ -61,6 +66,15 @@ class BookingModel {
       loginRoleId: json['loginRoleId'] as int?,
       loginId: json['loginId'] as int?,
       loginName: json['loginName']?.toString(),
+      branchHeadId: json['branchHeadId'] is int
+          ? json['branchHeadId'] as int
+          : int.tryParse(json['branchHeadId']?.toString() ?? '') ??
+              (json['branch_head_id'] is int
+                  ? json['branch_head_id'] as int
+                  : int.tryParse(json['branch_head_id']?.toString() ?? '')),
+      branchHeadName: json['branchHeadName']?.toString() ??
+          json['branch_head_name']?.toString() ??
+          json['loginName']?.toString(),
       stateId: json['stateId'] as int?,
       stateName: json['stateName']?.toString() ?? '',
       districtId: json['districtId'] as int?,
@@ -84,36 +98,27 @@ class BookingModel {
         ? '${createdAt!.day.toString().padLeft(2, '0')}/${createdAt!.month.toString().padLeft(2, '0')}/${createdAt!.year}'
         : '';
 
+    final avatarColors = getAvatarColorsForName(name);
     Color tagBg;
     Color tagText;
-    Color avatarBg;
-    Color avatarText;
 
     switch (statusLower) {
       case 'completed':
         tagBg = AppColors.completedBg;
         tagText = AppColors.completedText;
-        avatarBg = AppColors.completedBg;
-        avatarText = AppColors.completedText;
         break;
       case 'cancelled':
         tagBg = AppColors.cancelledBg;
         tagText = AppColors.cancelledText;
-        avatarBg = AppColors.cancelledBg;
-        avatarText = AppColors.cancelledText;
         break;
       case 'scheduled':
         tagBg = const Color(0xFFFEF3C7);
         tagText = const Color(0xFFD97706);
-        avatarBg = AppColors.purpleAvatarBg;
-        avatarText = AppColors.purpleAvatarText;
         break;
       case 'new':
       default:
         tagBg = AppColors.newBg;
         tagText = AppColors.newText;
-        avatarBg = AppColors.newAvatarBg;
-        avatarText = AppColors.newAvatarText;
         break;
     }
 
@@ -125,8 +130,8 @@ class BookingModel {
       'id': id.toString(),
       'title': name,
       'avatarLetter': name.isNotEmpty ? name[0].toUpperCase() : 'B',
-      'avatarBgColor': avatarBg,
-      'avatarTextColor': avatarText,
+      'avatarBgColor': avatarColors.background,
+      'avatarTextColor': avatarColors.icon,
       'avatarBorderColor': null,
       'hasVerifiedBadge': false,
       'tagText': status.isNotEmpty
@@ -138,6 +143,11 @@ class BookingModel {
       'date': formattedDate,
       'unreadCount': 0,
       'isPending': statusLower != 'completed' && statusLower != 'cancelled',
+      'branchHeadId': branchHeadId,
+      'branchHeadName': branchHeadName,
+      'branchManager': (branchHeadName != null && branchHeadName!.trim().isNotEmpty)
+          ? branchHeadName!.trim()
+          : (loginName ?? ''),
       'booking': this,
     };
   }
