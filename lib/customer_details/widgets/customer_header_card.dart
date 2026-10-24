@@ -158,7 +158,7 @@ class CustomerHeaderCard extends StatelessWidget {
                   ),
                   const SizedBox(width: 6),
                   Text(
-                    'Scheduled: ${customer.scheduleDate}',
+                    'Scheduled: ${customer.formattedScheduleDate.isNotEmpty ? customer.formattedScheduleDate : customer.scheduleDate}',
                     style: TextStyle(
                       fontFamily: 'Helvetica Neue',
                       fontSize: 12,

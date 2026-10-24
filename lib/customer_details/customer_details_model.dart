@@ -1,3 +1,5 @@
+import '../core/date_utils.dart';
+
 /// Data model for Customer Details.
 /// Decoupled from hardcoded mock dictionaries for clean API usage.
 class CustomerDetailsModel {
@@ -15,6 +17,10 @@ class CustomerDetailsModel {
   final String? branchHeadName;
 
   final String? scheduleDate;
+
+  /// Returns the scheduled date formatted as day/month/year (DD/MM/YYYY).
+  String get formattedScheduleDate => formatDateToDayMonthYear(scheduleDate);
+
 
   const CustomerDetailsModel({
     required this.id,

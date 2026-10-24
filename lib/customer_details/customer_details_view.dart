@@ -7,6 +7,8 @@ import '../update_status/coordinators/coordinator_update_status_view.dart';
 import '../update_status/status_update_result.dart';
 import 'customer_details_model.dart';
 import 'customer_details_view_model.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../api/api.dart';
 import 'widgets/contact_actions_card.dart';
 import 'widgets/customer_documents_card.dart';
 import 'widgets/customer_header_card.dart';
@@ -66,6 +68,45 @@ class _CustomerDetailsViewState extends State<CustomerDetailsView> {
         _viewModel.applyUpdate(result);
       } else if (result is String) {
         _viewModel.updateStatus(result);
+      }
+    }
+  }
+
+  Future<void> _handlePreviewDocument(String doc) async {
+    try {
+      final url = doc.startsWith('http') ? doc : '${ApiConfig.baseUrl}$doc';
+      final uri = Uri.parse(url);
+
+      final lower = doc.toLowerCase();
+      final isImage = lower.endsWith('.png') ||
+          lower.endsWith('.jpg') ||
+          lower.endsWith('.jpeg') ||
+          lower.endsWith('.webp') ||
+          lower.endsWith('.gif');
+
+      if (isImage && mounted) {
+        await showDialog<void>(
+          context: context,
+          builder: (ctx) => DocumentImagePreviewDialog(
+            url: url,
+            fileName:
+                doc.split('/').last.isNotEmpty ? doc.split('/').last : doc,
+          ),
+        );
+        return;
+      }
+
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        await launchUrl(uri);
+      }
+    } catch (e) {
+      debugPrint('Preview document error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Cannot open document: $e')),
+        );
       }
     }
   }
@@ -305,7 +346,10 @@ class _CustomerDetailsViewState extends State<CustomerDetailsView> {
                       const SizedBox(height: 16),
 
                       // 3. Attached Documents Card
-                      CustomerDocumentsCard(documents: customer.documents),
+                      CustomerDocumentsCard(
+                        documents: customer.documents,
+                        onView: _handlePreviewDocument,
+                      ),
 
                       const SizedBox(height: 24),
 

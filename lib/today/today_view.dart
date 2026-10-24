@@ -4,7 +4,6 @@ import '../core/theme.dart';
 import 'today_model.dart';
 import 'today_view_model.dart';
 import 'widgets/chat_list_item_tile.dart';
-import 'widgets/filter_chips_bar.dart';
 import 'widgets/search_input_field.dart';
 import 'widgets/today_filter_bottom_sheet.dart';
 import 'widgets/today_skeleton_loading.dart';
@@ -28,7 +27,6 @@ class _TodayPageState extends State<TodayPage> {
   late final TodayViewModel _viewModel;
   final TextEditingController _searchController = TextEditingController();
 
-  final List<String> _filters = const ['All', 'Unread', 'Pending'];
   final List<String> _statusOptions = const [
     'All',
     'New',
@@ -367,16 +365,7 @@ class _TodayPageState extends State<TodayPage> {
                           ),
                         ),
 
-                      // Reusable Horizontal Filter Chips Bar
-                      FilterChipsBar(
-                        filters: _filters,
-                        selectedIndex: _viewModel.selectedFilterIndex,
-                        onSelected: (index) {
-                          _viewModel.setFilterIndex(index);
-                        },
-                      ),
-
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 8),
 
                       // Leads / Task List with Pull-to-refresh
                       Expanded(

@@ -86,12 +86,23 @@ class _ScheduleFieldCardState extends State<ScheduleFieldCard> {
 
   DateTime _parseDate(String str) {
     try {
+      final parsed = DateTime.tryParse(str.trim());
+      if (parsed != null) {
+        return parsed.isUtc ? parsed.toLocal() : parsed;
+      }
       final parts = str.split('/');
       if (parts.length == 3) {
-        final month = int.parse(parts[0]);
-        final day = int.parse(parts[1]);
-        final year = int.parse(parts[2]);
-        return DateTime(year, month, day);
+        final p0 = int.parse(parts[0]);
+        final p1 = int.parse(parts[1]);
+        final p2 = int.parse(parts[2]);
+        if (parts[2].length == 4) {
+          if (p0 > 12) {
+            // DD/MM/YYYY
+            return DateTime(p2, p1, p0);
+          }
+          // MM/DD/YYYY
+          return DateTime(p2, p0, p1);
+        }
       }
     } catch (_) {}
     return DateTime(2024, 10, 24);

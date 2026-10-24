@@ -36,84 +36,24 @@ class AttachDocumentsCard extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Header row with "Attach Documents", count badge, and attach action
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Text(
-              'Attach Documents',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-                color: primaryText,
-              ),
-            ),
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (effectiveDocs.isNotEmpty) ...[
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 3.5,
-                    ),
-                    decoration: BoxDecoration(
-                      color: isDark
-                          ? const Color(0xFF0F3822)
-                          : const Color(0xFFE8FDF2),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Text(
-                      '${effectiveDocs.length} ${effectiveDocs.length == 1 ? 'file' : 'files'} attached',
-                      style: TextStyle(
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w600,
-                        color: greenColor,
-                      ),
-                    ),
-                  ),
-                  if (onAttach != null) const SizedBox(width: 8),
-                ],
-                if (onAttach != null)
-                  InkWell(
-                    onTap: onAttach,
-                    borderRadius: BorderRadius.circular(6),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 2,
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.add, size: 16, color: greenColor),
-                          const SizedBox(width: 2),
-                          Text(
-                            'Upload',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: greenColor,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ],
+        // Header
+        Text(
+          'Documents',
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
+            color: primaryText,
+          ),
         ),
         const SizedBox(height: 10),
 
-        if (effectiveDocs.isEmpty)
-          InkWell(
-            onTap: onAttach,
-            borderRadius: BorderRadius.circular(16),
-            child: Container(
+        if (effectiveDocs.isEmpty) ...[
+          if (onAttach != null)
+            _buildAddDocumentButton(isDark: isDark, greenColor: greenColor)
+          else
+            Container(
               width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               decoration: BoxDecoration(
                 color: isDark
                     ? AppDarkColors.surfaceCard
@@ -128,30 +68,18 @@ class AttachDocumentsCard extends StatelessWidget {
                 children: [
                   Icon(Icons.attachment_rounded, size: 20, color: subtitleText),
                   const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      'No documents attached',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w400,
-                        color: subtitleText,
-                      ),
+                  Text(
+                    'No File attached',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w400,
+                      color: subtitleText,
                     ),
                   ),
-                  if (onAttach != null)
-                    Text(
-                      'Upload',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: greenColor,
-                      ),
-                    ),
                 ],
               ),
             ),
-          )
-        else ...[
+        ] else ...[
           ...effectiveDocs.map((doc) {
             final fileName = doc.split('/').last.isNotEmpty
                 ? doc.split('/').last
@@ -259,7 +187,7 @@ class AttachDocumentsCard extends StatelessWidget {
                         padding: const EdgeInsets.all(4.0),
                         child: Icon(
                           Icons.delete_outline_rounded,
-                          size: 19,
+                          size: 18,
                           color: isDark
                               ? const Color(0xFF8696A0)
                               : const Color.fromARGB(255, 202, 51, 13),
@@ -272,43 +200,48 @@ class AttachDocumentsCard extends StatelessWidget {
           }),
           if (onAttach != null) ...[
             const SizedBox(height: 4),
-            InkWell(
-              onTap: onAttach,
-              borderRadius: BorderRadius.circular(12),
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                decoration: BoxDecoration(
-                  color: isDark
-                      ? AppDarkColors.surfaceSecondary
-                      : AppColors.surfaceGrey,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: isDark
-                        ? AppDarkColors.border
-                        : const Color(0xFFE2E8F0),
-                  ),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.add_rounded, size: 18, color: greenColor),
-                    const SizedBox(width: 6),
-                    Text(
-                      'Add Document',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: greenColor,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+            _buildAddDocumentButton(isDark: isDark, greenColor: greenColor),
           ],
         ],
       ],
+    );
+  }
+
+  Widget _buildAddDocumentButton({
+    required bool isDark,
+    required Color greenColor,
+  }) {
+    return InkWell(
+      onTap: onAttach,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          color: isDark
+              ? AppDarkColors.surfaceSecondary
+              : AppColors.surfaceGrey,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isDark ? AppDarkColors.border : const Color(0xFFE2E8F0),
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.add_rounded, size: 18, color: greenColor),
+            const SizedBox(width: 6),
+            Text(
+              'Add File',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: greenColor,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

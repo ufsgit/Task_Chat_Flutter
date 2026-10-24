@@ -77,11 +77,12 @@ class TodayViewModel extends ChangeNotifier {
     http.Client? client,
     this.tokenStorage,
     Duration? debounceDuration,
-  })  : _client = client ?? AuthenticatedClient(),
-        debounceDuration = debounceDuration ??
-            (TokenStorage.isTestEnvironment
-                ? Duration.zero
-                : const Duration(milliseconds: 300));
+  }) : _client = client ?? AuthenticatedClient(),
+       debounceDuration =
+           debounceDuration ??
+           (TokenStorage.isTestEnvironment
+               ? Duration.zero
+               : const Duration(milliseconds: 300));
 
   Timer? _searchDebounceTimer;
   bool _isLoading = false;
@@ -132,19 +133,8 @@ class TodayViewModel extends ChangeNotifier {
   List<Map<String, dynamic>> get filteredChatItems {
     final query = _searchQuery.trim().toLowerCase();
     return _chatItems.where((item) {
-      final unreadCount = (item['unreadCount'] as int?) ?? 0;
-      final title = (item['title'] as String?)?.toLowerCase() ?? '';
       final tagText = (item['tagText'] as String?)?.toLowerCase() ?? '';
-      final location = (item['location'] as String?)?.toLowerCase() ?? '';
-      final date = (item['date'] as String?)?.toLowerCase() ?? '';
-      final isPending = (item['isPending'] as bool?) ?? true;
 
-      if (_selectedFilterIndex == 1 && unreadCount == 0) {
-        return false;
-      }
-      if (_selectedFilterIndex == 2 && !isPending) {
-        return false;
-      }
       if (_selectedStatusFilter != 'All' &&
           tagText != _selectedStatusFilter.toLowerCase()) {
         return false;
@@ -154,6 +144,9 @@ class TodayViewModel extends ChangeNotifier {
         if (searchIndex != null) {
           return searchIndex.contains(query);
         }
+        final title = (item['title'] as String?)?.toLowerCase() ?? '';
+        final location = (item['location'] as String?)?.toLowerCase() ?? '';
+        final date = (item['date'] as String?)?.toLowerCase() ?? '';
         return title.contains(query) ||
             tagText.contains(query) ||
             location.contains(query) ||
@@ -337,9 +330,9 @@ class TodayViewModel extends ChangeNotifier {
     String? token;
     try {
       final isTest = TokenStorage.isTestEnvironment;
-      token = await (tokenStorage ?? TokenStorage())
-          .getToken()
-          .timeout(isTest ? const Duration(milliseconds: 50) : const Duration(seconds: 5));
+      token = await (tokenStorage ?? TokenStorage()).getToken().timeout(
+        isTest ? const Duration(milliseconds: 50) : const Duration(seconds: 5),
+      );
     } catch (_) {
       // Ignored in test environment if platform channel is absent or times out
     }
@@ -348,8 +341,9 @@ class TodayViewModel extends ChangeNotifier {
       final headers = <String, String>{
         'Accept': 'application/json',
         if (token != null && token.isNotEmpty)
-          'authorization':
-              token.startsWith('Bearer ') ? token : 'Bearer $token',
+          'authorization': token.startsWith('Bearer ')
+              ? token
+              : 'Bearer $token',
       };
 
       final params = queryParams ?? buildQueryParameters();
@@ -359,10 +353,7 @@ class TodayViewModel extends ChangeNotifier {
           : baseUri;
 
       var response = await _client
-          .get(
-            uri,
-            headers: headers,
-          )
+          .get(uri, headers: headers)
           .timeout(const Duration(seconds: 10));
 
       if (response.statusCode >= 200 && response.statusCode < 300) {

@@ -254,7 +254,34 @@ void main() {
         ),
       );
 
-      expect(find.text('Scheduled: 10/28/2026'), findsOneWidget);
+      expect(find.text('Scheduled: 28/10/2026'), findsOneWidget);
+      expect(find.byIcon(Icons.calendar_today_rounded), findsOneWidget);
+    });
+
+    testWidgets('CustomerDetailsView displays ISO date in day/month/year format', (tester) async {
+      const customerWithIsoDate = CustomerDetailsModel(
+        id: '103',
+        name: 'tvmmm',
+        inquiry: 'Steel door enquiry',
+        status: 'Scheduled',
+        scheduleDate: '2024-10-23T18:30:00.000Z',
+        phoneNumber: '1234567890',
+        addressLine1: 'aa',
+        addressLine2: 'Kowdiar, Trivandrum, Kerala',
+      );
+
+      final vm = CustomerDetailsViewModel(customer: customerWithIsoDate);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: CustomerDetailsView(
+            customer: customerWithIsoDate,
+            viewModel: vm,
+          ),
+        ),
+      );
+
+      expect(find.text('Scheduled: ${customerWithIsoDate.formattedScheduleDate}'), findsOneWidget);
       expect(find.byIcon(Icons.calendar_today_rounded), findsOneWidget);
     });
   });

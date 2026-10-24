@@ -1,74 +1,7 @@
 import 'package:flutter/material.dart';
 import '../core/theme.dart';
 import '../core/widgets/user_circle_avatar.dart';
-
-/// Formats any date string (ISO8601, MM/DD/YYYY, YYYY-MM-DD, etc.) into DD/MM/YYYY (date/month/year).
-String formatDateToDayMonthYear(String? dateStr) {
-  if (dateStr == null) return '';
-  final trimmed = dateStr.trim();
-  if (trimmed.isEmpty) return '';
-
-  final parsed = DateTime.tryParse(trimmed);
-  if (parsed != null) {
-    final d = parsed.day.toString().padLeft(2, '0');
-    final m = parsed.month.toString().padLeft(2, '0');
-    final y = parsed.year.toString();
-    return '$d/$m/$y';
-  }
-
-  if (trimmed.contains('/')) {
-    final parts = trimmed.split('/');
-    if (parts.length == 3) {
-      final p0 = int.tryParse(parts[0]);
-      final p1 = int.tryParse(parts[1]);
-      final p2 = int.tryParse(parts[2]);
-      if (p0 != null && p1 != null && p2 != null) {
-        if (parts[0].length == 4) {
-          final d = p2.toString().padLeft(2, '0');
-          final m = p1.toString().padLeft(2, '0');
-          return '$d/$m/${parts[0]}';
-        }
-        if (parts[2].length == 4) {
-          if (p0 > 12) {
-            final d = p0.toString().padLeft(2, '0');
-            final m = p1.toString().padLeft(2, '0');
-            return '$d/$m/${parts[2]}';
-          }
-          final d = p1.toString().padLeft(2, '0');
-          final m = p0.toString().padLeft(2, '0');
-          return '$d/$m/${parts[2]}';
-        }
-      }
-    }
-  }
-
-  if (trimmed.contains('-')) {
-    final parts = trimmed.split('-');
-    if (parts.length == 3) {
-      final p0 = int.tryParse(parts[0]);
-      final p1 = int.tryParse(parts[1]);
-      final p2 = int.tryParse(parts[2]);
-      if (p0 != null && p1 != null && p2 != null) {
-        if (parts[0].length == 4) {
-          final d = p2.toString().padLeft(2, '0');
-          final m = p1.toString().padLeft(2, '0');
-          return '$d/$m/${parts[0]}';
-        } else if (parts[2].length == 4) {
-          if (p0 > 12) {
-            final d = p0.toString().padLeft(2, '0');
-            final m = p1.toString().padLeft(2, '0');
-            return '$d/$m/${parts[2]}';
-          }
-          final d = p1.toString().padLeft(2, '0');
-          final m = p0.toString().padLeft(2, '0');
-          return '$d/$m/${parts[2]}';
-        }
-      }
-    }
-  }
-
-  return trimmed;
-}
+export '../core/date_utils.dart';
 
 /// Data model representing a booking lead from /api/booking.
 class BookingModel {
@@ -139,10 +72,11 @@ class BookingModel {
       branchHeadId: json['branchHeadId'] is int
           ? json['branchHeadId'] as int
           : int.tryParse(json['branchHeadId']?.toString() ?? '') ??
-              (json['branch_head_id'] is int
-                  ? json['branch_head_id'] as int
-                  : int.tryParse(json['branch_head_id']?.toString() ?? '')),
-      branchHeadName: json['branchHeadName']?.toString() ??
+                (json['branch_head_id'] is int
+                    ? json['branch_head_id'] as int
+                    : int.tryParse(json['branch_head_id']?.toString() ?? '')),
+      branchHeadName:
+          json['branchHeadName']?.toString() ??
           json['branch_head_name']?.toString() ??
           json['loginName']?.toString(),
       stateId: json['stateId'] as int?,
@@ -158,7 +92,8 @@ class BookingModel {
       updatedAt: json['updatedAt'] != null
           ? DateTime.tryParse(json['updatedAt'].toString())
           : null,
-      scheduleDate: json['scheduleDate']?.toString() ??
+      scheduleDate:
+          json['scheduleDate']?.toString() ??
           json['schedule_date']?.toString() ??
           json['scheduledDate']?.toString() ??
           json['scheduled_date']?.toString() ??
@@ -172,8 +107,8 @@ class BookingModel {
     final formattedDate = (scheduleDate != null && scheduleDate!.isNotEmpty)
         ? scheduleDate!
         : (createdAt != null
-            ? '${createdAt!.day.toString().padLeft(2, '0')}/${createdAt!.month.toString().padLeft(2, '0')}/${createdAt!.year}'
-            : '');
+              ? '${createdAt!.day.toString().padLeft(2, '0')}/${createdAt!.month.toString().padLeft(2, '0')}/${createdAt!.year}'
+              : '');
 
     final avatarColors = getAvatarColorsForName(name);
     Color tagBg;
@@ -223,7 +158,8 @@ class BookingModel {
       'isPending': statusLower != 'completed' && statusLower != 'cancelled',
       'branchHeadId': branchHeadId,
       'branchHeadName': branchHeadName,
-      'branchManager': (branchHeadName != null && branchHeadName!.trim().isNotEmpty)
+      'branchManager':
+          (branchHeadName != null && branchHeadName!.trim().isNotEmpty)
           ? branchHeadName!.trim()
           : (loginName ?? ''),
       'mobile': mobile,
