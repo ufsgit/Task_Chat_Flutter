@@ -138,6 +138,39 @@ class CustomerHeaderCard extends StatelessWidget {
             ),
           ),
 
+          if (customer.scheduleDate != null &&
+              customer.scheduleDate!.trim().isNotEmpty) ...[
+            const SizedBox(height: 7),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: colors.surfaceSecondary,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: colors.border, width: 0.8),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.calendar_today_rounded,
+                    size: 13,
+                    color: colors.textSubtitle,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Scheduled: ${customer.scheduleDate}',
+                    style: TextStyle(
+                      fontFamily: 'Helvetica Neue',
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: colors.textSubtitle,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+
           if (customer.addressLine1.isNotEmpty ||
               customer.addressLine2.isNotEmpty) ...[
             const SizedBox(height: 18),

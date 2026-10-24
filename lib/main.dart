@@ -27,6 +27,9 @@ void main() {
 }
 
 class FitmateApp extends StatelessWidget {
+  static final GlobalKey<NavigatorState> navigatorKey =
+      GlobalKey<NavigatorState>();
+
   const FitmateApp({super.key});
 
   @override
@@ -35,6 +38,7 @@ class FitmateApp extends StatelessWidget {
       valueListenable: ThemeController.instance.themeModeNotifier,
       builder: (context, currentMode, _) {
         return MaterialApp(
+          navigatorKey: navigatorKey,
           title: 'Fitmate',
           debugShowCheckedModeBanner: false,
           theme: AppTheme.lightTheme,

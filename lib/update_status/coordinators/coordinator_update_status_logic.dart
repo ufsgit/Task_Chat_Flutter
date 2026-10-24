@@ -1,6 +1,8 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../../api/api.dart';
+import '../../api/authenticated_client.dart';
 import '../../customer_details/customer_details_model.dart';
 import '../../login_page/login_model.dart';
 import '../../login_page/token_storage.dart';
@@ -110,7 +112,7 @@ class CoordinatorUpdateStatusLogic {
   CoordinatorUpdateStatusLogic({
     http.Client? client,
     TokenStorage? tokenStorage,
-  })  : client = client ?? http.Client(),
+  })  : client = client ?? AuthenticatedClient(),
         tokenStorage = tokenStorage ?? TokenStorage();
 
   /// Fetches branch head managers from backend GET /api/users?role=branch_head.
@@ -159,6 +161,9 @@ class CoordinatorUpdateStatusLogic {
     required String branchManager,
     int? branchManagerId,
     String? branchManagerName,
+    int? districtId,
+    String? districtName,
+    List<String>? documents,
   }) async {
     final isTest = TokenStorage.isTestEnvironment;
     String? token;
@@ -176,17 +181,25 @@ class CoordinatorUpdateStatusLogic {
 
     int effectiveCreatedBy = branchManagerId ?? 0;
     String effectiveCreatedByName = branchManagerName ?? branchManager;
+    int? effectiveDistrictId = districtId;
+    String? effectiveDistrictName = districtName;
 
-    if (effectiveCreatedBy == 0 && branchManager.isNotEmpty) {
+    if ((effectiveCreatedBy == 0 || effectiveDistrictId == null || effectiveDistrictName == null) &&
+        branchManager.isNotEmpty) {
       final managers = await fetchBranchManagers();
       final match = managers
           .where((m) =>
               m.name.toLowerCase().trim() == branchManager.toLowerCase().trim() ||
-              m.username.toLowerCase().trim() == branchManager.toLowerCase().trim())
+              m.username.toLowerCase().trim() == branchManager.toLowerCase().trim() ||
+              (branchManagerId != null && m.id == branchManagerId))
           .firstOrNull;
       if (match != null) {
-        effectiveCreatedBy = match.id;
-        effectiveCreatedByName = match.name;
+        if (effectiveCreatedBy == 0) {
+          effectiveCreatedBy = match.id;
+          effectiveCreatedByName = match.name;
+        }
+        effectiveDistrictId ??= match.districtId;
+        effectiveDistrictName ??= match.districtName;
       }
     }
 
@@ -196,6 +209,9 @@ class CoordinatorUpdateStatusLogic {
           ? user.name
           : (user?.username.isNotEmpty == true ? user!.username : 'Coordinator');
     }
+
+    effectiveDistrictId ??= user?.districtId;
+    effectiveDistrictName ??= user?.districtName;
 
     final requestPayload = StatusUpdateRequest(
       clientId: int.tryParse(customer.id) ?? 1,
@@ -208,6 +224,8 @@ class CoordinatorUpdateStatusLogic {
       branchManager: branchManager,
       branchManagerId: effectiveCreatedBy,
       branchManagerName: effectiveCreatedByName,
+      districtId: effectiveDistrictId,
+      districtName: effectiveDistrictName,
     );
 
     final response = await client.post(
@@ -222,9 +240,26 @@ class CoordinatorUpdateStatusLogic {
     ).timeout(const Duration(seconds: 10));
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
+      if (documents != null && !listEquals(documents, customer.documents)) {
+        try {
+          final bookingUri = Uri.parse('${ApiConfig.bookings}/${customer.id}');
+          await client.put(
+            bookingUri,
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+              if (token != null && token.isNotEmpty)
+                'authorization': token.startsWith('Bearer ') ? token : 'Bearer $token',
+            },
+            body: jsonEncode({'documents': documents}),
+          ).timeout(const Duration(seconds: 10));
+        } catch (_) {}
+      }
+
       updateChatItemStatus(
         customerName: customer.name,
         newStatus: status,
+        newDate: scheduleDate,
       );
       return true;
     }

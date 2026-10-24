@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/theme.dart';
-import '../area_model.dart';
+import '../model/area_model.dart';
 import '../area_view_model.dart';
 import 'lead_form_card.dart';
 
@@ -81,60 +81,6 @@ class AreaSelectorDropdown extends StatelessWidget {
     required Color cardBgColor,
     required Color borderColor,
   }) {
-    if (viewModel.isLoading) {
-      return Row(
-        children: [
-          const SizedBox(
-            width: 16,
-            height: 16,
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-              valueColor: AlwaysStoppedAnimation<Color>(
-                AppColors.whatsappGreen,
-              ),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Text(
-            'Loading areas...',
-            style: TextStyle(
-              fontFamily: _fontFamily,
-              fontSize: 14.5,
-              color: placeholderColor,
-              fontStyle: FontStyle.italic,
-            ),
-          ),
-        ],
-      );
-    }
-
-    if (viewModel.errorMessage != null && viewModel.areas.isEmpty) {
-      return Row(
-        children: [
-          Expanded(
-            child: Text(
-              viewModel.errorMessage!,
-              style: const TextStyle(
-                fontFamily: _fontFamily,
-                fontSize: 13,
-                color: Color(0xFFEF4444),
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.refresh_rounded, size: 20),
-            color: AppColors.whatsappGreen,
-            tooltip: 'Retry',
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(),
-            onPressed: () => viewModel.fetchAreas(),
-          ),
-        ],
-      );
-    }
-
     return LayoutBuilder(
       builder: (context, constraints) {
         final menuWidth = constraints.maxWidth;
@@ -159,7 +105,7 @@ class AreaSelectorDropdown extends StatelessWidget {
             constraints: BoxConstraints(
               minWidth: menuWidth,
               maxWidth: menuWidth,
-              maxHeight: 280,
+              maxHeight: 240,
             ),
             padding: EdgeInsets.zero,
             onSelected: (AreaItem area) {
@@ -172,20 +118,38 @@ class AreaSelectorDropdown extends StatelessWidget {
               if (viewModel.areas.isEmpty) {
                 return [
                   PopupMenuItem<AreaItem>(
-                    enabled: false,
+                    enabled: viewModel.errorMessage != null,
                     height: 44,
                     padding: const EdgeInsets.symmetric(
                       horizontal: 16,
                       vertical: 8,
                     ),
-                    child: Text(
-                      'No areas available',
-                      style: TextStyle(
-                        fontFamily: _fontFamily,
-                        fontSize: 14,
-                        color: placeholderColor,
-                        fontStyle: FontStyle.italic,
-                      ),
+                    onTap: () {
+                      if (viewModel.errorMessage != null) {
+                        viewModel.fetchAreas();
+                      }
+                    },
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            viewModel.errorMessage ?? 'No areas available',
+                            style: TextStyle(
+                              fontFamily: _fontFamily,
+                              fontSize: 14,
+                              color: placeholderColor,
+                              fontStyle: FontStyle.italic,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (viewModel.errorMessage != null)
+                          const Icon(
+                            Icons.refresh_rounded,
+                            size: 18,
+                            color: AppColors.whatsappGreen,
+                          ),
+                      ],
                     ),
                   ),
                 ];
@@ -249,49 +213,42 @@ class AreaSelectorDropdown extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    viewModel.selectedArea != null
-                        ? viewModel.selectedArea!.name
-                        : 'Select $label',
+                    viewModel.isLoading
+                        ? 'Loading areas...'
+                        : (viewModel.selectedArea != null
+                            ? viewModel.selectedArea!.name
+                            : 'Select $label'),
                     style: TextStyle(
                       fontFamily: _fontFamily,
                       fontSize: 15,
-                      fontWeight: viewModel.selectedArea != null
-                          ? FontWeight.w500
-                          : FontWeight.w400,
-                      color: viewModel.selectedArea != null
-                          ? primaryTextColor
-                          : placeholderColor,
+                      fontWeight:
+                          viewModel.selectedArea != null && !viewModel.isLoading
+                              ? FontWeight.w500
+                              : FontWeight.w400,
+                      color:
+                          viewModel.selectedArea != null && !viewModel.isLoading
+                              ? primaryTextColor
+                              : placeholderColor,
                       letterSpacing: -0.1,
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                if (viewModel.selectedArea != null)
-                  GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: () {
-                      viewModel.clearSelection();
-                      if (onAreaSelected != null) {
-                        onAreaSelected!(null);
-                      }
-                    },
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6.0,
-                        vertical: 2.0,
-                      ),
-                      child: Icon(
-                        Icons.close_rounded,
-                        size: 18,
-                        color: placeholderColor,
-                      ),
+                if (viewModel.isLoading)
+                  const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: AppColors.whatsappGreen,
                     ),
+                  )
+                else
+                  Icon(
+                    Icons.keyboard_arrow_down_rounded,
+                    color: placeholderColor,
+                    size: 22,
                   ),
-                Icon(
-                  Icons.keyboard_arrow_down_rounded,
-                  color: placeholderColor,
-                  size: 22,
-                ),
               ],
             ),
           ),

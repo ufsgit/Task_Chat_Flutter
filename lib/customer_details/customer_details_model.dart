@@ -14,6 +14,8 @@ class CustomerDetailsModel {
   final int? branchHeadId;
   final String? branchHeadName;
 
+  final String? scheduleDate;
+
   const CustomerDetailsModel({
     required this.id,
     required this.name,
@@ -27,6 +29,7 @@ class CustomerDetailsModel {
     this.documents = const [],
     this.branchHeadId,
     this.branchHeadName,
+    this.scheduleDate,
   });
 
   CustomerDetailsModel copyWith({
@@ -42,6 +45,7 @@ class CustomerDetailsModel {
     List<String>? documents,
     int? branchHeadId,
     String? branchHeadName,
+    String? scheduleDate,
   }) {
     return CustomerDetailsModel(
       id: id ?? this.id,
@@ -56,6 +60,7 @@ class CustomerDetailsModel {
       documents: documents ?? this.documents,
       branchHeadId: branchHeadId ?? this.branchHeadId,
       branchHeadName: branchHeadName ?? this.branchHeadName,
+      scheduleDate: scheduleDate ?? this.scheduleDate,
     );
   }
 
@@ -68,6 +73,10 @@ class CustomerDetailsModel {
     List<String>? documents,
     int? branchHeadId,
     String? branchHeadName,
+    String? scheduleDate,
+    String? phoneNumber,
+    String? notes,
+    String? inquiry,
   }) {
     final resolvedStatus =
         (tagText != null && tagText.isNotEmpty) ? tagText : 'New';
@@ -79,18 +88,21 @@ class CustomerDetailsModel {
     return CustomerDetailsModel(
       id: id ?? 'cust_default',
       name: name,
-      inquiry: '5ft Steel door enquiry',
+      inquiry: inquiry ?? '5ft Steel door enquiry',
       status: resolvedStatus,
-      phoneNumber: '7096797345',
+      phoneNumber: (phoneNumber != null && phoneNumber.isNotEmpty)
+          ? phoneNumber
+          : '7096797345',
       addressLine1: location != null && location.isNotEmpty
           ? '742 Evergreen Terrace, $location'
           : '742 Evergreen Terrace',
       addressLine2: 'Springfield, OR 97477',
-      notes: '',
+      notes: notes ?? '',
       hasBeenScheduled: isScheduledOrCompleted,
       documents: documents ?? const [],
       branchHeadId: branchHeadId,
       branchHeadName: branchHeadName,
+      scheduleDate: scheduleDate,
     );
   }
 }

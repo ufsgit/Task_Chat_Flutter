@@ -14,11 +14,7 @@ class SplashScreen extends StatefulWidget {
   final TokenStorage? tokenStorage;
   final Widget Function(BuildContext, UserModel?)? homeBuilder;
 
-  const SplashScreen({
-    super.key,
-    this.tokenStorage,
-    this.homeBuilder,
-  });
+  const SplashScreen({super.key, this.tokenStorage, this.homeBuilder});
 
   @override
   State<SplashScreen> createState() => _SplashScreenState();
@@ -51,8 +47,8 @@ class _SplashScreenState extends State<SplashScreen>
 
     _animController.forward();
 
-    // 1-second splash screen delay before checking session
-    _timer = Timer(const Duration(seconds: 1), _checkAuthAndNavigate);
+    // Verify session immediately without artificial delay
+    _checkAuthAndNavigate();
   }
 
   Future<void> _checkAuthAndNavigate() async {
@@ -60,34 +56,38 @@ class _SplashScreenState extends State<SplashScreen>
 
     final tokenStorage = widget.tokenStorage ?? TokenStorage();
     String? token;
+    UserModel? user;
+
     try {
-      token = await tokenStorage.getToken();
+      final results = await Future.wait([
+        tokenStorage.getToken().catchError((_) => null),
+        UserProfileData.loadUser().catchError((_) => null),
+      ]);
+      token = results[0] as String?;
+      user = results[1] as UserModel?;
     } catch (_) {
       token = null;
+      user = null;
     }
 
     if (!mounted) return;
 
     if (token != null && token.isNotEmpty) {
-      final user = await UserProfileData.loadUser();
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
-          builder: (ctx) =>
-              widget.homeBuilder != null
-                  ? widget.homeBuilder!(ctx, user)
-                  : HomePage(
-                      isCoordinator: user?.isCoordinator ?? false,
-                      user: user,
-                    ),
+          builder: (ctx) => widget.homeBuilder != null
+              ? widget.homeBuilder!(ctx, user)
+              : HomePage(
+                  isCoordinator: user?.isCoordinator ?? false,
+                  user: user,
+                ),
         ),
       );
     } else {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder: (_) => const LoginPage(),
-        ),
-      );
+      Navigator.of(
+        context,
+      ).pushReplacement(MaterialPageRoute(builder: (_) => const LoginPage()));
     }
   }
 

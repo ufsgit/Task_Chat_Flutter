@@ -6,6 +6,7 @@ import 'package:http/testing.dart';
 import 'package:task_chat/customer_details/customer_details_model.dart';
 import 'package:task_chat/customer_details/customer_details_view.dart';
 import 'package:task_chat/customer_details/customer_details_view_model.dart';
+import 'package:task_chat/update_status/status_update_result.dart';
 
 void main() {
   group('CustomerDetailsViewModel MVVM Tests', () {
@@ -206,6 +207,55 @@ void main() {
 
       expect(putCalls, 1);
       expect(vm.customer.name, 'Rahul Updated');
+    });
+
+    test('CustomerDetailsViewModel applyUpdate updates status, date, notes and documents', () {
+      final vm = CustomerDetailsViewModel(customer: initialCustomer);
+      var notified = false;
+      vm.addListener(() => notified = true);
+
+      vm.applyUpdate(const StatusUpdateResult(
+        status: 'Scheduled',
+        scheduleDate: '10/28/2026',
+        notes: 'Updated schedule notes from coordinator',
+        documents: ['/uploads/doc1.pdf'],
+        branchManager: 'Manager Bob',
+      ));
+
+      expect(notified, isTrue);
+      expect(vm.customer.status, 'Scheduled');
+      expect(vm.customer.scheduleDate, '10/28/2026');
+      expect(vm.customer.notes, 'Updated schedule notes from coordinator');
+      expect(vm.customer.documents, ['/uploads/doc1.pdf']);
+      expect(vm.customer.branchHeadName, 'Manager Bob');
+      expect(vm.customer.hasBeenScheduled, isTrue);
+    });
+
+    testWidgets('CustomerDetailsView displays Scheduled date chip when scheduleDate is present', (tester) async {
+      const customerWithDate = CustomerDetailsModel(
+        id: '102',
+        name: 'Anita Roy',
+        inquiry: 'Single door fitting',
+        status: 'Scheduled',
+        scheduleDate: '10/28/2026',
+        phoneNumber: '+91 94471 99999',
+        addressLine1: 'MG Road',
+        addressLine2: 'Kochi',
+      );
+
+      final vm = CustomerDetailsViewModel(customer: customerWithDate);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: CustomerDetailsView(
+            customer: customerWithDate,
+            viewModel: vm,
+          ),
+        ),
+      );
+
+      expect(find.text('Scheduled: 10/28/2026'), findsOneWidget);
+      expect(find.byIcon(Icons.calendar_today_rounded), findsOneWidget);
     });
   });
 }

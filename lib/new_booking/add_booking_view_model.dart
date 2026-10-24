@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:task_chat/login_page/token_storage.dart';
 import '../api/api.dart';
+import '../api/authenticated_client.dart';
 import 'area_view_model.dart';
 import 'district_view_model.dart';
 import 'lead_data.dart';
@@ -35,7 +36,7 @@ class AddBookingViewModel extends ChangeNotifier {
     http.Client? client,
     AreaViewModel? areaViewModel,
     DistrictViewModel? districtViewModel,
-  })  : _client = client ?? http.Client(),
+  })  : _client = client ?? AuthenticatedClient(),
         areaViewModel = areaViewModel ?? AreaViewModel(client: client),
         districtViewModel =
             districtViewModel ?? DistrictViewModel(client: client);
@@ -158,7 +159,7 @@ class AddBookingViewModel extends ChangeNotifier {
       _errorMessage = errorMsg;
       _isSubmitting = false;
       notifyListeners();
-      return SaveBookingResult.failure(errorMsg);
+      return const SaveBookingResult.failure('Connection error');
     }
   }
 

@@ -16,7 +16,9 @@ class BranchManagerUpdateStatusViewModel extends ChangeNotifier {
   late String _scheduleDate;
   late bool _hasBeenScheduled;
   bool _isSaving = false;
+  bool _isUploadingDocument = false;
   String? _errorMessage;
+  late List<String> _documents;
 
   BranchManagerUpdateStatusViewModel({
     required this.customer,
@@ -41,8 +43,12 @@ class BranchManagerUpdateStatusViewModel extends ChangeNotifier {
       _selectedStatus = 'Scheduled';
     }
 
-    _notesController = TextEditingController(text: '');
-    _scheduleDate = '10/24/2024';
+    _notesController = TextEditingController(text: customer.notes);
+    _scheduleDate =
+        (customer.scheduleDate != null && customer.scheduleDate!.isNotEmpty)
+            ? customer.scheduleDate!
+            : '10/24/2024';
+    _documents = List<String>.from(customer.documents);
   }
 
   // Getters
@@ -51,7 +57,27 @@ class BranchManagerUpdateStatusViewModel extends ChangeNotifier {
   String get scheduleDate => _scheduleDate;
   bool get hasBeenScheduled => _hasBeenScheduled;
   bool get isSaving => _isSaving;
+  bool get isUploadingDocument => _isUploadingDocument;
   String? get errorMessage => _errorMessage;
+  List<String> get documents => _documents;
+
+  void addDocument(String docUrl) {
+    if (!_documents.contains(docUrl)) {
+      _documents.add(docUrl);
+      notifyListeners();
+    }
+  }
+
+  void removeDocument(String docUrl) {
+    if (_documents.remove(docUrl)) {
+      notifyListeners();
+    }
+  }
+
+  void setUploadingDocument(bool uploading) {
+    _isUploadingDocument = uploading;
+    notifyListeners();
+  }
 
   List<String> get availableOptions =>
       getAvailableStatusOptions(hasBeenScheduled: _hasBeenScheduled);
@@ -89,6 +115,7 @@ class BranchManagerUpdateStatusViewModel extends ChangeNotifier {
         status: _selectedStatus,
         scheduleDate: _scheduleDate,
         notes: _notesController.text,
+        documents: _documents,
       );
 
       if (success) {
@@ -119,12 +146,12 @@ class BranchManagerUpdateStatusViewModel extends ChangeNotifier {
         return false;
       }
     } catch (e) {
-      _errorMessage = 'Error: $e';
+      _errorMessage = 'Connection error';
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error updating status: $e'),
-            backgroundColor: const Color(0xFFEF4444),
+          const SnackBar(
+            content: Text('Connection error'),
+            backgroundColor: Color(0xFFEF4444),
           ),
         );
       }

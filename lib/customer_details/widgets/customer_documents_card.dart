@@ -23,6 +23,9 @@ class CustomerDocumentsCard extends StatelessWidget {
     final subtitleText = isDark
         ? AppDarkColors.textSubtitle
         : AppColors.textSubtitle;
+    final greenColor = isDark
+        ? AppDarkColors.whatsappGreen
+        : const Color(0xFF16A34A);
 
     return Container(
       width: double.infinity,
@@ -139,7 +142,7 @@ class CustomerDocumentsCard extends StatelessWidget {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            '2.4 MB • Updated yesterday',
+                            '2.4 MB',
                             style: TextStyle(
                               fontSize: 11.5,
                               fontWeight: FontWeight.w400,

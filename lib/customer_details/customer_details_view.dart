@@ -4,6 +4,7 @@ import '../core/slide_up_route.dart';
 import '../core/theme.dart';
 import '../update_status/branch_manager/branch_manager_update_status_view.dart';
 import '../update_status/coordinators/coordinator_update_status_view.dart';
+import '../update_status/status_update_result.dart';
 import 'customer_details_model.dart';
 import 'customer_details_view_model.dart';
 import 'widgets/contact_actions_card.dart';
@@ -51,7 +52,7 @@ class _CustomerDetailsViewState extends State<CustomerDetailsView> {
   }
 
   Future<void> _openUpdateStatusPage() async {
-    final updatedStatus = await Navigator.push<String>(
+    final result = await Navigator.push<dynamic>(
       context,
       SlideUpRoute(
         page: widget.isCoordinator
@@ -60,8 +61,12 @@ class _CustomerDetailsViewState extends State<CustomerDetailsView> {
       ),
     );
 
-    if (updatedStatus != null && mounted) {
-      _viewModel.updateStatus(updatedStatus);
+    if (result != null && mounted) {
+      if (result is StatusUpdateResult) {
+        _viewModel.applyUpdate(result);
+      } else if (result is String) {
+        _viewModel.updateStatus(result);
+      }
     }
   }
 
@@ -176,28 +181,42 @@ class _CustomerDetailsViewState extends State<CustomerDetailsView> {
       builder: (context, _) {
         final customer = _viewModel.customer;
 
-        return Scaffold(
-          backgroundColor: scaffoldBg,
-          appBar: AppBar(
+        final resultPayload = StatusUpdateResult(
+          status: customer.status,
+          scheduleDate: customer.scheduleDate ?? '',
+          notes: customer.notes,
+          documents: customer.documents,
+          branchManager: customer.branchHeadName,
+        );
+
+        return PopScope(
+          canPop: false,
+          onPopInvokedWithResult: (didPop, result) {
+            if (didPop) return;
+            Navigator.of(context).pop(resultPayload);
+          },
+          child: Scaffold(
             backgroundColor: scaffoldBg,
-            elevation: 0,
-            scrolledUnderElevation: 0,
-            leadingWidth: 58,
-            leading: Padding(
-              padding: const EdgeInsets.only(left: 16.0),
-              child: Center(
-                child: CircularBackButton(
-                  onBack: () => Navigator.of(context).pop(customer.status),
+            appBar: AppBar(
+              backgroundColor: scaffoldBg,
+              elevation: 0,
+              scrolledUnderElevation: 0,
+              leadingWidth: 58,
+              leading: Padding(
+                padding: const EdgeInsets.only(left: 16.0),
+                child: Center(
+                  child: CircularBackButton(
+                    onBack: () => Navigator.of(context).pop(resultPayload),
+                  ),
                 ),
               ),
-            ),
-            title: Text(
-              'Contact Info',
-              style: TextStyle(
-                fontFamily: 'Helvetica Neue',
-                fontSize: 18.5,
-                fontWeight: FontWeight.w600,
-                color: primaryTextColor,
+              title: Text(
+                'Contact Info',
+                style: TextStyle(
+                  fontFamily: 'Helvetica Neue',
+                  fontSize: 18.5,
+                  fontWeight: FontWeight.w600,
+                  color: primaryTextColor,
                 letterSpacing: -0.2,
               ),
             ),
@@ -306,8 +325,9 @@ class _CustomerDetailsViewState extends State<CustomerDetailsView> {
               ],
             ),
           ),
-        );
-      },
+        ),
+      );
+    },
     );
   }
 }

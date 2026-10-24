@@ -114,8 +114,11 @@ class _ScheduleFieldCardState extends State<ScheduleFieldCard> {
       _isExpanded = !_isExpanded;
       if (_isExpanded) {
         _tempSelectedDate = _confirmedDate;
-        _currentMonthView =
-            DateTime(_confirmedDate.year, _confirmedDate.month, 1);
+        _currentMonthView = DateTime(
+          _confirmedDate.year,
+          _confirmedDate.month,
+          1,
+        );
       }
     });
     widget.onTap?.call();
@@ -138,6 +141,17 @@ class _ScheduleFieldCardState extends State<ScheduleFieldCard> {
         _currentMonthView.month + 1,
         1,
       );
+    });
+  }
+
+  void _onYearSelected(int year) {
+    setState(() {
+      _currentMonthView = DateTime(year, _currentMonthView.month, 1);
+      final daysInMonth = DateTime(year, _tempSelectedDate.month + 1, 0).day;
+      final clampedDay = _tempSelectedDate.day > daysInMonth
+          ? daysInMonth
+          : _tempSelectedDate.day;
+      _tempSelectedDate = DateTime(year, _tempSelectedDate.month, clampedDay);
     });
   }
 
@@ -186,11 +200,15 @@ class _ScheduleFieldCardState extends State<ScheduleFieldCard> {
             duration: const Duration(milliseconds: 200),
             height: 56,
             decoration: BoxDecoration(
-              color: isDark ? AppDarkColors.surfaceCard : AppColors.surfaceWhite,
+              color: isDark
+                  ? AppDarkColors.surfaceCard
+                  : AppColors.surfaceWhite,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
                 color: _isExpanded
-                    ? (isDark ? AppDarkColors.whatsappGreen : AppColors.primaryGreen)
+                    ? (isDark
+                          ? AppDarkColors.whatsappGreen
+                          : AppColors.primaryGreen)
                     : (isDark ? AppDarkColors.border : AppColors.border),
                 width: _isExpanded ? 1.5 : 1,
               ),
@@ -233,8 +251,12 @@ class _ScheduleFieldCardState extends State<ScheduleFieldCard> {
                       ? Icons.keyboard_arrow_up_rounded
                       : Icons.keyboard_arrow_down_rounded,
                   color: _isExpanded
-                      ? (isDark ? AppDarkColors.whatsappGreen : AppColors.primaryGreen)
-                      : (isDark ? AppDarkColors.textSubtitle : AppColors.textSubtitle),
+                      ? (isDark
+                            ? AppDarkColors.whatsappGreen
+                            : AppColors.primaryGreen)
+                      : (isDark
+                            ? AppDarkColors.textSubtitle
+                            : AppColors.textSubtitle),
                   size: 24,
                 ),
               ],
@@ -281,16 +303,130 @@ class _ScheduleFieldCardState extends State<ScheduleFieldCard> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    '${_months[_currentMonthView.month - 1]} ${_currentMonthView.year}',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
-                      color: isDark
-                          ? AppDarkColors.textPrimary
-                          : AppColors.textPrimary,
-                      letterSpacing: -0.2,
-                    ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        _months[_currentMonthView.month - 1],
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                          color: isDark
+                              ? AppDarkColors.textPrimary
+                              : AppColors.textPrimary,
+                          letterSpacing: -0.2,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      // Dropdown to select year easily when clicked on year
+                      PopupMenuButton<int>(
+                        tooltip: 'Select Year',
+                        initialValue: _currentMonthView.year,
+                        onSelected: _onYearSelected,
+                        constraints: const BoxConstraints(
+                          maxHeight: 180,
+                          minWidth: 110,
+                          maxWidth: 130,
+                        ),
+                        color: isDark
+                            ? AppDarkColors.surfaceCard
+                            : AppColors.surfaceWhite,
+                        elevation: 4,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          side: BorderSide(
+                            color: isDark
+                                ? AppDarkColors.border
+                                : AppColors.border,
+                          ),
+                        ),
+                        itemBuilder: (context) {
+                          final currentYear = DateTime.now().year;
+                          final years = List.generate(
+                            25,
+                            (index) => (currentYear - 12) + index,
+                          );
+                          return years.map((year) {
+                            final isSelected = year == _currentMonthView.year;
+                            return PopupMenuItem<int>(
+                              value: year,
+                              height: 38,
+                              child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    '$year',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: isSelected
+                                          ? FontWeight.w700
+                                          : FontWeight.w500,
+                                      color: isSelected
+                                          ? (isDark
+                                                ? AppDarkColors.whatsappGreen
+                                                : AppColors.primaryGreen)
+                                          : (isDark
+                                                ? AppDarkColors.textPrimary
+                                                : AppColors.textPrimary),
+                                    ),
+                                  ),
+                                  if (isSelected)
+                                    Icon(
+                                      Icons.check_rounded,
+                                      size: 16,
+                                      color: isDark
+                                          ? AppDarkColors.whatsappGreen
+                                          : AppColors.primaryGreen,
+                                    ),
+                                ],
+                              ),
+                            );
+                          }).toList();
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 7,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: isDark
+                                ? AppDarkColors.surfaceSecondary
+                                : AppColors.surfaceGrey,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: isDark
+                                  ? AppDarkColors.border
+                                  : const Color(0xFFE2E8F0),
+                              width: 0.8,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                '${_currentMonthView.year}',
+                                style: TextStyle(
+                                  fontSize: 14.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: isDark
+                                      ? AppDarkColors.textPrimary
+                                      : AppColors.textPrimary,
+                                ),
+                              ),
+                              const SizedBox(width: 3),
+                              Icon(
+                                Icons.arrow_drop_down_rounded,
+                                size: 18,
+                                color: isDark
+                                    ? AppDarkColors.textSubtitle
+                                    : AppColors.textSubtitle,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 3),
                   Text(
@@ -385,7 +521,10 @@ class _ScheduleFieldCardState extends State<ScheduleFieldCard> {
                 behavior: HitTestBehavior.opaque,
                 onTap: _handleCancel,
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 8,
+                  ),
                   child: Text(
                     'Cancel',
                     style: TextStyle(
@@ -461,8 +600,7 @@ class _ScheduleFieldCardState extends State<ScheduleFieldCard> {
                 displayDay =
                     daysInPrevMonth - (startWeekdayOffset - cellIndex - 1);
                 cellDate = DateTime(year, month - 1, displayDay);
-              } else if (cellIndex >=
-                  startWeekdayOffset + daysInCurrentMonth) {
+              } else if (cellIndex >= startWeekdayOffset + daysInCurrentMonth) {
                 // Next month day
                 isCurrentMonth = false;
                 displayDay =
@@ -474,7 +612,8 @@ class _ScheduleFieldCardState extends State<ScheduleFieldCard> {
                 cellDate = DateTime(year, month, displayDay);
               }
 
-              final isSelected = isCurrentMonth &&
+              final isSelected =
+                  isCurrentMonth &&
                   cellDate.year == _tempSelectedDate.year &&
                   cellDate.month == _tempSelectedDate.month &&
                   cellDate.day == _tempSelectedDate.day;
@@ -503,8 +642,11 @@ class _ScheduleFieldCardState extends State<ScheduleFieldCard> {
                       _onDaySelected(cellDate);
                       if (!isCurrentMonth) {
                         setState(() {
-                          _currentMonthView =
-                              DateTime(cellDate.year, cellDate.month, 1);
+                          _currentMonthView = DateTime(
+                            cellDate.year,
+                            cellDate.month,
+                            1,
+                          );
                         });
                       }
                     },
@@ -522,8 +664,9 @@ class _ScheduleFieldCardState extends State<ScheduleFieldCard> {
                         displayDay.toString(),
                         style: TextStyle(
                           fontSize: 13,
-                          fontWeight:
-                              isSelected ? FontWeight.w700 : FontWeight.w600,
+                          fontWeight: isSelected
+                              ? FontWeight.w700
+                              : FontWeight.w600,
                           color: textColor,
                         ),
                       ),
@@ -557,7 +700,9 @@ class _WeekdayLabel extends StatelessWidget {
             fontWeight: FontWeight.w600,
             color: isSunday
                 ? const Color(0xFFEF4444)
-                : (isDark ? AppDarkColors.textSubtitle : AppColors.textSubtitle),
+                : (isDark
+                      ? AppDarkColors.textSubtitle
+                      : AppColors.textSubtitle),
           ),
         ),
       ),

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/theme.dart';
-import '../district_model.dart';
+import '../model/district_model.dart';
 import 'lead_form_card.dart';
 
 /// Available hardcoded districts for Coordinator role as fallback.

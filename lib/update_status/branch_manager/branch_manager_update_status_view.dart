@@ -1,11 +1,16 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:url_launcher/url_launcher.dart';
+import '../../api/api.dart';
+import '../../api/document_upload_service.dart';
 import '../../core/theme.dart';
 import '../../customer_details/customer_details_model.dart';
 import '../../login_page/token_storage.dart';
+import '../status_update_result.dart';
 import '../widgets/attach_documents_card.dart';
 import '../widgets/notes_field_card.dart';
-import '../widgets/schedule_field_card.dart';
+import '../widgets/calender_field_card.dart';
 import '../widgets/status_selector_chips.dart';
 import '../widgets/update_status_header.dart';
 import 'branch_manager_update_status_view_model.dart';
@@ -69,7 +74,76 @@ class _BranchManagerUpdateStatusViewState
   Future<void> _handleSave() async {
     final success = await _viewModel.saveStatus(context);
     if (success && mounted) {
-      Navigator.of(context).pop(_viewModel.selectedStatus);
+      Navigator.of(context).pop(
+        StatusUpdateResult(
+          status: _viewModel.selectedStatus,
+          scheduleDate: _viewModel.scheduleDate,
+          notes: _viewModel.notesController.text.trim(),
+          documents: _viewModel.documents,
+        ),
+      );
+    }
+  }
+
+  Future<void> _handlePickDocuments() async {
+    try {
+      final files = await FilePicker.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf', 'docx', 'doc', 'png', 'jpg', 'jpeg'],
+      );
+
+      if (files.isNotEmpty && mounted) {
+        _viewModel.setUploadingDocument(true);
+        final uploadService = DocumentUploadService(
+          client: widget.client,
+          tokenStorage: widget.tokenStorage,
+        );
+
+        for (final file in files) {
+          List<int>? bytes;
+          try {
+            bytes = await file.readAsBytes();
+          } catch (_) {}
+
+          final uploadedUrl = await uploadService.uploadFile(
+            fileName: file.name,
+            bytes: bytes,
+            filePath: file.path,
+          );
+
+          if (!mounted) break;
+
+          if (uploadedUrl != null) {
+            _viewModel.addDocument(uploadedUrl);
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Failed to upload ${file.name}'),
+                backgroundColor: const Color(0xFFEF4444),
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('FilePicker error: $e');
+    } finally {
+      if (mounted) {
+        _viewModel.setUploadingDocument(false);
+      }
+    }
+  }
+
+  Future<void> _handlePreviewDocument(String doc) async {
+    try {
+      final url = doc.startsWith('http') ? doc : '${ApiConfig.baseUrl}$doc';
+      final uri = Uri.parse(url);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      }
+    } catch (e) {
+      debugPrint('Preview document error: $e');
     }
   }
 
@@ -131,7 +205,12 @@ class _BranchManagerUpdateStatusViewState
                   const SizedBox(height: 20),
 
                   // 5. Attach Documents Section
-                  const AttachDocumentsCard(),
+                  AttachDocumentsCard(
+                    documents: _viewModel.documents,
+                    onAttach: _viewModel.isUploadingDocument ? null : _handlePickDocuments,
+                    onDelete: null, // Only Coordinator role has permission to delete documents
+                    onPreview: _handlePreviewDocument,
+                  ),
 
                   const SizedBox(height: 24),
 

@@ -8,12 +8,14 @@ class LeadDocumentUploadCard extends StatelessWidget {
   final List<String> documents;
   final VoidCallback? onTap;
   final ValueChanged<String>? onRemove;
+  final bool isUploading;
 
   const LeadDocumentUploadCard({
     super.key,
     this.documents = const [],
     this.onTap,
     this.onRemove,
+    this.isUploading = false,
   });
 
   @override
@@ -180,25 +182,46 @@ class LeadDocumentUploadCard extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        Text(
-                          'Tap to browse or upload file',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 13.5,
-                            fontWeight: FontWeight.w600,
-                            color: primaryTextColor,
+                        if (isUploading) ...[
+                          const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: AppColors.whatsappGreen,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Supports PDF, DOCX, PNG, or JPG',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w400,
-                            color: subtitleColor,
+                          const SizedBox(height: 8),
+                          Text(
+                            'Uploading document to server...',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: primaryTextColor,
+                            ),
                           ),
-                        ),
+                        ] else ...[
+                          Text(
+                            'Tap to browse or upload file',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.w600,
+                              color: primaryTextColor,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Supports PDF, DOCX, PNG, or JPG',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w400,
+                              color: subtitleColor,
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ),

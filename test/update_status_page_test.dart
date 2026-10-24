@@ -715,4 +715,86 @@ void main() {
       expect(find.text('Rajesh Menon'), findsOneWidget);
     },
   );
+
+  testWidgets(
+    'BranchManagerUpdateStatusView hides delete document button but allows adding documents',
+    (WidgetTester tester) async {
+      const customer = CustomerDetailsData(
+        id: '1',
+        name: 'John Doe',
+        inquiry: 'Fitmate Inquiry',
+        phoneNumber: '9876543210',
+        addressLine1: 'MG Road',
+        addressLine2: 'Kochi',
+        status: 'Scheduled',
+        notes: '',
+        documents: ['invoice.pdf'],
+        branchHeadId: 2,
+        branchHeadName: 'Branch Head User',
+      );
+
+      final mockClient = MockClient((request) async => http.Response('{}', 200));
+      final storage = TokenStorage();
+      await storage.savetoken('bm_token');
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: BranchManagerUpdateStatusView(
+            customer: customer,
+            client: mockClient,
+            tokenStorage: storage,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Attach Documents'), findsOneWidget);
+      expect(find.text('invoice.pdf'), findsOneWidget);
+      expect(find.text('Upload'), findsOneWidget);
+      expect(find.text('Add Document'), findsOneWidget);
+      // Delete icon is hidden for Branch Manager
+      expect(find.byIcon(Icons.delete_outline_rounded), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'CoordinatorUpdateStatusView displays delete document button and allows adding documents',
+    (WidgetTester tester) async {
+      const customer = CustomerDetailsData(
+        id: '1',
+        name: 'John Doe',
+        inquiry: 'Fitmate Inquiry',
+        phoneNumber: '9876543210',
+        addressLine1: 'MG Road',
+        addressLine2: 'Kochi',
+        status: 'Scheduled',
+        notes: '',
+        documents: ['contract.pdf'],
+        branchHeadId: 2,
+        branchHeadName: 'Branch Head User',
+      );
+
+      final mockClient = MockClient((request) async => http.Response('{}', 200));
+      final storage = TokenStorage();
+      await storage.savetoken('coord_token');
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: CoordinatorUpdateStatusView(
+            customer: customer,
+            client: mockClient,
+            tokenStorage: storage,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Attach Documents'), findsOneWidget);
+      expect(find.text('contract.pdf'), findsOneWidget);
+      expect(find.text('Upload'), findsOneWidget);
+      expect(find.text('Add Document'), findsOneWidget);
+      // Delete icon is visible for Coordinator
+      expect(find.byIcon(Icons.delete_outline_rounded), findsOneWidget);
+    },
+  );
 }

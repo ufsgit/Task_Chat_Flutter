@@ -15,7 +15,7 @@ void main() {
     TokenStorage.useMemoryOnly = false;
   });
 
-  testWidgets('SplashScreen displays brand elements and navigates to LoginPage after 1 second',
+  testWidgets('SplashScreen displays brand elements and navigates to LoginPage',
       (WidgetTester tester) async {
     await tester.pumpWidget(
       const MaterialApp(
@@ -26,13 +26,6 @@ void main() {
     // Initial frame: brand name should be present
     expect(find.text('Fitmate'), findsOneWidget);
 
-    // Advance 500ms - still on SplashScreen
-    await tester.pump(const Duration(milliseconds: 500));
-    expect(find.byType(SplashScreen), findsOneWidget);
-    expect(find.byType(LoginPage), findsNothing);
-
-    // Advance past the 1-second mark and transition animation
-    await tester.pump(const Duration(milliseconds: 800));
     await tester.pumpAndSettle();
 
     // Now transitioned to LoginPage

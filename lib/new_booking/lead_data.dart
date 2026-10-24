@@ -7,6 +7,8 @@ class LeadFormData {
   final String stage;
   final int? areaId;
   final String? areaName;
+  final int? districtId;
+  final String? districtName;
   final String? district;
   final List<String> documents;
 
@@ -18,6 +20,8 @@ class LeadFormData {
     this.stage = 'NEW',
     this.areaId,
     this.areaName,
+    this.districtId,
+    this.districtName,
     this.district,
     this.documents = const [],
   });
@@ -30,6 +34,8 @@ class LeadFormData {
     String? stage,
     int? areaId,
     String? areaName,
+    int? districtId,
+    String? districtName,
     String? district,
     List<String>? documents,
   }) {
@@ -41,22 +47,36 @@ class LeadFormData {
       stage: stage ?? this.stage,
       areaId: areaId ?? this.areaId,
       areaName: areaName ?? this.areaName,
+      districtId: districtId ?? this.districtId,
+      districtName: districtName ?? this.districtName,
       district: district ?? this.district,
       documents: documents ?? this.documents,
     );
   }
 
-  Map<String, dynamic> toJson() => {
-    'name': name,
-    'mobile': mobile,
-    'address': address,
-    'notes': notes,
-    'status': _formatStatus(stage),
-    'areaId': areaId,
-    'areaName': areaName ?? '',
-    if (district != null && district!.isNotEmpty) 'district': district,
-    'documents': documents,
-  };
+  Map<String, dynamic> toJson() {
+    final effectiveDistrictName =
+        (districtName != null && districtName!.isNotEmpty)
+        ? districtName
+        : district;
+
+    return {
+      'name': name,
+      'mobile': mobile,
+      'address': address,
+      'notes': notes,
+      'status': _formatStatus(stage),
+      'areaId': areaId,
+      'areaName': areaName ?? '',
+      if (districtId != null && districtId! > 0) 'districtId': districtId,
+      if (effectiveDistrictName != null &&
+          effectiveDistrictName.isNotEmpty) ...{
+        'districtName': effectiveDistrictName,
+        'district': effectiveDistrictName,
+      },
+      'documents': documents,
+    };
+  }
 
   static String _formatStatus(String status) {
     final lower = status.toLowerCase().trim();
@@ -82,14 +102,20 @@ class LeadFormData {
           ? json['areaId'] as int
           : int.tryParse(json['areaId']?.toString() ?? ''),
       areaName: json['areaName'] as String?,
-      district: json['district']?.toString() ?? json['districtName']?.toString(),
+      districtId: json['districtId'] is int
+          ? json['districtId'] as int
+          : int.tryParse(json['districtId']?.toString() ?? ''),
+      districtName:
+          json['districtName']?.toString() ?? json['district']?.toString(),
+      district:
+          json['district']?.toString() ?? json['districtName']?.toString(),
       documents: docsList,
     );
   }
 }
 
 /// Available pipeline stages for a lead.
-const List<String> defaultLeadStages = ['New Booking', 'Contacted'];
+const List<String> defaultLeadStages = ['New Booking'];
 
 /// Separated mock / initial lead data.
 /// Later, replacing this with an API fetch or passing empty fields

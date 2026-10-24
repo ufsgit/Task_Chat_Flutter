@@ -7,7 +7,7 @@ import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:task_chat/new_booking/add_booking_view.dart';
 import 'package:task_chat/new_booking/add_booking_view_model.dart';
-import 'package:task_chat/new_booking/area_model.dart';
+import 'package:task_chat/new_booking/model/area_model.dart';
 import 'package:task_chat/new_booking/area_view_model.dart';
 import 'package:task_chat/new_booking/district_view_model.dart';
 import 'package:task_chat/new_booking/lead_data.dart';

@@ -3,7 +3,8 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:task_chat/login_page/token_storage.dart';
 import '../api/api.dart';
-import 'district_model.dart';
+import '../api/authenticated_client.dart';
+import 'model/district_model.dart';
 
 /// Default fallback districts for initial display and offline resilience.
 const List<DistrictItem> defaultDistricts = [
@@ -27,7 +28,7 @@ class DistrictViewModel extends ChangeNotifier {
     http.Client? client,
     DistrictItem? initialDistrict,
     String? initialDistrictName,
-  }) : _client = client ?? http.Client() {
+  }) : _client = client ?? AuthenticatedClient() {
     if (initialDistrict != null) {
       _selectedDistrict = initialDistrict;
     } else if (initialDistrictName != null && initialDistrictName.isNotEmpty) {

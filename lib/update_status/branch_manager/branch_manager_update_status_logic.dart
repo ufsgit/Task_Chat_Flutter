@@ -1,6 +1,8 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../../api/api.dart';
+import '../../api/authenticated_client.dart';
 import '../../customer_details/customer_details_model.dart';
 import '../../login_page/login_model.dart';
 import '../../login_page/token_storage.dart';
@@ -52,6 +54,8 @@ class StatusUpdateRequest {
   final String? branchManager;
   final int? branchManagerId;
   final String? branchManagerName;
+  final int? districtId;
+  final String? districtName;
 
   const StatusUpdateRequest({
     required this.clientId,
@@ -64,6 +68,8 @@ class StatusUpdateRequest {
     this.branchManager,
     this.branchManagerId,
     this.branchManagerName,
+    this.districtId,
+    this.districtName,
   });
 
   Map<String, dynamic> toJson() => {
@@ -79,6 +85,9 @@ class StatusUpdateRequest {
     if (branchManagerId != null) 'branchManagerId': branchManagerId,
     if (branchManagerName != null && branchManagerName!.isNotEmpty)
       'branchManagerName': branchManagerName,
+    if (districtId != null && districtId! > 0) 'districtId': districtId,
+    if (districtName != null && districtName!.isNotEmpty)
+      'districtName': districtName,
   };
 
   factory StatusUpdateRequest.fromJson(Map<String, dynamic> json) {
@@ -94,6 +103,13 @@ class StatusUpdateRequest {
           ? json['createdBy'] as int
           : int.tryParse(json['createdBy']?.toString() ?? '') ?? 0,
       createdByName: json['createdByName']?.toString() ?? '',
+      branchManager: json['branchManager']?.toString(),
+      branchManagerId: json['branchManagerId'] as int? ??
+          int.tryParse(json['branchManagerId']?.toString() ?? ''),
+      branchManagerName: json['branchManagerName']?.toString(),
+      districtId: json['districtId'] as int? ??
+          int.tryParse(json['districtId']?.toString() ?? ''),
+      districtName: json['districtName']?.toString(),
     );
   }
 }
@@ -106,7 +122,7 @@ class BranchManagerUpdateStatusLogic {
   BranchManagerUpdateStatusLogic({
     http.Client? client,
     TokenStorage? tokenStorage,
-  })  : client = client ?? http.Client(),
+  })  : client = client ?? AuthenticatedClient(),
         tokenStorage = tokenStorage ?? TokenStorage();
 
   /// Submits the updated status to the backend POST /api/status endpoint.
@@ -115,6 +131,7 @@ class BranchManagerUpdateStatusLogic {
     required String status,
     required String scheduleDate,
     required String notes,
+    List<String>? documents,
   }) async {
     final isTest = TokenStorage.isTestEnvironment;
     String? token;
@@ -154,9 +171,26 @@ class BranchManagerUpdateStatusLogic {
     ).timeout(const Duration(seconds: 10));
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
+      if (documents != null && !listEquals(documents, customer.documents)) {
+        try {
+          final bookingUri = Uri.parse('${ApiConfig.bookings}/${customer.id}');
+          await client.put(
+            bookingUri,
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+              if (token != null && token.isNotEmpty)
+                'authorization': token.startsWith('Bearer ') ? token : 'Bearer $token',
+            },
+            body: jsonEncode({'documents': documents}),
+          ).timeout(const Duration(seconds: 10));
+        } catch (_) {}
+      }
+
       updateChatItemStatus(
         customerName: customer.name,
         newStatus: status,
+        newDate: scheduleDate,
       );
       return true;
     }

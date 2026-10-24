@@ -97,23 +97,35 @@ class CoordinatorItem {
 }
 
 int _lastTodayLength = -1;
+int _lastTodayVersion = -1;
 List<Map<String, dynamic>> _cachedCoordinatorChatItems = [];
+
+/// Invalidate cached coordinator chat items explicitly.
+void invalidateCoordinatorCache() {
+  _lastTodayVersion = -1;
+  _lastTodayLength = -1;
+  _cachedCoordinatorChatItems = [];
+}
 
 /// Separated data source for Coordinator (formerly Super Admin).
 /// Wraps centralized chat items with the extra role badge field ('Branch Manager')
 /// and assigned branch manager names.
 List<Map<String, dynamic>> get coordinatorChatItems {
+  final currentVersion = todayChatItemsVersion;
   if (todayChatItems.isEmpty) {
     _lastTodayLength = 0;
+    _lastTodayVersion = currentVersion;
     _cachedCoordinatorChatItems = [];
     return _cachedCoordinatorChatItems;
   }
   if (_cachedCoordinatorChatItems.isNotEmpty &&
-      _lastTodayLength == todayChatItems.length) {
+      _lastTodayLength == todayChatItems.length &&
+      _lastTodayVersion == currentVersion) {
     return _cachedCoordinatorChatItems;
   }
   final managers = availableBranchManagers;
   _lastTodayLength = todayChatItems.length;
+  _lastTodayVersion = currentVersion;
   _cachedCoordinatorChatItems = todayChatItems.asMap().entries.map((entry) {
     final index = entry.key;
     final item = entry.value;

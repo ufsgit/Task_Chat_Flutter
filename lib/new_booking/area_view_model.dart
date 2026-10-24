@@ -4,7 +4,8 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:task_chat/login_page/token_storage.dart';
 import '../api/api.dart';
-import 'area_model.dart';
+import '../api/authenticated_client.dart';
+import 'model/area_model.dart';
 
 /// ViewModel managing state, API fetching, and selection for area dropdowns.
 class AreaViewModel extends ChangeNotifier {
@@ -31,7 +32,7 @@ class AreaViewModel extends ChangeNotifier {
     int defaultPage = 1,
     int defaultLimit = 20,
     AreaItem? initialArea,
-  }) : _client = client ?? http.Client(),
+  }) : _client = client ?? AuthenticatedClient(),
        _type = defaultType,
        _search = defaultSearch,
        _page = defaultPage,

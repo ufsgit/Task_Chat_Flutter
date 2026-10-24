@@ -2,7 +2,9 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../api/api.dart';
+import '../api/authenticated_client.dart';
 import '../login_page/token_storage.dart';
+import '../update_status/status_update_result.dart';
 import 'customer_details_model.dart';
 
 /// ViewModel managing state, status updates, notes, and deletion for Customer Details screen.
@@ -20,7 +22,7 @@ class CustomerDetailsViewModel extends ChangeNotifier {
     required this.customer,
     http.Client? client,
     this.tokenStorage,
-  })  : _client = client ?? http.Client();
+  })  : _client = client ?? AuthenticatedClient();
 
   bool get isDeleting => _isDeleting;
   String? get deleteError => _deleteError;
@@ -72,7 +74,7 @@ class CustomerDetailsViewModel extends ChangeNotifier {
         return false;
       }
     } catch (e) {
-      _deleteError = 'Network error: $e';
+      _deleteError = 'Connection error';
       return false;
     } finally {
       _isDeleting = false;
@@ -162,7 +164,7 @@ class CustomerDetailsViewModel extends ChangeNotifier {
         return false;
       }
     } catch (e) {
-      _updateError = 'Network error: $e';
+      _updateError = 'Connection error';
       return false;
     } finally {
       _isUpdating = false;
@@ -170,12 +172,32 @@ class CustomerDetailsViewModel extends ChangeNotifier {
     }
   }
 
-  /// Updates the status of the customer and updates scheduling flag accordingly.
-  void updateStatus(String newStatus) {
+  /// Updates the status and optional schedule date of the customer.
+  void updateStatus(String newStatus, {String? scheduleDate}) {
     final wasScheduled = newStatus.toLowerCase() == 'scheduled' ||
         customer.hasBeenScheduled;
     customer = customer.copyWith(
       status: newStatus,
+      scheduleDate: scheduleDate ?? customer.scheduleDate,
+      hasBeenScheduled: wasScheduled,
+    );
+    notifyListeners();
+  }
+
+  /// Applies a full status update result from Update Status page.
+  void applyUpdate(StatusUpdateResult result) {
+    final wasScheduled = result.status.toLowerCase() == 'scheduled' ||
+        customer.hasBeenScheduled;
+    customer = customer.copyWith(
+      status: result.status,
+      scheduleDate: result.scheduleDate.isNotEmpty
+          ? result.scheduleDate
+          : customer.scheduleDate,
+      notes: result.notes.isNotEmpty ? result.notes : customer.notes,
+      documents: result.documents.isNotEmpty
+          ? result.documents
+          : customer.documents,
+      branchHeadName: result.branchManager ?? customer.branchHeadName,
       hasBeenScheduled: wasScheduled,
     );
     notifyListeners();

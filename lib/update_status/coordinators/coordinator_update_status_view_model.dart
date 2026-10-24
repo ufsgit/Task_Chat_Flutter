@@ -19,8 +19,10 @@ class CoordinatorUpdateStatusViewModel extends ChangeNotifier {
   late bool _hasBeenScheduled;
   bool _isSaving = false;
   bool _isLoadingManagers = false;
+  bool _isUploadingDocument = false;
   String? _errorMessage;
   List<BranchHeadUser> _branchManagers = [];
+  late List<String> _documents;
 
   CoordinatorUpdateStatusViewModel({
     required this.customer,
@@ -29,13 +31,15 @@ class CoordinatorUpdateStatusViewModel extends ChangeNotifier {
     CoordinatorUpdateStatusLogic? logic,
     bool autoLoadManagers = false,
     String? initialBranchManager,
-  })  : _shouldCloseClient = client == null && logic == null,
-        _logic = logic ??
-            CoordinatorUpdateStatusLogic(
-              client: client,
-              tokenStorage: tokenStorage,
-            ) {
-    _hasBeenScheduled = customer.hasBeenScheduled ||
+  }) : _shouldCloseClient = client == null && logic == null,
+       _logic =
+           logic ??
+           CoordinatorUpdateStatusLogic(
+             client: client,
+             tokenStorage: tokenStorage,
+           ) {
+    _hasBeenScheduled =
+        customer.hasBeenScheduled ||
         customer.status.toLowerCase() == 'scheduled' ||
         customer.status.toLowerCase() == 'completed';
 
@@ -47,18 +51,22 @@ class CoordinatorUpdateStatusViewModel extends ChangeNotifier {
       _selectedStatus = 'Scheduled';
     }
 
-    _notesController = TextEditingController(text: '');
-    _scheduleDate = '10/24/2024';
-    final resolvedInitialManager = (initialBranchManager != null &&
-            initialBranchManager.trim().isNotEmpty)
+    _notesController = TextEditingController(text: customer.notes);
+    _scheduleDate =
+        (customer.scheduleDate != null && customer.scheduleDate!.isNotEmpty)
+        ? customer.scheduleDate!
+        : '10/24/2024';
+    _documents = List<String>.from(customer.documents);
+    final resolvedInitialManager =
+        (initialBranchManager != null && initialBranchManager.trim().isNotEmpty)
         ? initialBranchManager.trim()
         : ((customer.branchHeadName != null &&
-                customer.branchHeadName!.trim().isNotEmpty)
-            ? customer.branchHeadName!.trim()
-            : null);
+                  customer.branchHeadName!.trim().isNotEmpty)
+              ? customer.branchHeadName!.trim()
+              : null);
 
-    _selectedBranchManager = resolvedInitialManager ??
-        availableBranchManagers.first;
+    _selectedBranchManager =
+        resolvedInitialManager ?? availableBranchManagers.first;
 
     if (autoLoadManagers) {
       loadBranchManagers();
@@ -73,14 +81,35 @@ class CoordinatorUpdateStatusViewModel extends ChangeNotifier {
   bool get hasBeenScheduled => _hasBeenScheduled;
   bool get isSaving => _isSaving;
   bool get isLoadingManagers => _isLoadingManagers;
+  bool get isUploadingDocument => _isUploadingDocument;
   String? get errorMessage => _errorMessage;
   List<BranchHeadUser> get branchManagers => _branchManagers;
+  List<String> get documents => _documents;
+
+  void addDocument(String docUrl) {
+    if (!_documents.contains(docUrl)) {
+      _documents.add(docUrl);
+      notifyListeners();
+    }
+  }
+
+  void removeDocument(String docUrl) {
+    if (_documents.remove(docUrl)) {
+      notifyListeners();
+    }
+  }
+
+  void setUploadingDocument(bool uploading) {
+    _isUploadingDocument = uploading;
+    notifyListeners();
+  }
 
   List<String> get availableManagers {
     final list = _branchManagers.isNotEmpty
         ? _branchManagers.map((m) => m.name).toList()
         : List<String>.from(availableBranchManagers);
-    if (_selectedBranchManager.isNotEmpty && !list.contains(_selectedBranchManager)) {
+    if (_selectedBranchManager.isNotEmpty &&
+        !list.contains(_selectedBranchManager)) {
       list.insert(0, _selectedBranchManager);
     }
     return list;
@@ -105,16 +134,19 @@ class CoordinatorUpdateStatusViewModel extends ChangeNotifier {
               .firstOrNull;
         }
 
-        final targetName = (customer.branchHeadName != null &&
+        final targetName =
+            (customer.branchHeadName != null &&
                 customer.branchHeadName!.trim().isNotEmpty)
             ? customer.branchHeadName!.trim()
             : null;
 
         if (matched == null && targetName != null) {
           matched = _branchManagers
-              .where((m) =>
-                  m.name.toLowerCase().trim() == targetName.toLowerCase() ||
-                  m.username.toLowerCase().trim() == targetName.toLowerCase())
+              .where(
+                (m) =>
+                    m.name.toLowerCase().trim() == targetName.toLowerCase() ||
+                    m.username.toLowerCase().trim() == targetName.toLowerCase(),
+              )
               .firstOrNull;
         }
 
@@ -177,11 +209,13 @@ class CoordinatorUpdateStatusViewModel extends ChangeNotifier {
       }
     }
     return _branchManagers
-        .where((m) =>
-            m.name.toLowerCase().trim() ==
-                _selectedBranchManager.toLowerCase().trim() ||
-            m.username.toLowerCase().trim() ==
-                _selectedBranchManager.toLowerCase().trim())
+        .where(
+          (m) =>
+              m.name.toLowerCase().trim() ==
+                  _selectedBranchManager.toLowerCase().trim() ||
+              m.username.toLowerCase().trim() ==
+                  _selectedBranchManager.toLowerCase().trim(),
+        )
         .firstOrNull;
   }
 
@@ -197,6 +231,8 @@ class CoordinatorUpdateStatusViewModel extends ChangeNotifier {
       final selectedBm = selectedBranchHead;
       final bmId = selectedBm?.id ?? customer.branchHeadId;
       final bmName = selectedBm?.name ?? _selectedBranchManager;
+      final districtId = selectedBm?.districtId;
+      final districtName = selectedBm?.districtName;
       final success = await _logic.submitStatusUpdate(
         customer: customer,
         status: _selectedStatus,
@@ -205,6 +241,9 @@ class CoordinatorUpdateStatusViewModel extends ChangeNotifier {
         branchManager: _selectedBranchManager,
         branchManagerId: bmId,
         branchManagerName: bmName,
+        districtId: districtId,
+        districtName: districtName,
+        documents: _documents,
       );
 
       if (success) {
@@ -237,12 +276,12 @@ class CoordinatorUpdateStatusViewModel extends ChangeNotifier {
         return false;
       }
     } catch (e) {
-      _errorMessage = 'Error: $e';
+      _errorMessage = 'Connection error';
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error updating status: $e'),
-            backgroundColor: const Color(0xFFEF4444),
+          const SnackBar(
+            content: Text('Connection error'),
+            backgroundColor: Color(0xFFEF4444),
           ),
         );
       }

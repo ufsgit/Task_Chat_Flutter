@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../api/api.dart';
+import '../api/authenticated_client.dart';
 import '../core/theme.dart';
 import '../login_page/token_storage.dart';
 import '../today/today_model.dart';
@@ -15,6 +17,7 @@ class CoordinatorViewModel extends ChangeNotifier {
   final TokenStorage? tokenStorage;
   final TextEditingController searchController;
   final bool _internalController;
+  Timer? _searchDebounceTimer;
 
   bool _isLoading = false;
   String? _errorMessage;
@@ -25,6 +28,8 @@ class CoordinatorViewModel extends ChangeNotifier {
   String _selectedStatusFilter = 'All';
   String _selectedManagerFilter = 'All';
 
+  final Duration debounceDuration;
+
   CoordinatorViewModel({
     http.Client? client,
     this.tokenStorage,
@@ -32,7 +37,12 @@ class CoordinatorViewModel extends ChangeNotifier {
     int initialFilterIndex = 0,
     String initialStatusFilter = 'All',
     String initialManagerFilter = 'All',
-  })  : _client = client ?? http.Client(),
+    Duration? debounceDuration,
+  })  : _client = client ?? AuthenticatedClient(),
+        debounceDuration = debounceDuration ??
+            (TokenStorage.isTestEnvironment
+                ? Duration.zero
+                : const Duration(milliseconds: 300)),
         searchController = searchController ?? TextEditingController(),
         _internalController = searchController == null,
         _selectedFilterIndex = initialFilterIndex,
@@ -100,6 +110,10 @@ class CoordinatorViewModel extends ChangeNotifier {
 
       // 4. Search query
       if (query.isNotEmpty) {
+        final searchIndex = item['searchIndex'] as String?;
+        if (searchIndex != null && searchIndex.contains(query)) {
+          return true;
+        }
         return title.contains(query) ||
             tagText.contains(query) ||
             location.contains(query) ||
@@ -184,7 +198,7 @@ class CoordinatorViewModel extends ChangeNotifier {
         _errorMessage = 'Failed to load bookings (${response.statusCode})';
       }
     } catch (e) {
-      _errorMessage = 'Network error: $e';
+      _errorMessage = 'Connection error';
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -196,11 +210,13 @@ class CoordinatorViewModel extends ChangeNotifier {
     String customerName,
     String newStatus, {
     String? newLocation,
+    String? newDate,
   }) {
     updateChatItemStatus(
       customerName: customerName,
       newStatus: newStatus,
       newLocation: newLocation,
+      newDate: newDate,
     );
 
     final index = _items.indexWhere(
@@ -214,6 +230,10 @@ class CoordinatorViewModel extends ChangeNotifier {
       item['tagText'] = newStatus;
       if (newLocation != null && newLocation.isNotEmpty) {
         item['location'] = newLocation;
+      }
+      if (newDate != null && newDate.isNotEmpty) {
+        item['date'] = newDate;
+        item['scheduleDate'] = newDate;
       }
 
       switch (newStatus.toLowerCase()) {
@@ -276,7 +296,20 @@ class CoordinatorViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  void onSearchChanged([String? query, bool immediate = false]) {
+    if (immediate || debounceDuration == Duration.zero) {
+      _searchDebounceTimer?.cancel();
+      notifyListeners();
+      return;
+    }
+    _searchDebounceTimer?.cancel();
+    _searchDebounceTimer = Timer(debounceDuration, () {
+      notifyListeners();
+    });
+  }
+
   void clearSearch() {
+    _searchDebounceTimer?.cancel();
     searchController.clear();
     notifyListeners();
   }
@@ -287,6 +320,7 @@ class CoordinatorViewModel extends ChangeNotifier {
 
   @override
   void dispose() {
+    _searchDebounceTimer?.cancel();
     if (_internalController) {
       searchController.dispose();
     }

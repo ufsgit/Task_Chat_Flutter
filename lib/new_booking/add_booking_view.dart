@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../core/widgets/circular_back_button.dart';
 import '../core/theme.dart';
+import '../api/document_upload_service.dart';
 import '../settings/settings_model.dart';
 import 'add_booking_view_model.dart';
 import 'area_view_model.dart';
@@ -48,6 +49,7 @@ class _add_bookingState extends State<add_booking> {
   late final TextEditingController _notesController;
   late final AddBookingViewModel _viewModel;
   late List<String> _documents;
+  bool _isUploadingDocument = false;
   bool _isLocalViewModel = false;
 
   late List<String> _stages;
@@ -87,20 +89,17 @@ class _add_bookingState extends State<add_booking> {
       _viewModel.districtViewModel.selectDistrictByName(data.district);
     }
 
-    if (_isCoordinator) {
-      _viewModel.areaViewModel.isCoordinator = true;
-      final dId = _viewModel.districtViewModel.selectedDistrictId;
-      _viewModel.areaViewModel.fetchAreas(
-        isCoordinator: true,
-        districtId: dId,
-      );
-      _viewModel.districtViewModel.fetchDistricts();
+    if (widget.isCoordinator != null) {
+      if (_isCoordinator) {
+        _viewModel.areaViewModel.isCoordinator = true;
+        final dId = _viewModel.districtViewModel.selectedDistrictId;
+        _viewModel.areaViewModel.fetchAreas(isCoordinator: true, districtId: dId);
+        _viewModel.districtViewModel.fetchDistricts();
+      } else {
+        _viewModel.areaViewModel.isCoordinator = false;
+        _viewModel.areaViewModel.fetchAreas(isCoordinator: false);
+      }
     } else {
-      _viewModel.areaViewModel.isCoordinator = false;
-      _viewModel.areaViewModel.fetchAreas(isCoordinator: false);
-    }
-
-    if (widget.isCoordinator == null) {
       _loadCoordinatorRole();
     }
 
@@ -128,7 +127,11 @@ class _add_bookingState extends State<add_booking> {
           isCoordinator: true,
           districtId: dId,
         );
+      } else {
+        _viewModel.areaViewModel.fetchAreas(isCoordinator: false);
       }
+    } else if (mounted) {
+      _viewModel.areaViewModel.fetchAreas(isCoordinator: false);
     }
   }
 
@@ -150,6 +153,17 @@ class _add_bookingState extends State<add_booking> {
         ? _stages[_selectedStageIndex]
         : (_stages.isNotEmpty ? _stages[0] : 'NEW');
 
+    final districtVm = _viewModel.districtViewModel;
+    final selectedDistrictItem = districtVm.selectedDistrict;
+    final effectiveDistrictId = _isCoordinator
+        ? (selectedDistrictItem != null && selectedDistrictItem.id > 0
+            ? selectedDistrictItem.id
+            : null)
+        : null;
+    final effectiveDistrictName = _isCoordinator
+        ? (_selectedDistrict ?? selectedDistrictItem?.name)
+        : null;
+
     final result = LeadFormData(
       name: _nameController.text.trim(),
       mobile: _mobileController.text.trim(),
@@ -158,7 +172,9 @@ class _add_bookingState extends State<add_booking> {
       stage: selectedStage,
       areaId: _viewModel.areaViewModel.selectedAreaId,
       areaName: _viewModel.areaViewModel.selectedAreaName,
-      district: _isCoordinator ? _selectedDistrict : null,
+      districtId: effectiveDistrictId,
+      districtName: effectiveDistrictName,
+      district: effectiveDistrictName,
       documents: _documents,
     );
 
@@ -214,18 +230,49 @@ class _add_bookingState extends State<add_booking> {
       );
 
       if (files.isNotEmpty && mounted) {
-        setState(() {
-          for (final file in files) {
-            final name = file.name;
-            final docPath = name.startsWith('/') ? name : '/uploads/$name';
-            if (!_documents.contains(docPath)) {
-              _documents.add(docPath);
-            }
+        setState(() => _isUploadingDocument = true);
+        final uploadService = DocumentUploadService();
+
+        for (final file in files) {
+          List<int>? bytes;
+          try {
+            bytes = await file.readAsBytes();
+          } catch (_) {}
+
+          final uploadedUrl = await uploadService.uploadFile(
+            fileName: file.name,
+            bytes: bytes,
+            filePath: file.path,
+          );
+
+          if (!mounted) break;
+
+          if (uploadedUrl != null) {
+            setState(() {
+              if (!_documents.contains(uploadedUrl)) {
+                _documents.add(uploadedUrl);
+              }
+            });
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  'Failed to upload ${file.name}. Please try again.',
+                  style: const TextStyle(fontFamily: 'Helvetica Neue'),
+                ),
+                backgroundColor: const Color(0xFFEF4444),
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
           }
-        });
+        }
       }
     } catch (e) {
       debugPrint('FilePicker error: $e');
+    } finally {
+      if (mounted) {
+        setState(() => _isUploadingDocument = false);
+      }
     }
   }
 
@@ -366,7 +413,8 @@ class _add_bookingState extends State<add_booking> {
                   listenable: _viewModel.districtViewModel,
                   builder: (context, _) {
                     final districtVm = _viewModel.districtViewModel;
-                    final currentSelected = _selectedDistrict ??
+                    final currentSelected =
+                        _selectedDistrict ??
                         districtVm.selectedDistrictName ??
                         districtVm.districts.firstOrNull?.name;
 
@@ -412,7 +460,8 @@ class _add_bookingState extends State<add_booking> {
               // 5. Attach Documents Card
               LeadDocumentUploadCard(
                 documents: _documents,
-                onTap: _handlePickDocuments,
+                isUploading: _isUploadingDocument,
+                onTap: _isUploadingDocument ? null : _handlePickDocuments,
                 onRemove: (doc) {
                   setState(() {
                     _documents.remove(doc);

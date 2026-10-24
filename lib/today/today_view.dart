@@ -13,6 +13,7 @@ import '../core/widgets/fitmate_app_bar_title.dart';
 import '../customer_details/customer_details_model.dart';
 import '../customer_details/customer_details_view.dart';
 import '../notification_page/notification_page.dart';
+import '../update_status/status_update_result.dart';
 
 class TodayPage extends StatefulWidget {
   final TodayViewModel? viewModel;
@@ -64,11 +65,26 @@ class _TodayPageState extends State<TodayPage> {
       builder: (context) => TodayFilterBottomSheet(
         selectedStatus: _viewModel.selectedStatusFilter,
         statusOptions: _statusOptions,
+        selectedDateFrom: _viewModel.dateFrom,
+        selectedDateTo: _viewModel.dateTo,
         onApply: (status) {
           _viewModel.setStatusFilter(status);
         },
+        onApplyAdvanced: ({
+          required String status,
+          String? districtId,
+          String? dateFrom,
+          String? dateTo,
+          String? filterRole,
+        }) {
+          _viewModel.applyFilters(
+            status: status,
+            dateFrom: dateFrom,
+            dateTo: dateTo,
+          );
+        },
         onReset: () {
-          _viewModel.setStatusFilter('All');
+          _viewModel.resetFilters();
         },
       ),
     );
@@ -200,33 +216,32 @@ class _TodayPageState extends State<TodayPage> {
         ],
       ),
       body: SafeArea(
-        child: ListenableBuilder(
-          listenable: _viewModel,
-          builder: (context, _) {
-            final filtered = _viewModel.filteredChatItems;
-            final hasActiveFilters = _viewModel.hasActiveFilters;
-
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Search Input Field & Filter Option Row
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16.0,
-                    vertical: 6.0,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Search Input Field & Filter Option Row
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16.0,
+                vertical: 6.0,
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: SearchInputField(
+                      controller: _searchController,
+                      padding: EdgeInsets.zero,
+                      onChanged: (val) => _viewModel.setSearchQuery(val),
+                      onClear: () =>
+                          _viewModel.setSearchQuery('', immediate: true),
+                    ),
                   ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: SearchInputField(
-                          controller: _searchController,
-                          padding: EdgeInsets.zero,
-                          onChanged: (val) => _viewModel.setSearchQuery(val),
-                          onClear: () => _viewModel.setSearchQuery(''),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Material(
+                  const SizedBox(width: 10),
+                  ListenableBuilder(
+                    listenable: _viewModel,
+                    builder: (context, _) {
+                      final hasActiveFilters = _viewModel.hasActiveFilters;
+                      return Material(
                         color: Colors.transparent,
                         child: InkWell(
                           borderRadius: BorderRadius.circular(24),
@@ -288,41 +303,84 @@ class _TodayPageState extends State<TodayPage> {
                             ),
                           ),
                         ),
-                      ),
-                    ],
+                      );
+                    },
                   ),
-                ),
+                ],
+              ),
+            ),
 
-                if (hasActiveFilters)
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16.0, 4.0, 16.0, 6.0),
-                    child: Row(
-                      children: [
-                        _buildActiveFilterChip(
-                          label: 'Status: ${_viewModel.selectedStatusFilter}',
-                          isDark: isDark,
-                          onDeleted: () {
-                            _viewModel.setStatusFilter('All');
-                          },
+            // Content Area (Active Filters, Chips Bar, and List) scoped with ListenableBuilder
+            Expanded(
+              child: ListenableBuilder(
+                listenable: _viewModel,
+                builder: (context, _) {
+                  final filtered = _viewModel.filteredChatItems;
+                  final hasActiveFilters = _viewModel.hasActiveFilters;
+
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (hasActiveFilters)
+                        Padding(
+                          padding:
+                              const EdgeInsets.fromLTRB(16.0, 4.0, 16.0, 6.0),
+                          child: SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: Row(
+                              children: [
+                                if (_viewModel.selectedStatusFilter != 'All') ...[
+                                  _buildActiveFilterChip(
+                                    label:
+                                        'Status: ${_viewModel.selectedStatusFilter}',
+                                    isDark: isDark,
+                                    onDeleted: () {
+                                      _viewModel.setStatusFilter('All');
+                                    },
+                                  ),
+                                  const SizedBox(width: 8),
+                                ],
+                                if ((_viewModel.dateFrom != null &&
+                                        _viewModel.dateFrom!.isNotEmpty) ||
+                                    (_viewModel.dateTo != null &&
+                                        _viewModel.dateTo!.isNotEmpty)) ...[
+                                  _buildActiveFilterChip(
+                                    label:
+                                        'Date: ${formatDateToDayMonthYear(_viewModel.dateFrom)} - ${formatDateToDayMonthYear(_viewModel.dateTo)}',
+                                    isDark: isDark,
+                                    onDeleted: () {
+                                      _viewModel.setDateRange(
+                                          from: null, to: null);
+                                    },
+                                  ),
+                                  const SizedBox(width: 8),
+                                ],
+                                _buildActiveFilterChip(
+                                  label: 'Clear All',
+                                  isDark: isDark,
+                                  onDeleted: () {
+                                    _viewModel.resetFilters();
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
-                      ],
-                    ),
-                  ),
 
-                // Reusable Horizontal Filter Chips Bar
-                FilterChipsBar(
-                  filters: _filters,
-                  selectedIndex: _viewModel.selectedFilterIndex,
-                  onSelected: (index) {
-                    _viewModel.setFilterIndex(index);
-                  },
-                ),
+                      // Reusable Horizontal Filter Chips Bar
+                      FilterChipsBar(
+                        filters: _filters,
+                        selectedIndex: _viewModel.selectedFilterIndex,
+                        onSelected: (index) {
+                          _viewModel.setFilterIndex(index);
+                        },
+                      ),
 
-                const SizedBox(height: 4),
+                      const SizedBox(height: 4),
 
-                // Leads / Task List with Pull-to-refresh
-                Expanded(
-                  child: RefreshIndicator(
+                      // Leads / Task List with Pull-to-refresh
+                      Expanded(
+                        child: RefreshIndicator(
                     onRefresh: _viewModel.fetchBookings,
                     color: AppColors.primaryGreen,
                     child: _viewModel.isLoading && filtered.isEmpty
@@ -371,7 +429,8 @@ class _TodayPageState extends State<TodayPage> {
                                         item['avatarBorderColor'],
                                     hasVerifiedBadge:
                                         item['hasVerifiedBadge'] ?? false,
-                                    date: item['date'] ?? '',
+                                    date: formatDateToDayMonthYear(
+                                        item['date']?.toString() ?? ''),
                                     tagText: item['tagText'] ?? '',
                                     tagBgColor: item['tagBgColor'] ??
                                         AppColors.completedBg,
@@ -410,6 +469,7 @@ class _TodayPageState extends State<TodayPage> {
                                               branchHeadId: booking.branchHeadId,
                                               branchHeadName: booking.branchHeadName ??
                                                   item['branchManager']?.toString(),
+                                              scheduleDate: booking.scheduleDate,
                                             )
                                           : CustomerDetailsData.fromChatInfo(
                                               name: item['title']?.toString() ??
@@ -419,6 +479,16 @@ class _TodayPageState extends State<TodayPage> {
                                               tagText: item['tagText']
                                                   ?.toString(),
                                               id: item['id']?.toString(),
+                                              scheduleDate: item['scheduleDate']?.toString() ??
+                                                  item['date']?.toString(),
+                                              phoneNumber: item['mobile']?.toString() ??
+                                                  item['phoneNumber']?.toString(),
+                                              notes: item['notes']?.toString(),
+                                              documents: item['documents'] is List
+                                                  ? (item['documents'] as List)
+                                                      .map((e) => e.toString())
+                                                      .toList()
+                                                  : null,
                                               branchHeadId: item['branchHeadId'] is int
                                                   ? item['branchHeadId'] as int
                                                   : null,
@@ -435,11 +505,19 @@ class _TodayPageState extends State<TodayPage> {
                                         ),
                                       );
 
-                                      if (updatedStatus is String && mounted) {
-                                        _viewModel.updateStatus(
-                                          item['title'] ?? '',
-                                          updatedStatus,
-                                        );
+                                      if (mounted) {
+                                        if (updatedStatus is StatusUpdateResult) {
+                                          _viewModel.updateStatus(
+                                            item['title'] ?? '',
+                                            updatedStatus.status,
+                                            newDate: updatedStatus.scheduleDate,
+                                          );
+                                        } else if (updatedStatus is String) {
+                                          _viewModel.updateStatus(
+                                            item['title'] ?? '',
+                                            updatedStatus,
+                                          );
+                                        }
                                         _viewModel.fetchBookings();
                                       }
                                     },
@@ -453,8 +531,11 @@ class _TodayPageState extends State<TodayPage> {
           },
         ),
       ),
-    );
-  }
+    ],
+  ),
+),
+);
+}
 }
 
 /// Backward compatibility / MVVM alias for TodayPage.

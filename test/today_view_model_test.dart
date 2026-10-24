@@ -221,6 +221,139 @@ void main() {
       final scaffold = tester.widget<Scaffold>(find.byType(Scaffold).first);
       expect(scaffold.extendBody, true);
     });
+
+    test('BookingModel parses scheduleDate and reflects in toChatItem', () {
+      final jsonWithSchedule = {
+        'id': 99,
+        'name': 'Test Client',
+        'mobile': '9876543210',
+        'address': 'Test Address',
+        'notes': 'Test Notes',
+        'status': 'SCHEDULED',
+        'stateName': 'Kerala',
+        'districtName': 'Kochi',
+        'areaName': 'Edapally',
+        'documents': [],
+        'scheduleDate': '10/28/2026',
+        'createdAt': '2026-10-21T10:38:24.000Z',
+      };
+
+      final booking = BookingModel.fromJson(jsonWithSchedule);
+      expect(booking.scheduleDate, '10/28/2026');
+
+      final chatItem = booking.toChatItem();
+      expect(chatItem['date'], '10/28/2026');
+      expect(chatItem['scheduleDate'], '10/28/2026');
+    });
+
+    test('TodayViewModel updateStatus updates status and date in memory', () {
+      todayChatItems.clear();
+      todayChatItems.add({
+        'title': 'Test Customer',
+        'tagText': 'New',
+        'date': '10/21/2026',
+      });
+
+      final vm = TodayViewModel();
+      vm.updateStatus('Test Customer', 'Scheduled', newDate: '10/29/2026');
+
+      expect(todayChatItems.first['tagText'], 'Scheduled');
+      expect(todayChatItems.first['date'], '10/29/2026');
+      expect(todayChatItems.first['scheduleDate'], '10/29/2026');
+    });
+
+    test('TodayViewModel buildQueryParameters includes provided fields and omits null/all fields', () {
+      final vm = TodayViewModel();
+
+      // Test default: all empty/null/All => empty map
+      expect(vm.buildQueryParameters(), isEmpty);
+
+      // Full query parameters as specified in requirement
+      final params = vm.buildQueryParameters(
+        search: 'Rahul',
+        districtId: '1',
+        dateFrom: '2026-10-01',
+        dateTo: '2026-10-24',
+        filterRole: '5',
+        status: 'Scheduled',
+        page: '1',
+        limit: '15',
+      );
+
+      expect(params, {
+        'search': 'Rahul',
+        'districtId': '1',
+        'dateFrom': '2026-10-01',
+        'dateTo': '2026-10-24',
+        'filterRole': '5',
+        'status': 'Scheduled',
+        'page': '1',
+        'limit': '15',
+      });
+
+      // Partial query parameters: omits null, empty, or 'all'
+      final partial = vm.buildQueryParameters(
+        search: '',
+        districtId: '2',
+        dateFrom: null,
+        dateTo: null,
+        filterRole: '3',
+        status: 'All',
+        page: null,
+        limit: null,
+      );
+
+      expect(partial, {
+        'districtId': '2',
+        'filterRole': '3',
+      });
+      expect(partial.containsKey('search'), isFalse);
+      expect(partial.containsKey('dateFrom'), isFalse);
+      expect(partial.containsKey('dateTo'), isFalse);
+      expect(partial.containsKey('status'), isFalse);
+      expect(partial.containsKey('page'), isFalse);
+      expect(partial.containsKey('limit'), isFalse);
+    });
+
+    test('TodayViewModel fetchBookings sends query parameters to ApiConfig.bookings', () async {
+      Uri? capturedUri;
+      final mockClient = MockClient((request) async {
+        capturedUri = request.url;
+        return http.Response(mockApiResponse, 200,
+            headers: {'content-type': 'application/json'});
+      });
+
+      final vm = TodayViewModel(client: mockClient);
+      vm.applyFilters(
+        status: 'Scheduled',
+        districtId: '1',
+        dateFrom: '2026-10-01',
+        dateTo: '2026-10-24',
+        filterRole: '5',
+        page: '1',
+        limit: '15',
+      );
+
+      // Search query
+      vm.setSearchQuery('Rahul', immediate: true);
+      await vm.fetchBookings(force: true);
+
+      expect(capturedUri, isNotNull);
+      expect(capturedUri!.path, '/api/bookings');
+      expect(capturedUri!.queryParameters['search'], 'Rahul');
+      expect(capturedUri!.queryParameters['districtId'], '1');
+      expect(capturedUri!.queryParameters['dateFrom'], '2026-10-01');
+      expect(capturedUri!.queryParameters['dateTo'], '2026-10-24');
+      expect(capturedUri!.queryParameters['filterRole'], '5');
+      expect(capturedUri!.queryParameters['status'], 'Scheduled');
+      expect(capturedUri!.queryParameters['page'], '1');
+      expect(capturedUri!.queryParameters['limit'], '15');
+
+      // Reset filters and verify null/empty keys are omitted
+      vm.resetFilters();
+      await vm.fetchBookings(force: true);
+      expect(capturedUri!.queryParameters, isEmpty);
+    });
   });
 }
 
