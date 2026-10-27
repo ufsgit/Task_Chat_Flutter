@@ -2,6 +2,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../core/widgets/circular_back_button.dart';
+import '../core/widgets/document_preview_upload_page.dart';
 import '../core/theme.dart';
 import '../api/document_upload_service.dart';
 import '../settings/settings_model.dart';
@@ -49,7 +50,7 @@ class _add_bookingState extends State<add_booking> {
   late final TextEditingController _notesController;
   late final AddBookingViewModel _viewModel;
   late List<String> _documents;
-  bool _isUploadingDocument = false;
+  final bool _isUploadingDocument = false;
   bool _isLocalViewModel = false;
 
   late List<String> _stages;
@@ -230,19 +231,27 @@ class _add_bookingState extends State<add_booking> {
       );
 
       if (files.isNotEmpty && mounted) {
-        setState(() => _isUploadingDocument = true);
         final uploadService = DocumentUploadService();
 
         for (final file in files) {
+          if (!mounted) break;
+
           List<int>? bytes;
           try {
             bytes = await file.readAsBytes();
           } catch (_) {}
 
-          final uploadedUrl = await uploadService.uploadFile(
-            fileName: file.name,
-            bytes: bytes,
-            filePath: file.path,
+          if (!mounted) break;
+
+          final uploadedUrl = await Navigator.of(context).push<String>(
+            MaterialPageRoute(
+              builder: (context) => DocumentPreviewUploadPage(
+                fileName: file.name,
+                filePath: file.path,
+                fileBytes: bytes != null ? Uint8List.fromList(bytes) : null,
+                uploadService: uploadService,
+              ),
+            ),
           );
 
           if (!mounted) break;
@@ -253,14 +262,13 @@ class _add_bookingState extends State<add_booking> {
                 _documents.add(uploadedUrl);
               }
             });
-          } else {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(
-                  'Failed to upload ${file.name}. Please try again.',
+                  'Document "${file.name}" uploaded successfully',
                   style: const TextStyle(fontFamily: 'Helvetica Neue'),
                 ),
-                backgroundColor: const Color(0xFFEF4444),
+                backgroundColor: AppColors.whatsappGreen,
                 behavior: SnackBarBehavior.floating,
               ),
             );
@@ -269,11 +277,20 @@ class _add_bookingState extends State<add_booking> {
       }
     } catch (e) {
       debugPrint('FilePicker error: $e');
-    } finally {
-      if (mounted) {
-        setState(() => _isUploadingDocument = false);
-      }
     }
+  }
+
+  Future<void> _handlePreviewDocument(String doc) async {
+    final fileName =
+        doc.split('/').last.isNotEmpty ? doc.split('/').last : doc;
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => DocumentPreviewUploadPage(
+          fileName: fileName,
+          fileUrl: doc,
+        ),
+      ),
+    );
   }
 
   @override
@@ -462,6 +479,7 @@ class _add_bookingState extends State<add_booking> {
                 documents: _documents,
                 isUploading: _isUploadingDocument,
                 onTap: _isUploadingDocument ? null : _handlePickDocuments,
+                onPreview: _handlePreviewDocument,
                 onRemove: (doc) {
                   setState(() {
                     _documents.remove(doc);

@@ -2,7 +2,8 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../core/theme.dart';
-import '../dashboard/dashboard_page.dart';
+import '../dashboard/dashboard_view.dart';
+import '../dashboard/dashboard_view_model.dart';
 import '../report_activity/main/report_activity.dart';
 import '../login_page/login_model.dart';
 import '../settings/settings_model.dart';
@@ -22,6 +23,7 @@ class BottomNavigator extends StatefulWidget {
   final UserModel? user;
   final TodayViewModel? todayViewModel;
   final CoordinatorViewModel? coordinatorViewModel;
+  final DashboardViewModel? dashboardViewModel;
 
   const BottomNavigator({
     super.key,
@@ -31,6 +33,7 @@ class BottomNavigator extends StatefulWidget {
     this.user,
     this.todayViewModel,
     this.coordinatorViewModel,
+    this.dashboardViewModel,
   }) : isCoordinator = isCoordinator ?? false;
 
   bool get isSuperAdmin => isCoordinator;
@@ -44,8 +47,10 @@ class _BottomNavigatorState extends State<BottomNavigator> {
   late final List<Widget> _pages;
   late final TodayViewModel _todayViewModel;
   late final CoordinatorViewModel _coordinatorViewModel;
+  late final DashboardViewModel _dashboardViewModel;
   bool _isLocalTodayViewModel = false;
   bool _isLocalCoordinatorViewModel = false;
+  bool _isLocalDashboardViewModel = false;
 
   @override
   void initState() {
@@ -67,6 +72,14 @@ class _BottomNavigatorState extends State<BottomNavigator> {
       _isLocalCoordinatorViewModel = true;
     }
 
+    if (widget.dashboardViewModel != null) {
+      _dashboardViewModel = widget.dashboardViewModel!;
+      _isLocalDashboardViewModel = false;
+    } else {
+      _dashboardViewModel = DashboardViewModel();
+      _isLocalDashboardViewModel = true;
+    }
+
     final profile = widget.user != null
         ? UserProfileData.fromUserModel(widget.user!)
         : null;
@@ -74,7 +87,10 @@ class _BottomNavigatorState extends State<BottomNavigator> {
       widget.isCoordinator
           ? CoordinatorPage(viewModel: _coordinatorViewModel)
           : TodayPage(viewModel: _todayViewModel),
-      DashboardPage(onBack: () => _onItemTapped(0)),
+      DashboardPage(
+        onBack: () => _onItemTapped(0),
+        viewModel: _dashboardViewModel,
+      ),
       const ReportActivity(),
       SettingsPage(profile: profile),
     ];
@@ -88,6 +104,9 @@ class _BottomNavigatorState extends State<BottomNavigator> {
     if (_isLocalCoordinatorViewModel) {
       _coordinatorViewModel.dispose();
     }
+    if (_isLocalDashboardViewModel) {
+      _dashboardViewModel.dispose();
+    }
     super.dispose();
   }
 
@@ -98,6 +117,8 @@ class _BottomNavigatorState extends State<BottomNavigator> {
       } else {
         _todayViewModel.fetchBookings();
       }
+    } else if (index == 1) {
+      _dashboardViewModel.fetchDashboard();
     }
     setState(() {
       _selectedIndex = index;

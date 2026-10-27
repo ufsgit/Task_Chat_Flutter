@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../../api/api.dart';
 import '../../core/theme.dart';
+import '../../core/widgets/document_preview_upload_page.dart';
 
 /// Documents section card displaying attached files for the customer.
 class CustomerDocumentsCard extends StatelessWidget {
@@ -17,39 +17,15 @@ class CustomerDocumentsCard extends StatelessWidget {
   });
 
   Future<void> _defaultViewDocument(BuildContext context, String doc) async {
-    try {
-      final url = doc.startsWith('http') ? doc : '${ApiConfig.baseUrl}$doc';
-      final uri = Uri.parse(url);
-
-      final lower = doc.toLowerCase();
-      final isImage =
-          lower.endsWith('.png') ||
-          lower.endsWith('.jpg') ||
-          lower.endsWith('.jpeg') ||
-          lower.endsWith('.webp') ||
-          lower.endsWith('.gif');
-
-      if (isImage) {
-        await showDialog(
-          context: context,
-          builder: (ctx) => DocumentImagePreviewDialog(
-            url: url,
-            fileName: doc.split('/').last.isNotEmpty
-                ? doc.split('/').last
-                : doc,
-          ),
-        );
-        return;
-      }
-
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-      } else {
-        await launchUrl(uri);
-      }
-    } catch (e) {
-      debugPrint('Preview document error: $e');
-    }
+    final fileName = doc.split('/').last.isNotEmpty ? doc.split('/').last : doc;
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => DocumentPreviewUploadPage(
+          fileName: fileName,
+          fileUrl: doc,
+        ),
+      ),
+    );
   }
 
   @override
@@ -99,6 +75,27 @@ class CustomerDocumentsCard extends StatelessWidget {
                   fontSize: 15,
                   fontWeight: FontWeight.w700,
                   color: primaryText,
+                ),
+              ),
+              TextButton(
+                onPressed: onUpload,
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.add,
+                      size: 14,
+                      color: greenColor,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Upload',
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                        color: greenColor,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -227,7 +224,7 @@ class CustomerDocumentsCard extends StatelessWidget {
                                   ),
                                   const SizedBox(width: 4),
                                   Text(
-                                    '',
+                                    'Preview',
                                     style: TextStyle(
                                       fontSize: 12,
                                       fontWeight: FontWeight.w600,

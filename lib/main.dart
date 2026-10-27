@@ -44,6 +44,7 @@ class FitmateApp extends StatelessWidget {
           theme: AppTheme.lightTheme,
           darkTheme: AppTheme.darkTheme,
           themeMode: currentMode,
+          scrollBehavior: const AppScrollBehavior(),
           home: const SplashScreen(),
         );
       },

@@ -10,6 +10,7 @@ import 'customer_details_model.dart';
 /// ViewModel managing state, status updates, notes, and deletion for Customer Details screen.
 class CustomerDetailsViewModel extends ChangeNotifier {
   final http.Client _client;
+  final bool _isInternalClient;
   final TokenStorage? tokenStorage;
   CustomerDetailsModel customer;
 
@@ -22,8 +23,10 @@ class CustomerDetailsViewModel extends ChangeNotifier {
     required this.customer,
     http.Client? client,
     this.tokenStorage,
-  })  : _client = client ?? AuthenticatedClient();
+  })  : _client = client ?? AuthenticatedClient(),
+        _isInternalClient = client == null;
 
+  http.Client get client => _client;
   bool get isDeleting => _isDeleting;
   String? get deleteError => _deleteError;
   bool get isUpdating => _isUpdating;
@@ -211,7 +214,9 @@ class CustomerDetailsViewModel extends ChangeNotifier {
 
   @override
   void dispose() {
-    _client.close();
+    if (_isInternalClient) {
+      _client.close();
+    }
     super.dispose();
   }
 }

@@ -8,7 +8,6 @@ import '../customer_details/customer_details_view.dart';
 import '../today/today_model.dart';
 import '../update_status/status_update_result.dart';
 import '../today/widgets/chat_list_item_tile.dart';
-import '../today/widgets/filter_chips_bar.dart';
 import '../today/widgets/search_input_field.dart';
 import '../today/widgets/today_skeleton_loading.dart';
 import 'coordinator_view_model.dart';
@@ -276,14 +275,7 @@ class _CoordinatorViewState extends State<CoordinatorView> {
                     ),
                   ),
 
-                // Quick Filter Chips Bar (All, Unread, Pending)
-                FilterChipsBar(
-                  filters: _viewModel.filters,
-                  selectedIndex: _viewModel.selectedFilterIndex,
-                  onSelected: (index) => _viewModel.setFilterIndex(index),
-                ),
 
-                const SizedBox(height: 8),
 
                 // Lead Chat Items List with extra 'Branch Manager' badge & Pull-to-refresh
                 Expanded(
@@ -330,7 +322,8 @@ class _CoordinatorViewState extends State<CoordinatorView> {
                                         AppColors.textSecondary,
                                     avatarBorderColor: item['avatarBorderColor'],
                                     hasVerifiedBadge: item['hasVerifiedBadge'] ?? false,
-                                    date: item['date'] ?? '',
+                                    date: formatDateToDayMonthYear(
+                                        item['date']?.toString() ?? ''),
                                     tagText: item['tagText'] ?? '',
                                     tagBgColor:
                                         item['tagBgColor'] ?? AppColors.completedBg,

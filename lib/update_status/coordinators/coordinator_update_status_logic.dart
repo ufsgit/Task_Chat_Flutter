@@ -8,6 +8,8 @@ import '../../login_page/login_model.dart';
 import '../../login_page/token_storage.dart';
 import '../../settings/settings_model.dart';
 import '../../today/today_view_model.dart';
+import '../models/status_chip_model.dart';
+import '../services/status_chips_service.dart';
 import '../branch_manager/branch_manager_update_status_logic.dart';
 
 /// Available status options for Coordinator.
@@ -114,6 +116,14 @@ class CoordinatorUpdateStatusLogic {
     TokenStorage? tokenStorage,
   })  : client = client ?? AuthenticatedClient(),
         tokenStorage = tokenStorage ?? TokenStorage();
+
+  /// Fetches status filter chips from GET /api/status.
+  Future<List<StatusChipModel>> fetchStatusChips() async {
+    return StatusChipsService(
+      client: client,
+      tokenStorage: tokenStorage,
+    ).fetchStatusChips();
+  }
 
   /// Fetches branch head managers from backend GET /api/users?role=branch_head.
   Future<List<BranchHeadUser>> fetchBranchManagers() async {

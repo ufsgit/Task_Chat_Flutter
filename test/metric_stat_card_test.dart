@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:task_chat/dashboard/dashboard_data.dart';
+import 'package:task_chat/dashboard/dashboard_model.dart';
 import 'package:task_chat/dashboard/widgets/metric_stat_card.dart';
 
 void main() {

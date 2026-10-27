@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import '../../core/theme.dart';
 import '../../customer_details/customer_details_model.dart';
 import '../../login_page/token_storage.dart';
+import '../models/status_chip_model.dart';
 import '../branch_manager/branch_manager_update_status_logic.dart';
 import 'coordinator_update_status_logic.dart';
 
@@ -19,9 +20,11 @@ class CoordinatorUpdateStatusViewModel extends ChangeNotifier {
   late bool _hasBeenScheduled;
   bool _isSaving = false;
   bool _isLoadingManagers = false;
+  bool _isLoadingChips = false;
   bool _isUploadingDocument = false;
   String? _errorMessage;
   List<BranchHeadUser> _branchManagers = [];
+  List<StatusChipModel> _statusChips = [];
   late List<String> _documents;
 
   CoordinatorUpdateStatusViewModel({
@@ -43,11 +46,11 @@ class CoordinatorUpdateStatusViewModel extends ChangeNotifier {
         customer.status.toLowerCase() == 'scheduled' ||
         customer.status.toLowerCase() == 'completed';
 
-    _selectedStatus = customer.status.toLowerCase() == 'new'
-        ? 'Scheduled'
-        : customer.status;
+    _selectedStatus = customer.status;
 
     if (!_hasBeenScheduled && _selectedStatus.toLowerCase() == 'completed') {
+      _selectedStatus = 'New';
+    } else if (_hasBeenScheduled && _selectedStatus.toLowerCase() == 'new') {
       _selectedStatus = 'Scheduled';
     }
 
@@ -81,9 +84,27 @@ class CoordinatorUpdateStatusViewModel extends ChangeNotifier {
   bool get hasBeenScheduled => _hasBeenScheduled;
   bool get isSaving => _isSaving;
   bool get isLoadingManagers => _isLoadingManagers;
+  bool get isLoadingChips => _isLoadingChips;
   bool get isUploadingDocument => _isUploadingDocument;
   String? get errorMessage => _errorMessage;
   List<BranchHeadUser> get branchManagers => _branchManagers;
+  List<StatusChipModel> get statusChips {
+    if (_hasBeenScheduled) {
+      // After scheduled: remove 'New' filter chip, show 'Completed' (and Scheduled, Cancelled)
+      return _statusChips.where((chip) {
+        final label = chip.label.toLowerCase();
+        final code = chip.code.toLowerCase();
+        return label != 'new' && code != 'new';
+      }).toList();
+    } else {
+      // When it's New: don't show 'Completed' filter chip
+      return _statusChips.where((chip) {
+        final label = chip.label.toLowerCase();
+        final code = chip.code.toLowerCase();
+        return label != 'completed' && code != 'completed';
+      }).toList();
+    }
+  }
   List<String> get documents => _documents;
 
   void addDocument(String docUrl) {
@@ -166,8 +187,36 @@ class CoordinatorUpdateStatusViewModel extends ChangeNotifier {
     }
   }
 
-  List<String> get availableOptions =>
-      getAvailableStatusOptions(hasBeenScheduled: _hasBeenScheduled);
+  List<String> get availableOptions => _statusChips.isNotEmpty
+      ? statusChips.map((c) => c.label).toList()
+      : getAvailableStatusOptions(hasBeenScheduled: _hasBeenScheduled);
+
+  /// Loads status filter chips from GET /api/status.
+  Future<void> loadStatusChips() async {
+    _isLoadingChips = true;
+    notifyListeners();
+
+    try {
+      final chips = await _logic.fetchStatusChips();
+      if (chips.isNotEmpty) {
+        _statusChips = chips;
+
+        // Ensure selectedStatus is valid among the visible chips
+        final visibleLabels =
+            statusChips.map((c) => c.label.toLowerCase()).toList();
+        if (!visibleLabels.contains(_selectedStatus.toLowerCase())) {
+          _selectedStatus = statusChips.isNotEmpty
+              ? statusChips.first.label
+              : _selectedStatus;
+        }
+      }
+    } catch (_) {
+      // Ignored
+    } finally {
+      _isLoadingChips = false;
+      notifyListeners();
+    }
+  }
 
   CoordinatorUpdateStatusVisibility get visibility =>
       CoordinatorUpdateStatusVisibility(_selectedStatus);

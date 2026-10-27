@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/theme.dart';
-import '../dashboard_data.dart';
+import '../dashboard_model.dart';
 
 /// Reusable card displaying booking leads and overall progress bar for Dashboard.
 class BookingProgressCard extends StatelessWidget {

@@ -11,21 +11,22 @@ import 'today_model.dart';
 /// Centralized in-memory list for Today chat items, populated dynamically from the API.
 final List<Map<String, dynamic>> todayChatItems = [];
 
-/// Updates the status and appearance of a chat item by customer title/name.
-void updateChatItemStatus({
+/// Updates the status and appearance of a chat item in a given list of chat items by customer title/name.
+bool updateChatItemInList(
+  List<Map<String, dynamic>> items, {
   required String customerName,
   required String newStatus,
   String? newLocation,
   String? newDate,
 }) {
-  final index = todayChatItems.indexWhere(
+  final index = items.indexWhere(
     (item) =>
         (item['title'] as String?)?.toLowerCase().trim() ==
         customerName.toLowerCase().trim(),
   );
 
   if (index != -1) {
-    final item = todayChatItems[index];
+    final item = items[index];
     item['tagText'] = newStatus;
 
     if (newLocation != null && newLocation.isNotEmpty) {
@@ -59,6 +60,26 @@ void updateChatItemStatus({
         item['isPending'] = false;
         break;
     }
+    return true;
+  }
+  return false;
+}
+
+/// Updates the status and appearance of a chat item by customer title/name in the shared list.
+void updateChatItemStatus({
+  required String customerName,
+  required String newStatus,
+  String? newLocation,
+  String? newDate,
+}) {
+  final updated = updateChatItemInList(
+    todayChatItems,
+    customerName: customerName,
+    newStatus: newStatus,
+    newLocation: newLocation,
+    newDate: newDate,
+  );
+  if (updated) {
     _todayVersion++;
   }
 }
@@ -70,6 +91,7 @@ void incrementTodayChatItemsVersion() => _todayVersion++;
 /// ViewModel managing state, search, filters, and API data fetching for TodayPage.
 class TodayViewModel extends ChangeNotifier {
   final http.Client _client;
+  final bool _isInternalClient;
   final TokenStorage? tokenStorage;
   final Duration debounceDuration;
 
@@ -78,6 +100,7 @@ class TodayViewModel extends ChangeNotifier {
     this.tokenStorage,
     Duration? debounceDuration,
   }) : _client = client ?? AuthenticatedClient(),
+       _isInternalClient = client == null,
        debounceDuration =
            debounceDuration ??
            (TokenStorage.isTestEnvironment
@@ -392,20 +415,28 @@ class TodayViewModel extends ChangeNotifier {
     String? newLocation,
     String? newDate,
   }) {
+    updateChatItemInList(
+      _chatItems,
+      customerName: customerName,
+      newStatus: newStatus,
+      newLocation: newLocation,
+      newDate: newDate,
+    );
     updateChatItemStatus(
       customerName: customerName,
       newStatus: newStatus,
       newLocation: newLocation,
       newDate: newDate,
     );
-    _chatItems = List<Map<String, dynamic>>.from(todayChatItems);
     notifyListeners();
   }
 
   @override
   void dispose() {
     _searchDebounceTimer?.cancel();
-    _client.close();
+    if (_isInternalClient) {
+      _client.close();
+    }
     super.dispose();
   }
 }

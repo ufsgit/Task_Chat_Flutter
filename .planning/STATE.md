@@ -20,5 +20,7 @@
 | Task Slug | Description | Date | Status |
 | :--- | :--- | :--- | :--- |
 | `20261023-audit-fixes-phase123` | Fix Phase 1, Phase 2, and Phase 3 findings from audit report | 2026-10-23 | complete ✓ |
+| `20261027-dashboard-api-mvvm` | Migrate Dashboard to MVVM and wire GET /api/bookings/dashboard?period=... | 2026-10-27 | complete ✓ |
+
 
 

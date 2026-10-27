@@ -17,8 +17,46 @@ String formatDateToDayMonthYear(String? dateStr) {
     return '$d/$m/$y';
   }
 
-  if (trimmed.contains('/')) {
-    final parts = trimmed.split('/');
+  // Pre-process: if dateStr contains time or whitespace/comma, extract the date component
+  String cleanDate = trimmed;
+  if (cleanDate.contains(',')) {
+    final segments = cleanDate.split(',');
+    for (final seg in segments) {
+      final s = seg.trim();
+      if (s.contains('/') || s.contains('-')) {
+        cleanDate = s;
+        break;
+      }
+    }
+  }
+
+  if (cleanDate.contains(' ')) {
+    final tokens = cleanDate.split(RegExp(r'\s+'));
+    for (final token in tokens) {
+      final t = token.trim();
+      if (t.contains('/') || t.contains('-')) {
+        cleanDate = t;
+        break;
+      }
+    }
+  }
+
+  if (cleanDate.contains('T')) {
+    cleanDate = cleanDate.split('T')[0].trim();
+  }
+
+  // Try parsing the cleaned date
+  final cleanParsed = DateTime.tryParse(cleanDate);
+  if (cleanParsed != null) {
+    final local = cleanParsed.isUtc ? cleanParsed.toLocal() : cleanParsed;
+    final d = local.day.toString().padLeft(2, '0');
+    final m = local.month.toString().padLeft(2, '0');
+    final y = local.year.toString();
+    return '$d/$m/$y';
+  }
+
+  if (cleanDate.contains('/')) {
+    final parts = cleanDate.split('/');
     if (parts.length == 3) {
       final p0 = int.tryParse(parts[0]);
       final p1 = int.tryParse(parts[1]);
@@ -45,8 +83,8 @@ String formatDateToDayMonthYear(String? dateStr) {
     }
   }
 
-  if (trimmed.contains('-')) {
-    final parts = trimmed.split('-');
+  if (cleanDate.contains('-')) {
+    final parts = cleanDate.split('-');
     if (parts.length == 3) {
       final p0 = int.tryParse(parts[0]);
       final p1 = int.tryParse(parts[1]);
@@ -70,5 +108,5 @@ String formatDateToDayMonthYear(String? dateStr) {
     }
   }
 
-  return trimmed;
+  return cleanDate;
 }

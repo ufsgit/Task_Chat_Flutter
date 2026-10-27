@@ -18,6 +18,7 @@ const List<DistrictItem> defaultDistricts = [
 /// ViewModel managing state, API fetching, and selection for District dropdown.
 class DistrictViewModel extends ChangeNotifier {
   final http.Client _client;
+  final bool _isInternalClient;
 
   bool _isLoading = false;
   String? _errorMessage;
@@ -28,7 +29,8 @@ class DistrictViewModel extends ChangeNotifier {
     http.Client? client,
     DistrictItem? initialDistrict,
     String? initialDistrictName,
-  }) : _client = client ?? AuthenticatedClient() {
+  }) : _client = client ?? AuthenticatedClient(),
+       _isInternalClient = client == null {
     if (initialDistrict != null) {
       _selectedDistrict = initialDistrict;
     } else if (initialDistrictName != null && initialDistrictName.isNotEmpty) {
@@ -141,7 +143,9 @@ class DistrictViewModel extends ChangeNotifier {
 
   @override
   void dispose() {
-    _client.close();
+    if (_isInternalClient) {
+      _client.close();
+    }
     super.dispose();
   }
 }

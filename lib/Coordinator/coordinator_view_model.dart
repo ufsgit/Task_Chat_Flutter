@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../api/api.dart';
 import '../api/authenticated_client.dart';
-import '../core/theme.dart';
 import '../login_page/token_storage.dart';
 import '../today/today_model.dart';
 import '../today/today_view_model.dart';
@@ -14,6 +13,7 @@ import 'coordinator_model.dart';
 /// ViewModel managing state, search, API data fetching, and dynamic filtering for Coordinator.
 class CoordinatorViewModel extends ChangeNotifier {
   final http.Client _client;
+  final bool _isInternalClient;
   final TokenStorage? tokenStorage;
   final TextEditingController searchController;
   final bool _internalController;
@@ -34,11 +34,16 @@ class CoordinatorViewModel extends ChangeNotifier {
     http.Client? client,
     this.tokenStorage,
     TextEditingController? searchController,
+    List<Map<String, dynamic>>? initialItems,
     int initialFilterIndex = 0,
     String initialStatusFilter = 'All',
     String initialManagerFilter = 'All',
     Duration? debounceDuration,
   })  : _client = client ?? AuthenticatedClient(),
+        _isInternalClient = client == null,
+        _items = initialItems != null
+            ? List<Map<String, dynamic>>.from(initialItems)
+            : [],
         debounceDuration = debounceDuration ??
             (TokenStorage.isTestEnvironment
                 ? Duration.zero
@@ -76,7 +81,7 @@ class CoordinatorViewModel extends ChangeNotifier {
 
   /// Evaluates and returns the filtered coordinator chat items.
   List<Map<String, dynamic>> get filteredChatItems {
-    final sourceList = _items.isNotEmpty ? _items : coordinatorChatItems;
+    final sourceList = _items;
     final query = searchController.text.trim().toLowerCase();
     return sourceList.where((item) {
       final unreadCount = (item['unreadCount'] as int?) ?? 0;
@@ -189,10 +194,6 @@ class CoordinatorViewModel extends ChangeNotifier {
               'branchManager': assignedManager,
             };
           }).toList();
-
-          // Sync shared in-memory list for backward compatibility
-          todayChatItems.clear();
-          todayChatItems.addAll(_items);
         }
       } else {
         _errorMessage = 'Failed to load bookings (${response.statusCode})';
@@ -212,54 +213,13 @@ class CoordinatorViewModel extends ChangeNotifier {
     String? newLocation,
     String? newDate,
   }) {
-    updateChatItemStatus(
+    updateChatItemInList(
+      _items,
       customerName: customerName,
       newStatus: newStatus,
       newLocation: newLocation,
       newDate: newDate,
     );
-
-    final index = _items.indexWhere(
-      (item) =>
-          (item['title'] as String?)?.toLowerCase().trim() ==
-          customerName.toLowerCase().trim(),
-    );
-
-    if (index != -1) {
-      final item = _items[index];
-      item['tagText'] = newStatus;
-      if (newLocation != null && newLocation.isNotEmpty) {
-        item['location'] = newLocation;
-      }
-      if (newDate != null && newDate.isNotEmpty) {
-        item['date'] = newDate;
-        item['scheduleDate'] = newDate;
-      }
-
-      switch (newStatus.toLowerCase()) {
-        case 'completed':
-          item['tagBgColor'] = AppColors.completedBg;
-          item['tagTextColor'] = AppColors.completedText;
-          item['isPending'] = false;
-          break;
-        case 'new':
-          item['tagBgColor'] = AppColors.newBg;
-          item['tagTextColor'] = AppColors.newText;
-          item['isPending'] = true;
-          break;
-        case 'scheduled':
-          item['tagBgColor'] = const Color(0xFFFEF3C7);
-          item['tagTextColor'] = const Color(0xFFD97706);
-          item['isPending'] = true;
-          break;
-        case 'cancelled':
-          item['tagBgColor'] = AppColors.cancelledBg;
-          item['tagTextColor'] = AppColors.cancelledText;
-          item['isPending'] = false;
-          break;
-      }
-    }
-
     notifyListeners();
   }
 
@@ -324,7 +284,9 @@ class CoordinatorViewModel extends ChangeNotifier {
     if (_internalController) {
       searchController.dispose();
     }
-    _client.close();
+    if (_isInternalClient) {
+      _client.close();
+    }
     super.dispose();
   }
 }

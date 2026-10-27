@@ -10,6 +10,7 @@ import 'model/area_model.dart';
 /// ViewModel managing state, API fetching, and selection for area dropdowns.
 class AreaViewModel extends ChangeNotifier {
   final http.Client _client;
+  final bool _isInternalClient;
   Timer? _debounceTimer;
 
   bool isCoordinator;
@@ -33,6 +34,7 @@ class AreaViewModel extends ChangeNotifier {
     int defaultLimit = 20,
     AreaItem? initialArea,
   }) : _client = client ?? AuthenticatedClient(),
+       _isInternalClient = client == null,
        _type = defaultType,
        _search = defaultSearch,
        _page = defaultPage,
@@ -212,7 +214,9 @@ class AreaViewModel extends ChangeNotifier {
   @override
   void dispose() {
     _debounceTimer?.cancel();
-    _client.close();
+    if (_isInternalClient) {
+      _client.close();
+    }
     super.dispose();
   }
 }

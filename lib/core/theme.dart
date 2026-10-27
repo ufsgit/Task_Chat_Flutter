@@ -427,6 +427,18 @@ class TopToBottomPageTransitionsBuilder extends PageTransitionsBuilder {
   }
 }
 
+/// Global scroll behavior applying bouncing scroll physics with always-scrollable parent across all scrollables.
+class AppScrollBehavior extends MaterialScrollBehavior {
+  const AppScrollBehavior();
+
+  @override
+  ScrollPhysics getScrollPhysics(BuildContext context) {
+    return const BouncingScrollPhysics(
+      parent: AlwaysScrollableScrollPhysics(),
+    );
+  }
+}
+
 /// Sleek Dark Mode Palette matching the design reference.
 abstract final class AppDarkColors {
   // Vibrant emerald green accents (WhatsApp Green)

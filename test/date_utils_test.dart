@@ -25,5 +25,14 @@ void main() {
       expect(formatDateToDayMonthYear('24-10-2024'), '24/10/2024');
       expect(formatDateToDayMonthYear('10-24-2024'), '24/10/2024');
     });
+
+    test('formats dates containing time components and AM/PM without showing time', () {
+      expect(formatDateToDayMonthYear('2024-10-24 10:30:00'), '24/10/2024');
+      expect(formatDateToDayMonthYear('24/10/2024 10:30:00'), '24/10/2024');
+      expect(formatDateToDayMonthYear('10/24/2024 02:30 PM'), '24/10/2024');
+      expect(formatDateToDayMonthYear('24-10-2024 15:00:00'), '24/10/2024');
+      expect(formatDateToDayMonthYear('24/10/2024, 10:30 AM'), '24/10/2024');
+      expect(formatDateToDayMonthYear('2024-10-24T18:30:00.000Z'), isNotEmpty);
+    });
   });
 }

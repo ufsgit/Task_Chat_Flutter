@@ -1,5 +1,9 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
+import '../api/document_upload_service.dart';
 import '../core/widgets/circular_back_button.dart';
+import '../core/widgets/document_preview_upload_page.dart';
 import '../core/slide_up_route.dart';
 import '../core/theme.dart';
 import '../update_status/branch_manager/branch_manager_update_status_view.dart';
@@ -7,8 +11,6 @@ import '../update_status/coordinators/coordinator_update_status_view.dart';
 import '../update_status/status_update_result.dart';
 import 'customer_details_model.dart';
 import 'customer_details_view_model.dart';
-import 'package:url_launcher/url_launcher.dart';
-import '../api/api.dart';
 import 'widgets/contact_actions_card.dart';
 import 'widgets/customer_documents_card.dart';
 import 'widgets/customer_header_card.dart';
@@ -73,41 +75,74 @@ class _CustomerDetailsViewState extends State<CustomerDetailsView> {
   }
 
   Future<void> _handlePreviewDocument(String doc) async {
+    final fileName = doc.split('/').last.isNotEmpty ? doc.split('/').last : doc;
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => DocumentPreviewUploadPage(
+          fileName: fileName,
+          fileUrl: doc,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _handleUploadDocument() async {
     try {
-      final url = doc.startsWith('http') ? doc : '${ApiConfig.baseUrl}$doc';
-      final uri = Uri.parse(url);
+      final files = await FilePicker.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf', 'docx', 'doc', 'png', 'jpg', 'jpeg'],
+      );
 
-      final lower = doc.toLowerCase();
-      final isImage = lower.endsWith('.png') ||
-          lower.endsWith('.jpg') ||
-          lower.endsWith('.jpeg') ||
-          lower.endsWith('.webp') ||
-          lower.endsWith('.gif');
-
-      if (isImage && mounted) {
-        await showDialog<void>(
-          context: context,
-          builder: (ctx) => DocumentImagePreviewDialog(
-            url: url,
-            fileName:
-                doc.split('/').last.isNotEmpty ? doc.split('/').last : doc,
-          ),
+      if (files.isNotEmpty && mounted) {
+        final uploadService = DocumentUploadService(
+          client: _viewModel.client,
+          tokenStorage: _viewModel.tokenStorage,
         );
-        return;
-      }
 
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-      } else {
-        await launchUrl(uri);
+        final nav = Navigator.of(context);
+
+        for (final file in files) {
+          List<int>? bytes;
+          try {
+            bytes = await file.readAsBytes();
+          } catch (_) {}
+
+          if (!mounted) break;
+
+          final uploadedUrl = await nav.push<String>(
+            MaterialPageRoute(
+              builder: (context) => DocumentPreviewUploadPage(
+                fileName: file.name,
+                filePath: file.path,
+                fileBytes: bytes != null ? Uint8List.fromList(bytes) : null,
+                uploadService: uploadService,
+                bookingId: _viewModel.customer.id,
+              ),
+            ),
+          );
+
+          if (!mounted) break;
+
+          if (uploadedUrl != null) {
+            final updatedDocs =
+                List<String>.from(_viewModel.customer.documents)
+                  ..add(uploadedUrl);
+            final success =
+                await _viewModel.updateCustomer(documents: updatedDocs);
+            if (success && mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Document "${file.name}" uploaded successfully'),
+                  backgroundColor: AppColors.primaryGreen,
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            }
+          }
+        }
       }
     } catch (e) {
-      debugPrint('Preview document error: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Cannot open document: $e')),
-        );
-      }
+      debugPrint('Upload document error: $e');
     }
   }
 
@@ -349,6 +384,7 @@ class _CustomerDetailsViewState extends State<CustomerDetailsView> {
                       CustomerDocumentsCard(
                         documents: customer.documents,
                         onView: _handlePreviewDocument,
+                        onUpload: _handleUploadDocument,
                       ),
 
                       const SizedBox(height: 24),

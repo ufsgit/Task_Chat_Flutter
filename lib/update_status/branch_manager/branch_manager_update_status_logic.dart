@@ -8,12 +8,15 @@ import '../../login_page/login_model.dart';
 import '../../login_page/token_storage.dart';
 import '../../settings/settings_model.dart';
 import '../../today/today_view_model.dart';
+import '../models/status_chip_model.dart';
+import '../services/status_chips_service.dart';
 
 /// Available status options for Branch Manager.
 const List<String> availableStatusOptions = [
   'Completed',
   'Scheduled',
   'Cancelled',
+  'New',
 ];
 
 /// Returns the status options available based on whether the customer has been scheduled.
@@ -21,7 +24,7 @@ List<String> getAvailableStatusOptions({required bool hasBeenScheduled}) {
   if (hasBeenScheduled) {
     return const ['Completed', 'Scheduled', 'Cancelled'];
   } else {
-    return const ['Scheduled', 'Cancelled'];
+    return const ['New', 'Scheduled', 'Cancelled'];
   }
 }
 
@@ -104,10 +107,12 @@ class StatusUpdateRequest {
           : int.tryParse(json['createdBy']?.toString() ?? '') ?? 0,
       createdByName: json['createdByName']?.toString() ?? '',
       branchManager: json['branchManager']?.toString(),
-      branchManagerId: json['branchManagerId'] as int? ??
+      branchManagerId:
+          json['branchManagerId'] as int? ??
           int.tryParse(json['branchManagerId']?.toString() ?? ''),
       branchManagerName: json['branchManagerName']?.toString(),
-      districtId: json['districtId'] as int? ??
+      districtId:
+          json['districtId'] as int? ??
           int.tryParse(json['districtId']?.toString() ?? ''),
       districtName: json['districtName']?.toString(),
     );
@@ -122,8 +127,16 @@ class BranchManagerUpdateStatusLogic {
   BranchManagerUpdateStatusLogic({
     http.Client? client,
     TokenStorage? tokenStorage,
-  })  : client = client ?? AuthenticatedClient(),
-        tokenStorage = tokenStorage ?? TokenStorage();
+  }) : client = client ?? AuthenticatedClient(),
+       tokenStorage = tokenStorage ?? TokenStorage();
+
+  /// Fetches status filter chips from GET /api/status.
+  Future<List<StatusChipModel>> fetchStatusChips() async {
+    return StatusChipsService(
+      client: client,
+      tokenStorage: tokenStorage,
+    ).fetchStatusChips();
+  }
 
   /// Submits the updated status to the backend POST /api/status endpoint.
   Future<bool> submitStatusUpdate({
@@ -136,15 +149,16 @@ class BranchManagerUpdateStatusLogic {
     final isTest = TokenStorage.isTestEnvironment;
     String? token;
     try {
-      token = await tokenStorage
-          .getToken()
-          .timeout(isTest ? const Duration(milliseconds: 50) : const Duration(seconds: 5));
+      token = await tokenStorage.getToken().timeout(
+        isTest ? const Duration(milliseconds: 50) : const Duration(seconds: 5),
+      );
     } catch (_) {}
 
     UserModel? user;
     try {
-      user = await UserProfileData.loadUser()
-          .timeout(isTest ? const Duration(milliseconds: 50) : const Duration(seconds: 2));
+      user = await UserProfileData.loadUser().timeout(
+        isTest ? const Duration(milliseconds: 50) : const Duration(seconds: 2),
+      );
     } catch (_) {}
 
     final requestPayload = StatusUpdateRequest(
@@ -156,34 +170,44 @@ class BranchManagerUpdateStatusLogic {
       createdBy: user?.id ?? 0,
       createdByName: (user?.name != null && user!.name.isNotEmpty)
           ? user.name
-          : (user?.username.isNotEmpty == true ? user!.username : 'Branch Manager'),
+          : (user?.username.isNotEmpty == true
+                ? user!.username
+                : 'Branch Manager'),
     );
 
-    final response = await client.post(
-      Uri.parse(ApiConfig.statusUpdate),
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        if (token != null && token.isNotEmpty)
-          'authorization': token.startsWith('Bearer ') ? token : 'Bearer $token',
-      },
-      body: jsonEncode(requestPayload.toJson()),
-    ).timeout(const Duration(seconds: 10));
+    final response = await client
+        .post(
+          Uri.parse(ApiConfig.statusUpdate),
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            if (token != null && token.isNotEmpty)
+              'authorization': token.startsWith('Bearer ')
+                  ? token
+                  : 'Bearer $token',
+          },
+          body: jsonEncode(requestPayload.toJson()),
+        )
+        .timeout(const Duration(seconds: 10));
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
       if (documents != null && !listEquals(documents, customer.documents)) {
         try {
           final bookingUri = Uri.parse('${ApiConfig.bookings}/${customer.id}');
-          await client.put(
-            bookingUri,
-            headers: {
-              'Content-Type': 'application/json',
-              'Accept': 'application/json',
-              if (token != null && token.isNotEmpty)
-                'authorization': token.startsWith('Bearer ') ? token : 'Bearer $token',
-            },
-            body: jsonEncode({'documents': documents}),
-          ).timeout(const Duration(seconds: 10));
+          await client
+              .put(
+                bookingUri,
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Accept': 'application/json',
+                  if (token != null && token.isNotEmpty)
+                    'authorization': token.startsWith('Bearer ')
+                        ? token
+                        : 'Bearer $token',
+                },
+                body: jsonEncode({'documents': documents}),
+              )
+              .timeout(const Duration(seconds: 10));
         } catch (_) {}
       }
 

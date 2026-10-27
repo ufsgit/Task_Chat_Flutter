@@ -1,10 +1,10 @@
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:url_launcher/url_launcher.dart';
-import '../../api/api.dart';
 import '../../api/document_upload_service.dart';
 import '../../core/theme.dart';
+import '../../core/widgets/document_preview_upload_page.dart';
 import '../../customer_details/customer_details_model.dart';
 import '../../login_page/token_storage.dart';
 import '../status_update_result.dart';
@@ -63,6 +63,7 @@ class _CoordinatorUpdateStatusViewState
       _internalVm = true;
     }
     _viewModel.loadBranchManagers();
+    _viewModel.loadStatusChips();
   }
 
   @override
@@ -96,33 +97,41 @@ class _CoordinatorUpdateStatusViewState
       );
 
       if (files.isNotEmpty && mounted) {
-        _viewModel.setUploadingDocument(true);
         final uploadService = DocumentUploadService(
           client: widget.client,
           tokenStorage: widget.tokenStorage,
         );
 
         for (final file in files) {
+          if (!mounted) break;
+
           List<int>? bytes;
           try {
             bytes = await file.readAsBytes();
           } catch (_) {}
 
-          final uploadedUrl = await uploadService.uploadFile(
-            fileName: file.name,
-            bytes: bytes,
-            filePath: file.path,
+          if (!mounted) break;
+
+          final uploadedUrl = await Navigator.of(context).push<String>(
+            MaterialPageRoute(
+              builder: (context) => DocumentPreviewUploadPage(
+                fileName: file.name,
+                filePath: file.path,
+                fileBytes: bytes != null ? Uint8List.fromList(bytes) : null,
+                uploadService: uploadService,
+                bookingId: widget.customer.id,
+              ),
+            ),
           );
 
           if (!mounted) break;
 
           if (uploadedUrl != null) {
             _viewModel.addDocument(uploadedUrl);
-          } else {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('Failed to upload ${file.name}'),
-                backgroundColor: const Color(0xFFEF4444),
+                content: Text('Document "${file.name}" uploaded successfully'),
+                backgroundColor: AppColors.primaryGreen,
                 behavior: SnackBarBehavior.floating,
               ),
             );
@@ -131,23 +140,19 @@ class _CoordinatorUpdateStatusViewState
       }
     } catch (e) {
       debugPrint('FilePicker error: $e');
-    } finally {
-      if (mounted) {
-        _viewModel.setUploadingDocument(false);
-      }
     }
   }
 
   Future<void> _handlePreviewDocument(String doc) async {
-    try {
-      final url = doc.startsWith('http') ? doc : '${ApiConfig.baseUrl}$doc';
-      final uri = Uri.parse(url);
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-      }
-    } catch (e) {
-      debugPrint('Preview document error: $e');
-    }
+    final fileName = doc.split('/').last.isNotEmpty ? doc.split('/').last : doc;
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => DocumentPreviewUploadPage(
+          fileName: fileName,
+          fileUrl: doc,
+        ),
+      ),
+    );
   }
 
   @override
@@ -187,7 +192,9 @@ class _CoordinatorUpdateStatusViewState
                   const SizedBox(height: 10),
                   StatusSelectorChips(
                     selectedStatus: _viewModel.selectedStatus,
+                    chips: _viewModel.statusChips,
                     options: _viewModel.availableOptions,
+                    isLoading: _viewModel.isLoadingChips,
                     onStatusSelected: _viewModel.setStatus,
                   ),
 

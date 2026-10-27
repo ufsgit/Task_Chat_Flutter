@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/theme.dart';
+import '../../core/widgets/document_preview_upload_page.dart';
 import 'lead_form_card.dart';
 
 /// Reusable UI widget for the document upload option in New Booking.
@@ -7,6 +8,7 @@ import 'lead_form_card.dart';
 class LeadDocumentUploadCard extends StatelessWidget {
   final List<String> documents;
   final VoidCallback? onTap;
+  final ValueChanged<String>? onPreview;
   final ValueChanged<String>? onRemove;
   final bool isUploading;
 
@@ -14,6 +16,7 @@ class LeadDocumentUploadCard extends StatelessWidget {
     super.key,
     this.documents = const [],
     this.onTap,
+    this.onPreview,
     this.onRemove,
     this.isUploading = false,
   });
@@ -39,6 +42,10 @@ class LeadDocumentUploadCard extends StatelessWidget {
     final dotBorderColor = isDark
         ? const Color(0xFF71717A)
         : const Color.fromARGB(255, 104, 97, 97);
+
+    final greenColor = isDark
+        ? AppDarkColors.whatsappGreen
+        : const Color(0xFF16A34A);
 
     return LeadFormCard(
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 14.0),
@@ -83,10 +90,11 @@ class LeadDocumentUploadCard extends StatelessWidget {
           // Attached documents list
           if (documents.isNotEmpty) ...[
             ...documents.map((doc) {
-              final fileName = doc.split('/').last;
+              final fileName = doc.split('/').last.isNotEmpty
+                  ? doc.split('/').last
+                  : doc;
               return Container(
                 margin: const EdgeInsets.only(bottom: 8),
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                 decoration: BoxDecoration(
                   color: uploadBoxBg,
                   borderRadius: BorderRadius.circular(10),
@@ -94,60 +102,99 @@ class LeadDocumentUploadCard extends StatelessWidget {
                     color: isDark ? AppDarkColors.border : const Color(0xFFE2E8F0),
                   ),
                 ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 32,
-                      height: 32,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFEF4444).withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Center(
-                        child: Icon(
-                          Icons.picture_as_pdf_outlined,
-                          color: Color(0xFFEF4444),
-                          size: 18,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            fileName,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: primaryTextColor,
+                child: InkWell(
+                  onTap: () => _handlePreview(context, doc),
+                  borderRadius: BorderRadius.circular(10),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 32,
+                          height: 32,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFEF4444).withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Center(
+                            child: Icon(
+                              Icons.picture_as_pdf_outlined,
+                              color: Color(0xFFEF4444),
+                              size: 18,
                             ),
                           ),
-                          Text(
-                            doc,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: subtitleColor,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                fileName,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: primaryTextColor,
+                                ),
+                              ),
+                              Text(
+                                doc,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: subtitleColor,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        InkWell(
+                          onTap: () => _handlePreview(context, doc),
+                          borderRadius: BorderRadius.circular(6),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 4,
                             ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.visibility_outlined,
+                                  size: 16,
+                                  color: greenColor,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Preview',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: greenColor,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        if (onRemove != null) ...[
+                          const SizedBox(width: 4),
+                          IconButton(
+                            icon: const Icon(Icons.close, size: 18),
+                            color: subtitleColor,
+                            splashRadius: 18,
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            onPressed: () => onRemove!(doc),
                           ),
                         ],
-                      ),
+                      ],
                     ),
-                    if (onRemove != null)
-                      IconButton(
-                        icon: const Icon(Icons.close, size: 18),
-                        color: subtitleColor,
-                        splashRadius: 18,
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                        onPressed: () => onRemove!(doc),
-                      ),
-                  ],
+                  ),
                 ),
               );
             }),
@@ -232,6 +279,23 @@ class LeadDocumentUploadCard extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  Future<void> _handlePreview(BuildContext context, String doc) async {
+    if (onPreview != null) {
+      onPreview!(doc);
+    } else {
+      final fileName =
+          doc.split('/').last.isNotEmpty ? doc.split('/').last : doc;
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => DocumentPreviewUploadPage(
+            fileName: fileName,
+            fileUrl: doc,
+          ),
+        ),
+      );
+    }
   }
 }
 

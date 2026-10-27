@@ -10,14 +10,16 @@ import 'login_model.dart';
 /// ViewModel managing login business logic, API communication, and state.
 class LoginViewModel extends ChangeNotifier {
   final http.Client _client;
+  final bool _isInternalClient;
   final TokenStorage _tokenStorage;
 
   bool _isLoading = false;
   String? _errorMessage;
 
   LoginViewModel({http.Client? client, TokenStorage? tokenStorage})
-      : _client = client ?? http.Client(),
-        _tokenStorage = tokenStorage ?? TokenStorage();
+    : _client = client ?? http.Client(),
+      _isInternalClient = client == null,
+      _tokenStorage = tokenStorage ?? TokenStorage();
 
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
@@ -40,16 +42,18 @@ class LoginViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final response = await _client.post(
-        Uri.parse(ApiConfig.mobileLogin),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(
-          LoginRequest(
-            username: cleanUsername,
-            password: cleanPassword,
-          ).toJson(),
-        ),
-      );
+      final response = await _client
+          .post(
+            Uri.parse(ApiConfig.mobileLogin),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode(
+              LoginRequest(
+                username: cleanUsername,
+                password: cleanPassword,
+              ).toJson(),
+            ),
+          )
+          .timeout(const Duration(seconds: 10));
 
       final Map<String, dynamic> data = response.body.isNotEmpty
           ? jsonDecode(response.body) as Map<String, dynamic>
@@ -112,7 +116,9 @@ class LoginViewModel extends ChangeNotifier {
 
   @override
   void dispose() {
-    _client.close();
+    if (_isInternalClient) {
+      _client.close();
+    }
     super.dispose();
   }
 }

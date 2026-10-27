@@ -26,8 +26,11 @@ class SaveBookingResult {
 /// ViewModel managing state, validation, and API submission for creating a new booking.
 class AddBookingViewModel extends ChangeNotifier {
   final http.Client _client;
+  final bool _isInternalClient;
   final AreaViewModel areaViewModel;
   final DistrictViewModel districtViewModel;
+  final bool _isInternalAreaViewModel;
+  final bool _isInternalDistrictViewModel;
 
   bool _isSubmitting = false;
   String? _errorMessage;
@@ -37,6 +40,9 @@ class AddBookingViewModel extends ChangeNotifier {
     AreaViewModel? areaViewModel,
     DistrictViewModel? districtViewModel,
   })  : _client = client ?? AuthenticatedClient(),
+        _isInternalClient = client == null,
+        _isInternalAreaViewModel = areaViewModel == null,
+        _isInternalDistrictViewModel = districtViewModel == null,
         areaViewModel = areaViewModel ?? AreaViewModel(client: client),
         districtViewModel =
             districtViewModel ?? DistrictViewModel(client: client);
@@ -165,8 +171,15 @@ class AddBookingViewModel extends ChangeNotifier {
 
   @override
   void dispose() {
-    _client.close();
-    areaViewModel.dispose();
+    if (_isInternalClient) {
+      _client.close();
+    }
+    if (_isInternalAreaViewModel) {
+      areaViewModel.dispose();
+    }
+    if (_isInternalDistrictViewModel) {
+      districtViewModel.dispose();
+    }
     super.dispose();
   }
 }

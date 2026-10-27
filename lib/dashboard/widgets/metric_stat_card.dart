@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../dashboard_data.dart';
+import '../dashboard_model.dart';
 
 /// Reusable stat card for metrics in Dashboard (New Booking, Pending, Completed, Scheduled)
 /// matching the exact screenshot design: dark forest/charcoal container, top icon + status dot,
@@ -46,7 +46,20 @@ class MetricStatCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               crossAxisAlignment: CrossAxisAlignment.center,
-              children: [Icon(data.leadingIcon, size: 24, color: iconColor)],
+              children: [
+                Icon(data.leadingIcon, size: 24, color: iconColor),
+                if (data.percentageText != null &&
+                    data.percentageText!.isNotEmpty)
+                  Text(
+                    data.percentageText!,
+                    style: TextStyle(
+                      fontFamily: 'Helvetica Neue',
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                      color: data.percentageColor ?? titleColor,
+                    ),
+                  ),
+              ],
             ),
             const SizedBox(height: 14),
 
