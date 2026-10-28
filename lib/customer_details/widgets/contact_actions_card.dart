@@ -131,9 +131,10 @@ class _ContactActionsCardState extends State<ContactActionsCard> {
               Expanded(
                 child: _buildActionButton(
                   context: context,
+                  image: const AssetImage('assets/images/whatsapp_png.png'),
                   icon: Icons.chat_bubble_outline_rounded,
-                  label: 'Message',
-                  isPrimary: true,
+                  label: 'WhatsApp',
+                  isPrimary: false,
                   onTap:
                       widget.onMessageTap ??
                       () {
@@ -205,7 +206,8 @@ class _ContactActionsCardState extends State<ContactActionsCard> {
 
   Widget _buildActionButton({
     required BuildContext context,
-    required IconData icon,
+    IconData? icon,
+    ImageProvider? image,
     required String label,
     required bool isPrimary,
     required VoidCallback onTap,
@@ -247,7 +249,22 @@ class _ContactActionsCardState extends State<ContactActionsCard> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, color: iconColor, size: 18),
+              if (image != null)
+                Image(
+                  image: image,
+                  width: 22,
+                  height: 22,
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Icon(
+                      icon ?? Icons.chat_bubble_outline_rounded,
+                      color: iconColor,
+                      size: 20,
+                    );
+                  },
+                )
+              else if (icon != null)
+                Icon(icon, color: iconColor, size: 20),
               const SizedBox(width: 7),
               Text(
                 label,

@@ -50,6 +50,33 @@ void main() {
       expect(model.total, 162);
     });
 
+    test('parses live mobile-dashboard metrics endpoint response schema', () {
+      final json = {
+        'success': true,
+        'data': {
+          'newBookings': 0,
+          'pendingBookings': 1,
+          'scheduledBookings': 1,
+          'todayScheduledBookings': 0,
+          'upcomingInstallations': 0,
+          'delayedBookings': 1,
+          'completedBookings': 0,
+          'cancelledBookings': 0,
+          'totalBookings': 2,
+          'period': 'this_month',
+          'dateFrom': '2026-09-30T18:30:00.000Z',
+          'dateTo': '2026-10-30T18:30:00.000Z',
+        },
+      };
+
+      final model = DashboardModel.fromJson(json);
+      expect(model.newBooking, 0);
+      expect(model.pending, 1);
+      expect(model.scheduled, 1);
+      expect(model.completed, 0);
+      expect(model.total, 2);
+    });
+
     test('parses snake_case backend response and string numbers', () {
       final json = {
         'data': {

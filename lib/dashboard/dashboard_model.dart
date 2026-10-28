@@ -255,15 +255,17 @@ class DashboardModel {
     if (rawData is List) {
       for (final item in rawData) {
         if (item is Map) {
-          final status = (item['status'] ??
-                  item['code'] ??
-                  item['label'] ??
-                  item['name'] ??
-                  '')
-              .toString()
-              .toLowerCase();
-          final count =
-              _parseInt(item['count'] ?? item['value'] ?? item['total']);
+          final status =
+              (item['status'] ??
+                      item['code'] ??
+                      item['label'] ??
+                      item['name'] ??
+                      '')
+                  .toString()
+                  .toLowerCase();
+          final count = _parseInt(
+            item['count'] ?? item['value'] ?? item['total'],
+          );
 
           if (status.contains('new')) {
             newBookingCount = count;
@@ -279,16 +281,17 @@ class DashboardModel {
     } else if (rawData is Map) {
       final map = rawData;
       newBookingCount = _parseInt(
-        map['newBooking'] ??
+        map['newBookings'] ??
+            map['newBooking'] ??
             map['new_booking'] ??
-            map['new'] ??
             map['new_bookings'] ??
-            map['newBookings'] ??
+            map['new'] ??
             map['New'],
       );
 
       pendingCount = _parseInt(
-        map['pending'] ??
+        map['pendingBookings'] ??
+            map['pending'] ??
             map['pending_bookings'] ??
             map['pendingFollowUps'] ??
             map['pending_follow_ups'] ??
@@ -296,7 +299,8 @@ class DashboardModel {
       );
 
       completedCount = _parseInt(
-        map['completed'] ??
+        map['completedBookings'] ??
+            map['completed'] ??
             map['completed_bookings'] ??
             map['completedOrders'] ??
             map['completed_orders'] ??
@@ -304,7 +308,8 @@ class DashboardModel {
       );
 
       scheduledCount = _parseInt(
-        map['scheduled'] ??
+        map['scheduledBookings'] ??
+            map['scheduled'] ??
             map['scheduled_bookings'] ??
             map['scheduledVisits'] ??
             map['scheduled_visits'] ??
@@ -312,9 +317,9 @@ class DashboardModel {
       );
 
       totalCount = _parseInt(
-        map['total'] ??
+        map['totalBookings'] ??
+            map['total'] ??
             map['total_bookings'] ??
-            map['totalBookings'] ??
             map['totalLeads'],
       );
     }
@@ -412,11 +417,9 @@ class DashboardService {
   final http.Client client;
   final TokenStorage tokenStorage;
 
-  DashboardService({
-    http.Client? client,
-    TokenStorage? tokenStorage,
-  })  : client = client ?? AuthenticatedClient(),
-        tokenStorage = tokenStorage ?? TokenStorage();
+  DashboardService({http.Client? client, TokenStorage? tokenStorage})
+    : client = client ?? AuthenticatedClient(),
+      tokenStorage = tokenStorage ?? TokenStorage();
 
   /// Calls GET ApiConfig.dashboard?period=`period.queryValue`
   Future<DashboardModel> fetchDashboard({
@@ -431,21 +434,20 @@ class DashboardService {
     } catch (_) {}
 
     final baseUri = Uri.parse(ApiConfig.dashboard);
-    final uri = baseUri.replace(
-      queryParameters: {
-        'period': period.queryValue,
-      },
-    );
+    final uri = baseUri.replace(queryParameters: {'period': period.queryValue});
 
-    final response = await client.get(
-      uri,
-      headers: {
-        'Accept': 'application/json',
-        if (token != null && token.isNotEmpty)
-          'authorization':
-              token.startsWith('Bearer ') ? token : 'Bearer $token',
-      },
-    ).timeout(const Duration(seconds: 10));
+    final response = await client
+        .get(
+          uri,
+          headers: {
+            'Accept': 'application/json',
+            if (token != null && token.isNotEmpty)
+              'authorization': token.startsWith('Bearer ')
+                  ? token
+                  : 'Bearer $token',
+          },
+        )
+        .timeout(const Duration(seconds: 10));
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
       final dynamic decoded = json.decode(response.body);
@@ -457,7 +459,8 @@ class DashboardService {
       return const DashboardModel();
     } else {
       throw Exception(
-          'Failed to load dashboard metrics (${response.statusCode})');
+        'Failed to load dashboard metrics (${response.statusCode})',
+      );
     }
   }
 }

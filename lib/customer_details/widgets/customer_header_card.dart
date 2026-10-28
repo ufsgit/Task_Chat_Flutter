@@ -67,7 +67,11 @@ class CustomerHeaderCard extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           // 1. WhatsApp-style circular profile avatar
-          UserCircleAvatar(size: 64, name: customer.name),
+          UserCircleAvatar(
+            size: 64,
+            name: customer.name,
+            status: customer.status,
+          ),
           const SizedBox(height: 12),
 
           // 2. Customer Name & Status Badge Row

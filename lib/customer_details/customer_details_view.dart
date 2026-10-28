@@ -60,16 +60,26 @@ class _CustomerDetailsViewState extends State<CustomerDetailsView> {
       context,
       SlideUpRoute(
         page: widget.isCoordinator
-            ? CoordinatorUpdateStatusPage(customer: _viewModel.customer)
-            : UpdateStatusPage(customer: _viewModel.customer),
+            ? CoordinatorUpdateStatusPage(
+                customer: _viewModel.customer,
+                client: _viewModel.client,
+                tokenStorage: _viewModel.tokenStorage,
+              )
+            : UpdateStatusPage(
+                customer: _viewModel.customer,
+                client: _viewModel.client,
+                tokenStorage: _viewModel.tokenStorage,
+              ),
       ),
     );
 
     if (result != null && mounted) {
       if (result is StatusUpdateResult) {
         _viewModel.applyUpdate(result);
+        Navigator.of(context).pop(result);
       } else if (result is String) {
         _viewModel.updateStatus(result);
+        Navigator.of(context).pop(result);
       }
     }
   }
@@ -78,10 +88,8 @@ class _CustomerDetailsViewState extends State<CustomerDetailsView> {
     final fileName = doc.split('/').last.isNotEmpty ? doc.split('/').last : doc;
     await Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => DocumentPreviewUploadPage(
-          fileName: fileName,
-          fileUrl: doc,
-        ),
+        builder: (context) =>
+            DocumentPreviewUploadPage(fileName: fileName, fileUrl: doc),
       ),
     );
   }
@@ -124,15 +132,17 @@ class _CustomerDetailsViewState extends State<CustomerDetailsView> {
           if (!mounted) break;
 
           if (uploadedUrl != null) {
-            final updatedDocs =
-                List<String>.from(_viewModel.customer.documents)
-                  ..add(uploadedUrl);
-            final success =
-                await _viewModel.updateCustomer(documents: updatedDocs);
+            final updatedDocs = List<String>.from(_viewModel.customer.documents)
+              ..add(uploadedUrl);
+            final success = await _viewModel.updateCustomer(
+              documents: updatedDocs,
+            );
             if (success && mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text('Document "${file.name}" uploaded successfully'),
+                  content: Text(
+                    'Document "${file.name}" uploaded successfully',
+                  ),
                   backgroundColor: AppColors.primaryGreen,
                   behavior: SnackBarBehavior.floating,
                 ),
@@ -293,121 +303,121 @@ class _CustomerDetailsViewState extends State<CustomerDetailsView> {
                   fontSize: 18.5,
                   fontWeight: FontWeight.w600,
                   color: primaryTextColor,
-                letterSpacing: -0.2,
+                  letterSpacing: -0.2,
+                ),
+              ),
+              titleSpacing: 8,
+              actions: [
+                PopupMenuButton<String>(
+                  color: scaffoldBg,
+                  surfaceTintColor: Colors.transparent,
+                  elevation: 4,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    side: BorderSide(color: borderColor, width: 1),
+                  ),
+                  icon: Icon(
+                    Icons.more_vert,
+                    color: isDark
+                        ? AppDarkColors.textSecondary
+                        : primaryTextColor,
+                    size: 22,
+                  ),
+                  onSelected: (value) {
+                    if (value == 'Delete') {
+                      _handleDeleteContact();
+                    } else if (value == 'Edit' || value == 'Edit Contact') {
+                      _handleEditContact();
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Action: $value'),
+                          duration: const Duration(seconds: 1),
+                        ),
+                      );
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    PopupMenuItem(
+                      value: 'Edit',
+                      child: Text(
+                        'Edit Contact',
+                        style: TextStyle(
+                          fontFamily: 'Helvetica Neue',
+                          color: primaryTextColor,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: 'Delete',
+                      child: Text(
+                        'Delete Contact',
+                        style: TextStyle(
+                          fontFamily: 'Helvetica Neue',
+                          color: Colors.red,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+              bottom: PreferredSize(
+                preferredSize: const Size.fromHeight(1.0),
+                child: Container(height: 1.0, color: borderColor),
               ),
             ),
-            titleSpacing: 8,
-            actions: [
-              PopupMenuButton<String>(
-                color: scaffoldBg,
-                surfaceTintColor: Colors.transparent,
-                elevation: 4,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                  side: BorderSide(color: borderColor, width: 1),
-                ),
-                icon: Icon(
-                  Icons.more_vert,
-                  color: isDark
-                      ? AppDarkColors.textSecondary
-                      : primaryTextColor,
-                  size: 22,
-                ),
-                onSelected: (value) {
-                  if (value == 'Delete') {
-                    _handleDeleteContact();
-                  } else if (value == 'Edit' || value == 'Edit Contact') {
-                    _handleEditContact();
-                  } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Action: $value'),
-                        duration: const Duration(seconds: 1),
-                      ),
-                    );
-                  }
-                },
-                itemBuilder: (context) => [
-                  PopupMenuItem(
-                    value: 'Edit',
-                    child: Text(
-                      'Edit Contact',
-                      style: TextStyle(
-                        fontFamily: 'Helvetica Neue',
-                        color: primaryTextColor,
-                        fontWeight: FontWeight.w500,
-                      ),
+            body: SafeArea(
+              child: Stack(
+                children: [
+                  SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 16,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // 1. Customer Name & Inquiry Header Card
+                        CustomerHeaderCard(customer: customer),
+
+                        const SizedBox(height: 16),
+
+                        // 2. Contact Phone, Actions, Address & Notes Card
+                        ContactActionsCard(customer: customer),
+
+                        const SizedBox(height: 16),
+
+                        // 3. Attached Documents Card
+                        CustomerDocumentsCard(
+                          documents: customer.documents,
+                          onView: _handlePreviewDocument,
+                          onUpload: _handleUploadDocument,
+                        ),
+
+                        const SizedBox(height: 24),
+
+                        // 4. Full-width Update Status Button opens the Update Status Page
+                        UpdateStatusButton(onTap: _openUpdateStatusPage),
+                      ],
                     ),
                   ),
-                  PopupMenuItem(
-                    value: 'Delete',
-                    child: Text(
-                      'Delete Contact',
-                      style: TextStyle(
-                        fontFamily: 'Helvetica Neue',
-                        color: Colors.red,
-                        fontWeight: FontWeight.w500,
+                  if (_viewModel.isDeleting)
+                    Container(
+                      color: Colors.black.withValues(alpha: 0.35),
+                      alignment: Alignment.center,
+                      child: const CircularProgressIndicator(
+                        color: AppColors.whatsappGreen,
                       ),
                     ),
-                  ),
                 ],
               ),
-            ],
-            bottom: PreferredSize(
-              preferredSize: const Size.fromHeight(1.0),
-              child: Container(height: 1.0, color: borderColor),
             ),
           ),
-          body: SafeArea(
-            child: Stack(
-              children: [
-                SingleChildScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 16,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // 1. Customer Name & Inquiry Header Card
-                      CustomerHeaderCard(customer: customer),
-
-                      const SizedBox(height: 16),
-
-                      // 2. Contact Phone, Actions, Address & Notes Card
-                      ContactActionsCard(customer: customer),
-
-                      const SizedBox(height: 16),
-
-                      // 3. Attached Documents Card
-                      CustomerDocumentsCard(
-                        documents: customer.documents,
-                        onView: _handlePreviewDocument,
-                        onUpload: _handleUploadDocument,
-                      ),
-
-                      const SizedBox(height: 24),
-
-                      // 4. Full-width Update Status Button opens the Update Status Page
-                      UpdateStatusButton(onTap: _openUpdateStatusPage),
-                    ],
-                  ),
-                ),
-                if (_viewModel.isDeleting)
-                  Container(
-                    color: Colors.black.withValues(alpha: 0.35),
-                    alignment: Alignment.center,
-                    child: const CircularProgressIndicator(
-                      color: AppColors.whatsappGreen,
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ),
-      );
-    },
+        );
+      },
     );
   }
 }
@@ -468,10 +478,12 @@ class _EditContactDialogState extends State<_EditContactDialog> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final primaryTextColor =
-        isDark ? AppDarkColors.textPrimary : AppColors.textPrimary;
-    final secondaryTextColor =
-        isDark ? AppDarkColors.textSecondary : AppColors.textSecondary;
+    final primaryTextColor = isDark
+        ? AppDarkColors.textPrimary
+        : AppColors.textPrimary;
+    final secondaryTextColor = isDark
+        ? AppDarkColors.textSecondary
+        : AppColors.textSecondary;
     final cardBg = isDark ? AppDarkColors.surfaceCard : Colors.white;
 
     return AlertDialog(

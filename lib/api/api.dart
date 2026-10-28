@@ -1,6 +1,6 @@
 /// Central API configuration.
 abstract final class ApiConfig {
-  static const String baseUrl = 'https://steeldoorapi.ufstech.co.in';
+  static const String baseUrl = 'https://fg34kvb9-5000.inc1.devtunnels.ms';
   static const String mobileLogin = '$baseUrl/api/auth/mobile-login';
   static const String bookings = '$baseUrl/api/bookings';
   static const String area_listing = '$baseUrl/api/dropdowns';

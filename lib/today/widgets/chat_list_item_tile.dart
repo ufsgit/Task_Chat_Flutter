@@ -199,8 +199,9 @@ class ChatListItemTile extends StatelessWidget {
   }
 
   Widget _buildAvatar(bool isDark) {
-    final colors = getAvatarColorsForName(
-      title.isNotEmpty ? title : avatarLetter,
+    final colors = getAvatarColorsForStatus(
+      tagText.isNotEmpty ? tagText : title,
+      isDark: isDark,
     );
     final bg = (avatarBgColor != AppColors.surfaceGrey && avatarBgColor != Colors.transparent)
         ? avatarBgColor
@@ -213,6 +214,7 @@ class ChatListItemTile extends StatelessWidget {
       size: 48,
       backgroundColor: bg,
       iconColor: fg,
+      status: tagText,
       name: title.isNotEmpty ? title : avatarLetter,
     );
   }

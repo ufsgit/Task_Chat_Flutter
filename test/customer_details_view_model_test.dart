@@ -284,5 +284,73 @@ void main() {
       expect(find.text('Scheduled: ${customerWithIsoDate.formattedScheduleDate}'), findsOneWidget);
       expect(find.byIcon(Icons.calendar_today_rounded), findsOneWidget);
     });
+
+    testWidgets('CustomerDetailsView pops back when status update completes successfully', (tester) async {
+      tester.view.physicalSize = const Size(800, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      final mockClient = MockClient((request) async {
+        if (request.url.path.contains('/api/bookings/status/update')) {
+          return http.Response(jsonEncode({'message': 'Status updated'}), 200);
+        }
+        return http.Response(jsonEncode([]), 200);
+      });
+
+      final vm = CustomerDetailsViewModel(
+        customer: initialCustomer,
+        client: mockClient,
+      );
+
+      dynamic poppedResult;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Builder(
+            builder: (context) => ElevatedButton(
+              onPressed: () async {
+                poppedResult = await Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => CustomerDetailsView(
+                      customer: initialCustomer,
+                      viewModel: vm,
+                    ),
+                  ),
+                );
+              },
+              child: const Text('Open Details'),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Open Details'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(CustomerDetailsView), findsOneWidget);
+
+      // Scroll and tap Update Status button
+      final updateStatusFinder = find.text('Update Status');
+      await tester.scrollUntilVisible(updateStatusFinder, 100);
+      await tester.tap(updateStatusFinder);
+      await tester.pumpAndSettle();
+
+      // Tap Save button on UpdateStatusPage
+      final saveFinder = find.text('Save');
+      await tester.scrollUntilVisible(
+        saveFinder,
+        100,
+        scrollable: find.byType(Scrollable).last,
+      );
+      await tester.tap(saveFinder);
+      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 2));
+
+      // CustomerDetailsView should have popped back to Today / home page
+      expect(find.byType(CustomerDetailsView), findsNothing);
+      expect(poppedResult, isA<StatusUpdateResult>());
+    });
   });
 }

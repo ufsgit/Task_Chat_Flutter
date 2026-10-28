@@ -110,7 +110,7 @@ class BookingModel {
               ? '${createdAt!.day.toString().padLeft(2, '0')}/${createdAt!.month.toString().padLeft(2, '0')}/${createdAt!.year}'
               : '');
 
-    final avatarColors = getAvatarColorsForName(name);
+    final avatarColors = getAvatarColorsForStatus(status);
     Color tagBg;
     Color tagText;
 

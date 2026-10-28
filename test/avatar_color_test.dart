@@ -1,105 +1,94 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:task_chat/core/theme.dart';
 import 'package:task_chat/core/widgets/user_circle_avatar.dart';
 import 'package:task_chat/today/widgets/chat_list_item_tile.dart';
 
 void main() {
-  group('Avatar letter-pair color rules', () {
-    test('PZ pair has the same colour', () {
-      final pColor = getAvatarColorsForName('Peter');
-      final zColor = getAvatarColorsForName('Zack');
-      expect(pColor.background, equals(zColor.background));
-      expect(pColor.icon, equals(zColor.icon));
+  group('Avatar status color rules', () {
+    test('Scheduled status resolves to scheduled amber color', () {
+      final color = getAvatarColorsForStatus('Scheduled');
+      expect(color.background, equals(AppColors.scheduledBg));
+      expect(color.icon, equals(AppColors.scheduledText));
     });
 
-    test('AQ pair has the same colour', () {
-      final aColor = getAvatarColorsForName('Alice');
-      final qColor = getAvatarColorsForName('Quincy');
-      expect(aColor.background, equals(qColor.background));
-      expect(aColor.icon, equals(qColor.icon));
+    test('Completed status resolves to completed green color', () {
+      final color = getAvatarColorsForStatus('Completed');
+      expect(color.background, equals(AppColors.completedBg));
+      expect(color.icon, equals(AppColors.completedText));
     });
 
-    test('BR pair has the same colour', () {
-      final bColor = getAvatarColorsForName('Bob');
-      final rColor = getAvatarColorsForName('Rahul');
-      expect(bColor.background, equals(rColor.background));
-      expect(bColor.icon, equals(rColor.icon));
+    test('New status resolves to new blue color', () {
+      final color = getAvatarColorsForStatus('New');
+      expect(color.background, equals(AppColors.newBg));
+      expect(color.icon, equals(AppColors.newText));
     });
 
-    test('CS pair has the same colour', () {
-      final cColor = getAvatarColorsForName('Charlie');
-      final sColor = getAvatarColorsForName('Sneha');
-      expect(cColor.background, equals(sColor.background));
-      expect(cColor.icon, equals(sColor.icon));
+    test('Cancelled status resolves to cancelled red color', () {
+      final color = getAvatarColorsForStatus('Cancelled');
+      expect(color.background, equals(AppColors.cancelledBg));
+      expect(color.icon, equals(AppColors.cancelledText));
     });
 
-    test('DT pair has the same colour', () {
-      final dColor = getAvatarColorsForName('David');
-      final tColor = getAvatarColorsForName('Tom');
-      expect(dColor.background, equals(tColor.background));
-      expect(dColor.icon, equals(tColor.icon));
+    test('Pending status resolves to pending chip green color', () {
+      final color = getAvatarColorsForStatus('Pending');
+      expect(color.background, equals(AppColors.chipPendingBg));
+      expect(color.icon, equals(AppColors.chipPendingText));
     });
 
-    test('EU pair has the same colour', () {
-      final eColor = getAvatarColorsForName('Elena');
-      final uColor = getAvatarColorsForName('Uma');
-      expect(eColor.background, equals(uColor.background));
-      expect(eColor.icon, equals(uColor.icon));
+    test('Dark mode resolves to AppDarkColors status palette', () {
+      final sched = getAvatarColorsForStatus('Scheduled', isDark: true);
+      expect(sched.background, equals(AppDarkColors.scheduledBg));
+      expect(sched.icon, equals(AppDarkColors.scheduledText));
+
+      final comp = getAvatarColorsForStatus('Completed', isDark: true);
+      expect(comp.background, equals(AppDarkColors.completedBg));
+      expect(comp.icon, equals(AppDarkColors.completedText));
+
+      final canc = getAvatarColorsForStatus('Cancelled', isDark: true);
+      expect(canc.background, equals(AppDarkColors.cancelledBg));
+      expect(canc.icon, equals(AppDarkColors.cancelledText));
     });
 
-    test('FV pair has the same colour', () {
-      final fColor = getAvatarColorsForName('Farhan');
-      final vColor = getAvatarColorsForName('Varun');
-      expect(fColor.background, equals(vColor.background));
-      expect(fColor.icon, equals(vColor.icon));
+    test('Case-insensitivity applies to status matching', () {
+      expect(
+        getAvatarColorsForStatus('scheduled').background,
+        equals(getAvatarColorsForStatus('SCHEDULED').background),
+      );
+      expect(
+        getAvatarColorsForStatus('completed').background,
+        equals(getAvatarColorsForStatus('COMPLETED').background),
+      );
+      expect(
+        getAvatarColorsForStatus('cancelled').background,
+        equals(getAvatarColorsForStatus('Cancelled').background),
+      );
     });
 
-    test('GW pair has the same colour', () {
-      final gColor = getAvatarColorsForName('George');
-      final wColor = getAvatarColorsForName('Walter');
-      expect(gColor.background, equals(wColor.background));
-      expect(gColor.icon, equals(wColor.icon));
+    testWidgets('UserCircleAvatar renders with status color', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(body: UserCircleAvatar(status: 'Scheduled')),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final containerFinder = find.descendant(
+        of: find.byType(UserCircleAvatar),
+        matching: find.byType(Container),
+      );
+      expect(containerFinder, findsOneWidget);
+
+      final containerWidget = tester.widget<Container>(containerFinder);
+      final decoration = containerWidget.decoration as BoxDecoration;
+      expect(decoration.color, equals(AppColors.scheduledBg));
     });
 
-    test('HX pair has the same colour', () {
-      final hColor = getAvatarColorsForName('Harry');
-      final xColor = getAvatarColorsForName('Xavier');
-      expect(hColor.background, equals(xColor.background));
-      expect(hColor.icon, equals(xColor.icon));
-    });
-
-    test('IY pair has the same colour', () {
-      final iColor = getAvatarColorsForName('Isaac');
-      final yColor = getAvatarColorsForName('Yusuf');
-      expect(iColor.background, equals(yColor.background));
-      expect(iColor.icon, equals(yColor.icon));
-    });
-
-    test('Case-insensitivity applies to letter matching', () {
-      expect(getAvatarColorsForName('peter').background, equals(getAvatarColorsForName('Zack').background));
-      expect(getAvatarColorsForName('alice').background, equals(getAvatarColorsForName('quincy').background));
-      expect(getAvatarColorsForName('rahul').background, equals(getAvatarColorsForName('bob').background));
-    });
-
-    test('The 10 pairs have unique distinct colors from each other', () {
-      final pairs = [
-        getAvatarColorsForName('P'),
-        getAvatarColorsForName('A'),
-        getAvatarColorsForName('B'),
-        getAvatarColorsForName('C'),
-        getAvatarColorsForName('D'),
-        getAvatarColorsForName('E'),
-        getAvatarColorsForName('F'),
-        getAvatarColorsForName('G'),
-        getAvatarColorsForName('H'),
-        getAvatarColorsForName('I'),
-      ];
-
-      final backgrounds = pairs.map((p) => p.background).toSet();
-      expect(backgrounds.length, 10, reason: 'All 10 letter pairs must have distinct background colors');
-    });
-
-    testWidgets('ChatListItemTile renders avatar with name-resolved color', (WidgetTester tester) async {
+    testWidgets('ChatListItemTile renders avatar with status-resolved color', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
@@ -122,7 +111,7 @@ void main() {
 
       final containerWidget = tester.widget<Container>(containerFinder);
       final decoration = containerWidget.decoration as BoxDecoration;
-      expect(decoration.color, equals(getAvatarColorsForName('P').background));
+      expect(decoration.color, equals(AppColors.scheduledBg));
     });
   });
 }
