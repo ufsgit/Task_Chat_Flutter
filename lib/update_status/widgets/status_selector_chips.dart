@@ -67,8 +67,8 @@ class StatusSelectorChips extends StatelessWidget {
     return Row(
       children: displayList.map((item) {
         final isSelected =
-            selectedStatus.toLowerCase() == item.label.toLowerCase() ||
-            selectedStatus.toLowerCase() == item.code.toLowerCase();
+            selectedStatus.toLowerCase().trim() == item.label.toLowerCase().trim() ||
+            selectedStatus.toLowerCase().trim() == item.code.toLowerCase().trim();
 
         final unselectedBg = isDark ? AppDarkColors.surfaceCard : Colors.white;
         final unselectedBorder =

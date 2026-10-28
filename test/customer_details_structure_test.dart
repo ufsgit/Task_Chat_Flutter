@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:task_chat/customer_details/customer_details_model.dart';
-import 'package:task_chat/customer_details/widgets/contact_actions_card.dart';
+import 'package:task_chat/customer_details/customer_details_view.dart';
+import 'package:task_chat/customer_details/customer_details_view_model.dart';
+import 'package:task_chat/customer_details/widgets/customer_documents_card.dart';
 import 'package:task_chat/customer_details/widgets/customer_header_card.dart';
+import 'package:task_chat/customer_details/widgets/update_status_button.dart';
 
 void main() {
   const customer = CustomerDetailsData(
@@ -17,91 +20,93 @@ void main() {
     hasBeenScheduled: true,
   );
 
-  testWidgets('CustomerHeaderCard displays status badge next to customer name', (
-    WidgetTester tester,
-  ) async {
-    await tester.pumpWidget(
-      const MaterialApp(
-        home: Scaffold(
-          body: CustomerHeaderCard(customer: customer),
-        ),
-      ),
-    );
-
-    // Verify name and status exist
-    expect(find.text('Syam'), findsOneWidget);
-    expect(find.text('Scheduled'), findsOneWidget);
-
-    // Both should be in a Row
-    final nameFinder = find.text('Syam');
-    final rowAncestor = find.ancestor(
-      of: nameFinder,
-      matching: find.byType(Row),
-    );
-    expect(rowAncestor, findsOneWidget);
-  });
-
   testWidgets(
-    'ContactActionsCard orders sections: Address first, Notes second, Contact last',
+    'CustomerHeaderCard contains Name, Address, Phone, Status, Note in specified vertical order',
     (WidgetTester tester) async {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
-            body: ContactActionsCard(customer: customer),
+            body: SingleChildScrollView(
+              child: CustomerHeaderCard(customer: customer),
+            ),
           ),
         ),
       );
 
-      // Verify all sections exist
-      final addressFinder = find.text('MG Road, Allepy');
-      final notesFinder = find.text('Notes & Interaction History');
-      final phoneFinder = find.text('+91 9876543210');
+      // 1. Name
+      final nameFinder = find.text('Syam');
+      expect(nameFinder, findsOneWidget);
 
+      // 2. Address
+      final addressFinder = find.text('MG Road, Allepy');
       expect(addressFinder, findsOneWidget);
-      expect(notesFinder, findsOneWidget);
+
+      // 3. Phone number
+      final phoneFinder = find.text('+91 9876543210');
       expect(phoneFinder, findsOneWidget);
 
-      // Verify vertical ordering: Address Y < Notes Y < Phone Y
-      final addressY = tester.getTopLeft(addressFinder).dy;
-      final notesY = tester.getTopLeft(notesFinder).dy;
-      final phoneY = tester.getTopLeft(phoneFinder).dy;
+      // 4. Status
+      final statusHeaderFinder = find.text('STATUS');
+      expect(statusHeaderFinder, findsOneWidget);
+      final statusBadgeFinder = find.text('Scheduled');
+      expect(statusBadgeFinder, findsOneWidget);
 
-      expect(addressY < notesY, isTrue, reason: 'Address must appear before Notes');
-      expect(notesY < phoneY, isTrue, reason: 'Notes must appear before Contact (Phone)');
+      // 5. Note
+      final notesHeaderFinder = find.text('NOTES');
+      expect(notesHeaderFinder, findsOneWidget);
+      final noteContentFinder = find.text('Interested in annual membership.');
+      expect(noteContentFinder, findsOneWidget);
+
+      // Verify strict vertical ordering: Name < Address < Phone < Status < Note
+      final nameY = tester.getTopLeft(nameFinder).dy;
+      final addressY = tester.getTopLeft(addressFinder).dy;
+      final phoneY = tester.getTopLeft(phoneFinder).dy;
+      final statusY = tester.getTopLeft(statusHeaderFinder).dy;
+      final noteY = tester.getTopLeft(notesHeaderFinder).dy;
+
+      expect(nameY < addressY, isTrue, reason: 'Name must appear before Address');
+      expect(addressY < phoneY, isTrue, reason: 'Address must appear before Phone');
+      expect(phoneY < statusY, isTrue, reason: 'Phone must appear before Status');
+      expect(statusY < noteY, isTrue, reason: 'Status must appear before Note');
     },
   );
 
-  testWidgets('Notes box in ContactActionsCard is clickable and typable', (
-    WidgetTester tester,
-  ) async {
-    const emptyCustomer = CustomerDetailsData(
-      id: '2',
-      name: 'Devika',
-      inquiry: 'Door Inquiry',
-      status: 'Completed',
-      phoneNumber: '9845123490',
-      addressLine1: 'Civil Line Road',
-      addressLine2: 'Thrissur',
-      notes: '',
-    );
+  testWidgets(
+    'CustomerDetailsView orders page as: 1 Contact Info Section, then Update Status, then Documents',
+    (WidgetTester tester) async {
+      final vm = CustomerDetailsViewModel(customer: customer);
 
-    await tester.pumpWidget(
-      const MaterialApp(
-        home: Scaffold(
-          body: ContactActionsCard(customer: emptyCustomer),
+      await tester.pumpWidget(
+        MaterialApp(
+          home: CustomerDetailsView(
+            customer: customer,
+            viewModel: vm,
+          ),
         ),
-      ),
-    );
+      );
 
-    // Verify hint text when empty
-    expect(find.text('Add notes here...'), findsOneWidget);
+      final contactSectionFinder = find.byType(CustomerHeaderCard);
+      final updateStatusFinder = find.byType(UpdateStatusButton);
+      final documentsCardFinder = find.byType(CustomerDocumentsCard);
 
-    // Tap and type in notes field
-    await tester.tap(find.byType(TextField));
-    await tester.enterText(find.byType(TextField), 'Client called regarding measurements');
-    await tester.pumpAndSettle();
+      expect(contactSectionFinder, findsOneWidget);
+      expect(updateStatusFinder, findsOneWidget);
+      expect(documentsCardFinder, findsOneWidget);
 
-    // Verify entered text is displayed
-    expect(find.text('Client called regarding measurements'), findsOneWidget);
-  });
+      final contactY = tester.getTopLeft(contactSectionFinder).dy;
+      final updateY = tester.getTopLeft(updateStatusFinder).dy;
+      final docY = tester.getTopLeft(documentsCardFinder).dy;
+
+      expect(
+        contactY < updateY,
+        isTrue,
+        reason: 'Contact Info section must appear before Update Status button',
+      );
+      expect(
+        updateY < docY,
+        isTrue,
+        reason: 'Update Status button must appear before Documents card',
+      );
+    },
+  );
 }

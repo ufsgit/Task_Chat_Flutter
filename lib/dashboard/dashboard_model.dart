@@ -13,7 +13,8 @@ import '../login_page/token_storage.dart';
 enum DashboardPeriod {
   currentMonth,
   last30Days,
-  allTime;
+  allTime,
+  custom;
 
   /// User-facing label displayed on the filter chips.
   String get label {
@@ -24,6 +25,8 @@ enum DashboardPeriod {
         return 'Last 30 Days';
       case DashboardPeriod.allTime:
         return 'All Time';
+      case DashboardPeriod.custom:
+        return 'Custom';
     }
   }
 
@@ -31,6 +34,7 @@ enum DashboardPeriod {
   /// Current Month: `period=this_month`
   /// Last 30 Days: `period=last_30_days`
   /// All Time: `period=all`
+  /// Custom: `period=custom`
   String get queryValue {
     switch (this) {
       case DashboardPeriod.currentMonth:
@@ -39,6 +43,8 @@ enum DashboardPeriod {
         return 'last_30_days';
       case DashboardPeriod.allTime:
         return 'all';
+      case DashboardPeriod.custom:
+        return 'custom';
     }
   }
 
@@ -51,6 +57,8 @@ enum DashboardPeriod {
         return 'in last 30 days';
       case DashboardPeriod.allTime:
         return 'all time';
+      case DashboardPeriod.custom:
+        return 'in custom range';
     }
   }
 
@@ -63,6 +71,9 @@ enum DashboardPeriod {
     }
     if (normalized == 'all' || normalized.contains('all time')) {
       return DashboardPeriod.allTime;
+    }
+    if (normalized.contains('custom')) {
+      return DashboardPeriod.custom;
     }
     return DashboardPeriod.currentMonth;
   }
@@ -422,8 +433,11 @@ class DashboardService {
       tokenStorage = tokenStorage ?? TokenStorage();
 
   /// Calls GET ApiConfig.dashboard?period=`period.queryValue`
+  /// Supports optional custom date range filtering via dateFrom & dateTo.
   Future<DashboardModel> fetchDashboard({
     DashboardPeriod period = DashboardPeriod.currentMonth,
+    DateTime? dateFrom,
+    DateTime? dateTo,
   }) async {
     final isTest = TokenStorage.isTestEnvironment;
     String? token;
@@ -433,8 +447,20 @@ class DashboardService {
       );
     } catch (_) {}
 
+    final queryParams = <String, String>{
+      'period': period.queryValue,
+    };
+    if (dateFrom != null) {
+      queryParams['dateFrom'] =
+          '${dateFrom.year}-${dateFrom.month.toString().padLeft(2, '0')}-${dateFrom.day.toString().padLeft(2, '0')}';
+    }
+    if (dateTo != null) {
+      queryParams['dateTo'] =
+          '${dateTo.year}-${dateTo.month.toString().padLeft(2, '0')}-${dateTo.day.toString().padLeft(2, '0')}';
+    }
+
     final baseUri = Uri.parse(ApiConfig.dashboard);
-    final uri = baseUri.replace(queryParameters: {'period': period.queryValue});
+    final uri = baseUri.replace(queryParameters: queryParams);
 
     final response = await client
         .get(

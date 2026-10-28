@@ -321,6 +321,41 @@ void main() {
     final newText = tester.widget<Text>(find.text('New'));
     expect(newText.style?.color, const Color(0xFF3B82F6));
   });
+
+  testWidgets('StatusSelectorChips displays label for the name of status', (tester) async {
+    const chips = [
+      StatusChipModel(id: 1, code: 'NEW_CODE', label: 'New', colorCode: '#3b82f6', sortOrder: 1, isActive: true),
+      StatusChipModel(id: 2, code: 'SCHEDULED_CODE', label: 'Scheduled', colorCode: '#7c3aed', sortOrder: 2, isActive: true),
+      StatusChipModel(id: 3, code: 'COMPLETED_CODE', label: 'Completed', colorCode: '#10b981', sortOrder: 3, isActive: true),
+      StatusChipModel(id: 4, code: 'CANCELLED_CODE', label: 'Cancelled', colorCode: '#ef4444', sortOrder: 4, isActive: true),
+    ];
+
+    String? tappedStatus;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: StatusSelectorChips(
+            selectedStatus: 'SCHEDULED_CODE', // selected by code
+            chips: chips,
+            onStatusSelected: (val) => tappedStatus = val,
+          ),
+        ),
+      ),
+    );
+
+    // Verifies the labels are displayed, NOT the codes
+    expect(find.text('New'), findsOneWidget);
+    expect(find.text('Scheduled'), findsOneWidget);
+    expect(find.text('Completed'), findsOneWidget);
+    expect(find.text('Cancelled'), findsOneWidget);
+    expect(find.text('SCHEDULED_CODE'), findsNothing);
+
+    // Tapping passes the label
+    await tester.tap(find.text('Completed'));
+    expect(tappedStatus, 'Completed');
+  });
 }
 
 void _noop(String val) {}
+

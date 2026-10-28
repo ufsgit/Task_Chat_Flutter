@@ -52,7 +52,10 @@ class BranchManagerUpdateStatusViewModel extends ChangeNotifier {
     _scheduleDate =
         (customer.scheduleDate != null && customer.scheduleDate!.isNotEmpty)
         ? customer.scheduleDate!
-        : '10/24/2024';
+        : formatCurrentDate();
+    if (_selectedStatus.toLowerCase() == 'completed') {
+      _scheduleDate = formatCurrentDate();
+    }
     _documents = List<String>.from(customer.documents);
   }
 
@@ -98,13 +101,14 @@ class BranchManagerUpdateStatusViewModel extends ChangeNotifier {
       if (chips.isNotEmpty) {
         _statusChips = chips;
 
-        // Ensure selectedStatus is valid among the visible chips
-        final visibleLabels =
-            statusChips.map((c) => c.label.toLowerCase()).toList();
-        if (!visibleLabels.contains(_selectedStatus.toLowerCase())) {
-          _selectedStatus = statusChips.isNotEmpty
-              ? statusChips.first.label
-              : _selectedStatus;
+        // Ensure selectedStatus uses chip.label for display
+        final matchingChip = statusChips.where((c) =>
+            c.label.toLowerCase().trim() == _selectedStatus.toLowerCase().trim() ||
+            c.code.toLowerCase().trim() == _selectedStatus.toLowerCase().trim()).firstOrNull;
+        if (matchingChip != null) {
+          _selectedStatus = matchingChip.label;
+        } else if (statusChips.isNotEmpty) {
+          _selectedStatus = statusChips.first.label;
         }
       }
     } catch (_) {
@@ -139,8 +143,16 @@ class BranchManagerUpdateStatusViewModel extends ChangeNotifier {
   bool get showSchedule => visibility.showSchedule;
 
   void setStatus(String status) {
-    if (_selectedStatus != status) {
-      _selectedStatus = status;
+    final matchingChip = statusChips.where((c) =>
+        c.label.toLowerCase().trim() == status.toLowerCase().trim() ||
+        c.code.toLowerCase().trim() == status.toLowerCase().trim()).firstOrNull;
+    final resolvedStatus = matchingChip != null ? matchingChip.label : status;
+
+    if (_selectedStatus != resolvedStatus) {
+      _selectedStatus = resolvedStatus;
+      if (resolvedStatus.toLowerCase() == 'completed') {
+        _scheduleDate = formatCurrentDate();
+      }
       notifyListeners();
     }
   }
@@ -155,6 +167,10 @@ class BranchManagerUpdateStatusViewModel extends ChangeNotifier {
   /// Saves the status update to the backend API and shows user feedback.
   Future<bool> saveStatus(BuildContext context) async {
     if (_isSaving) return false;
+
+    if (_selectedStatus.toLowerCase() == 'completed') {
+      _scheduleDate = formatCurrentDate();
+    }
 
     _isSaving = true;
     _errorMessage = null;

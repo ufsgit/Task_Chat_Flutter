@@ -21,9 +21,9 @@ class StatusChipModel {
       id: json['id'] is int
           ? json['id'] as int
           : int.tryParse(json['id']?.toString() ?? '') ?? 0,
-      code: json['code']?.toString() ?? '',
-      label: json['label']?.toString() ?? '',
-      colorCode: (json['statusColorCode'] ?? json['colorCode'])?.toString(),
+      code: json['code']?.toString().trim() ?? '',
+      label: (json['label'] ?? json['code'] ?? '')?.toString().trim() ?? '',
+      colorCode: (json['colorCode'] ?? json['statusColorCode'])?.toString(),
       sortOrder: json['sortOrder'] is int
           ? json['sortOrder'] as int
           : int.tryParse(json['sortOrder']?.toString() ?? '') ?? 0,

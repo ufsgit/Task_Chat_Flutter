@@ -28,14 +28,24 @@ List<String> getAvailableStatusOptions({required bool hasBeenScheduled}) {
   }
 }
 
+/// Formats current date as MM/DD/YYYY to match scheduleDate format.
+String formatCurrentDate() {
+  final now = DateTime.now();
+  final m = now.month.toString().padLeft(2, '0');
+  final d = now.day.toString().padLeft(2, '0');
+  return '$m/$d/${now.year}';
+}
+
 /// Helper determining UI field visibility rules for status updates.
 class UpdateStatusVisibility {
   final String status;
 
   const UpdateStatusVisibility(this.status);
 
-  /// Schedule (Calendar) is shown for Completed and Scheduled, hidden for Cancelled.
-  bool get showSchedule => status.toLowerCase() != 'cancelled';
+  /// Schedule (Calendar) is shown for Scheduled, hidden for Completed and Cancelled.
+  bool get showSchedule =>
+      status.toLowerCase() != 'cancelled' &&
+      status.toLowerCase() != 'completed';
 
   /// All statuses use Notes.
   bool get showNotes => true;
@@ -161,11 +171,16 @@ class BranchManagerUpdateStatusLogic {
       );
     } catch (_) {}
 
+    final isCompleted = status.toLowerCase() == 'completed';
+    final effectiveDate = isCompleted
+        ? formatCurrentDate()
+        : (scheduleDate.trim().isNotEmpty ? scheduleDate : formatCurrentDate());
+
     final requestPayload = StatusUpdateRequest(
       clientId: int.tryParse(customer.id) ?? 1,
       clientName: customer.name,
       status: status,
-      scheduleDate: scheduleDate,
+      scheduleDate: effectiveDate,
       notes: notes.trim(),
       createdBy: user?.id ?? 0,
       createdByName: (user?.name != null && user!.name.isNotEmpty)
@@ -214,7 +229,7 @@ class BranchManagerUpdateStatusLogic {
       updateChatItemStatus(
         customerName: customer.name,
         newStatus: status,
-        newDate: scheduleDate,
+        newDate: effectiveDate,
       );
       return true;
     }

@@ -56,15 +56,45 @@ void main() {
     },
   );
 
-  test('UpdateStatusVisibility hides schedule when cancelled', () {
+  test('UpdateStatusVisibility hides schedule when cancelled or completed', () {
     const scheduledVis = UpdateStatusVisibility('Scheduled');
     expect(scheduledVis.showSchedule, isTrue);
 
     const completedVis = UpdateStatusVisibility('Completed');
-    expect(completedVis.showSchedule, isTrue);
+    expect(completedVis.showSchedule, isFalse);
 
     const cancelledVis = UpdateStatusVisibility('Cancelled');
     expect(cancelledVis.showSchedule, isFalse);
+  });
+
+  test('Setting status to Completed automatically assigns current date and hides schedule', () {
+    const customer = CustomerDetailsData(
+      id: '1',
+      name: 'Test Customer',
+      inquiry: 'Fitmate Inquiry',
+      status: 'Scheduled',
+      phoneNumber: '1234567890',
+      addressLine1: 'Test',
+      addressLine2: '',
+      notes: '',
+      hasBeenScheduled: true,
+    );
+
+    final vm = BranchManagerUpdateStatusViewModel(customer: customer);
+    expect(vm.showSchedule, isTrue);
+
+    vm.setStatus('Completed');
+    expect(vm.showSchedule, isFalse);
+    expect(vm.scheduleDate, equals(formatCurrentDate()));
+    vm.dispose();
+
+    final coordVm = CoordinatorUpdateStatusViewModel(customer: customer);
+    expect(coordVm.showSchedule, isTrue);
+
+    coordVm.setStatus('Completed');
+    expect(coordVm.showSchedule, isFalse);
+    expect(coordVm.scheduleDate, equals(formatCurrentDate()));
+    coordVm.dispose();
   });
 
   testWidgets(

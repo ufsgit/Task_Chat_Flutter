@@ -4,6 +4,7 @@ import '../core/theme.dart';
 import '../core/widgets/fitmate_app_bar_title.dart';
 import '../login_page/token_storage.dart';
 import 'dashboard_view_model.dart';
+import 'widgets/custom_date_range_picker_dialog.dart';
 import 'widgets/dashboard_skeleton.dart';
 import 'widgets/dashboard_time_filter_bar.dart';
 import 'widgets/metric_stat_card.dart';
@@ -58,6 +59,24 @@ class _DashboardViewState extends State<DashboardView> {
     super.dispose();
   }
 
+  Future<void> _showCustomDateRangePicker() async {
+    final now = DateTime.now();
+    final initialRange =
+        _viewModel.customDateRange ??
+        DateTimeRange(start: DateTime(now.year, now.month, 1), end: now);
+
+    final picked = await showCustomDateRangePicker(
+      context: context,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2035),
+      initialDateRange: initialRange,
+    );
+
+    if (picked != null) {
+      _viewModel.setCustomDateRange(picked.start, picked.end);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final scaffoldBg = Theme.of(context).scaffoldBackgroundColor;
@@ -88,13 +107,19 @@ class _DashboardViewState extends State<DashboardView> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // 1. Time Range Filter Bar
+                    // 1. Time Range Filter Bar with Custom Date Range Picker
                     DashboardTimeFilterBar(
                       filters: _viewModel.availableFilters,
                       selectedFilter: _viewModel.selectedFilter,
                       onFilterSelected: (newFilter) {
-                        _viewModel.selectFilter(newFilter);
+                        if (newFilter.startsWith('Custom') ||
+                            newFilter == 'Custom') {
+                          _showCustomDateRangePicker();
+                        } else {
+                          _viewModel.selectFilter(newFilter);
+                        }
                       },
+                      onCustomTap: _showCustomDateRangePicker,
                     ),
                     const SizedBox(height: 16),
 

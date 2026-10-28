@@ -7,6 +7,7 @@ import 'package:task_chat/api/api.dart';
 import 'package:task_chat/dashboard/dashboard_model.dart';
 import 'package:task_chat/dashboard/dashboard_view.dart';
 import 'package:task_chat/dashboard/dashboard_view_model.dart';
+import 'package:task_chat/dashboard/widgets/custom_date_range_picker_dialog.dart';
 import 'package:task_chat/dashboard/widgets/dashboard_time_filter_bar.dart';
 import 'package:task_chat/dashboard/widgets/metric_stat_card.dart';
 import 'package:task_chat/bottom_navigator/bottom_navigator.dart';
@@ -17,6 +18,7 @@ void main() {
       expect(DashboardPeriod.currentMonth.queryValue, 'this_month');
       expect(DashboardPeriod.last30Days.queryValue, 'last_30_days');
       expect(DashboardPeriod.allTime.queryValue, 'all');
+      expect(DashboardPeriod.custom.queryValue, 'custom');
     });
 
     test('fromLabel parses various label strings', () {
@@ -25,6 +27,8 @@ void main() {
       expect(DashboardPeriod.fromLabel('Last 30 Days'), DashboardPeriod.last30Days);
       expect(DashboardPeriod.fromLabel('All Time'), DashboardPeriod.allTime);
       expect(DashboardPeriod.fromLabel('All'), DashboardPeriod.allTime);
+      expect(DashboardPeriod.fromLabel('Custom'), DashboardPeriod.custom);
+      expect(DashboardPeriod.fromLabel('custom'), DashboardPeriod.custom);
       expect(DashboardPeriod.fromLabel(null), DashboardPeriod.currentMonth);
     });
   });
@@ -147,6 +151,29 @@ void main() {
 
       await service.fetchDashboard(period: DashboardPeriod.allTime);
       expect(capturedQueryParam, 'all');
+
+      String? capturedDateFrom;
+      String? capturedDateTo;
+      final customMockClient = MockClient((request) async {
+        capturedQueryParam = request.url.queryParameters['period'];
+        capturedDateFrom = request.url.queryParameters['dateFrom'];
+        capturedDateTo = request.url.queryParameters['dateTo'];
+        return http.Response(
+          json.encode({'data': {'newBooking': 2}}),
+          200,
+          headers: {'content-type': 'application/json'},
+        );
+      });
+
+      final customService = DashboardService(client: customMockClient);
+      await customService.fetchDashboard(
+        period: DashboardPeriod.custom,
+        dateFrom: DateTime(2026, 10, 5),
+        dateTo: DateTime(2026, 10, 20),
+      );
+      expect(capturedQueryParam, 'custom');
+      expect(capturedDateFrom, '2026-10-05');
+      expect(capturedDateTo, '2026-10-20');
     });
   });
 
@@ -206,6 +233,36 @@ void main() {
 
       vm.dispose();
     });
+
+    test('setCustomDateRange updates custom period and passes date query params', () async {
+      String? requestedPeriod;
+      String? requestedDateFrom;
+      String? requestedDateTo;
+
+      final mockClient = MockClient((request) async {
+        requestedPeriod = request.url.queryParameters['period'];
+        requestedDateFrom = request.url.queryParameters['dateFrom'];
+        requestedDateTo = request.url.queryParameters['dateTo'];
+        return http.Response(
+          json.encode({'data': {'newBooking': 5}}),
+          200,
+          headers: {'content-type': 'application/json'},
+        );
+      });
+
+      final vm = DashboardViewModel(client: mockClient);
+      vm.setCustomDateRange(DateTime(2026, 10, 5), DateTime(2026, 10, 20));
+      await Future.delayed(const Duration(milliseconds: 20));
+
+      expect(vm.selectedPeriod, DashboardPeriod.custom);
+      expect(vm.customDateRange, isNotNull);
+      expect(requestedPeriod, 'custom');
+      expect(requestedDateFrom, '2026-10-05');
+      expect(requestedDateTo, '2026-10-20');
+      expect(vm.selectedFilter.startsWith('Custom (05/10 - 20/10)'), isTrue);
+
+      vm.dispose();
+    });
   });
 
   group('DashboardPage Widget Integration', () {
@@ -249,6 +306,37 @@ void main() {
       expect(find.text('Current Month'), findsOneWidget);
       expect(find.text('Last 30 Days'), findsOneWidget);
       expect(find.text('All Time'), findsOneWidget);
+      expect(find.text('Custom'), findsOneWidget);
+
+      vm.dispose();
+    });
+
+    testWidgets('tapping Custom chip opens input-mode date range dialog without full page', (tester) async {
+      final mockClient = MockClient((request) async {
+        return http.Response(
+          json.encode({'data': {'newBooking': 1}}),
+          200,
+          headers: {'content-type': 'application/json'},
+        );
+      });
+
+      final vm = DashboardViewModel(client: mockClient);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: DashboardPage(viewModel: vm),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Custom'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Select range'), findsOneWidget);
+      expect(find.text('Start Date'), findsOneWidget);
+      expect(find.text('End Date'), findsOneWidget);
+      expect(find.text('Cancel'), findsOneWidget);
+      expect(find.text('OK'), findsOneWidget);
 
       vm.dispose();
     });
@@ -326,4 +414,98 @@ void main() {
       expect(dashboardFetchCount, 3);
     });
   });
+
+  group('PermanentSlashDateInputFormatter & CustomDateRangePickerDialog', () {
+    test('formatter maintains permanent slashes and inserts them on digit entry', () {
+      final formatter = PermanentSlashDateInputFormatter();
+
+      // Enter first 2 digits
+      var result = formatter.formatEditUpdate(
+        TextEditingValue.empty,
+        const TextEditingValue(text: '10', selection: TextSelection.collapsed(offset: 2)),
+      );
+      expect(result.text, '10/');
+      expect(result.selection.end, 3);
+
+      // Enter next 2 digits
+      result = formatter.formatEditUpdate(
+        result,
+        const TextEditingValue(text: '10/06', selection: TextSelection.collapsed(offset: 5)),
+      );
+      expect(result.text, '10/06/');
+      expect(result.selection.end, 6);
+
+      // Enter year digits
+      result = formatter.formatEditUpdate(
+        result,
+        const TextEditingValue(text: '10/06/2026', selection: TextSelection.collapsed(offset: 10)),
+      );
+      expect(result.text, '10/06/2026');
+      expect(result.selection.end, 10);
+    });
+
+    test('formatter cleanly deletes preceding digit when backspacing over a slash', () {
+      final formatter = PermanentSlashDateInputFormatter();
+
+      final current = const TextEditingValue(
+        text: '10/06/',
+        selection: TextSelection.collapsed(offset: 6),
+      );
+
+      // Backspace deleting the slash
+      final backspaced = formatter.formatEditUpdate(
+        current,
+        const TextEditingValue(text: '10/06', selection: TextSelection.collapsed(offset: 5)),
+      );
+
+      // Should delete the digit '6' before the slash, resulting in '10/0'
+      expect(backspaced.text, '10/0');
+      expect(backspaced.selection.end, 4);
+    });
+
+    testWidgets('CustomDateRangePickerDialog allows editing dates and submitting range', (tester) async {
+      DateTimeRange? submittedRange;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (context) {
+                return ElevatedButton(
+                  onPressed: () async {
+                    submittedRange = await showCustomDateRangePicker(
+                      context: context,
+                      initialDateRange: DateTimeRange(
+                        start: DateTime(2023, 10, 6),
+                        end: DateTime(2026, 10, 28),
+                      ),
+                    );
+                  },
+                  child: const Text('Open Dialog'),
+                );
+              },
+            ),
+          ),
+        ),
+      );
+
+      // Open dialog
+      await tester.tap(find.text('Open Dialog'));
+      await tester.pumpAndSettle();
+
+      // Verify header matches screenshot: "Oct 6, 2023 – Oct 28, 2026"
+      expect(find.text('Oct 6, 2023 – Oct 28, 2026'), findsOneWidget);
+      expect(find.text('10/06/2023'), findsOneWidget);
+      expect(find.text('10/28/2026'), findsOneWidget);
+
+      // Confirm dialog by tapping OK
+      await tester.tap(find.text('OK'));
+      await tester.pumpAndSettle();
+
+      expect(submittedRange, isNotNull);
+      expect(submittedRange!.start, DateTime(2023, 10, 6));
+      expect(submittedRange!.end, DateTime(2026, 10, 28));
+    });
+  });
 }
+

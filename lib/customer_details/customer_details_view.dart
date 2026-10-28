@@ -11,7 +11,6 @@ import '../update_status/coordinators/coordinator_update_status_view.dart';
 import '../update_status/status_update_result.dart';
 import 'customer_details_model.dart';
 import 'customer_details_view_model.dart';
-import 'widgets/contact_actions_card.dart';
 import 'widgets/customer_documents_card.dart';
 import 'widgets/customer_header_card.dart';
 import 'widgets/update_status_button.dart';
@@ -380,13 +379,13 @@ class _CustomerDetailsViewState extends State<CustomerDetailsView> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        // 1. Customer Name & Inquiry Header Card
+                        // 1. Unified Contact Info Section (Name, Address, Phone number, Status, Note)
                         CustomerHeaderCard(customer: customer),
 
                         const SizedBox(height: 16),
 
-                        // 2. Contact Phone, Actions, Address & Notes Card
-                        ContactActionsCard(customer: customer),
+                        // 2. Full-width Update Status Button opens the Update Status Page
+                        UpdateStatusButton(onTap: _openUpdateStatusPage),
 
                         const SizedBox(height: 16),
 
@@ -396,11 +395,6 @@ class _CustomerDetailsViewState extends State<CustomerDetailsView> {
                           onView: _handlePreviewDocument,
                           onUpload: _handleUploadDocument,
                         ),
-
-                        const SizedBox(height: 24),
-
-                        // 4. Full-width Update Status Button opens the Update Status Page
-                        UpdateStatusButton(onTap: _openUpdateStatusPage),
                       ],
                     ),
                   ),

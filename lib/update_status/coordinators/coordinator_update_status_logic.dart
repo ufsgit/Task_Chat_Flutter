@@ -96,8 +96,10 @@ class CoordinatorUpdateStatusVisibility {
 
   const CoordinatorUpdateStatusVisibility(this.status);
 
-  /// Schedule (Calendar) is shown for Completed and Scheduled, hidden for Cancelled.
-  bool get showSchedule => status.toLowerCase() != 'cancelled';
+  /// Schedule (Calendar) is shown for Scheduled, hidden for Completed and Cancelled.
+  bool get showSchedule =>
+      status.toLowerCase() != 'cancelled' &&
+      status.toLowerCase() != 'completed';
 
   /// All statuses use Notes.
   bool get showNotes => true;
@@ -223,11 +225,16 @@ class CoordinatorUpdateStatusLogic {
     effectiveDistrictId ??= user?.districtId;
     effectiveDistrictName ??= user?.districtName;
 
+    final isCompleted = status.toLowerCase() == 'completed';
+    final effectiveDate = isCompleted
+        ? formatCurrentDate()
+        : (scheduleDate.trim().isNotEmpty ? scheduleDate : formatCurrentDate());
+
     final requestPayload = StatusUpdateRequest(
       clientId: int.tryParse(customer.id) ?? 1,
       clientName: customer.name,
       status: status,
-      scheduleDate: scheduleDate,
+      scheduleDate: effectiveDate,
       notes: notes.trim(),
       createdBy: effectiveCreatedBy,
       createdByName: effectiveCreatedByName,
@@ -269,7 +276,7 @@ class CoordinatorUpdateStatusLogic {
       updateChatItemStatus(
         customerName: customer.name,
         newStatus: status,
-        newDate: scheduleDate,
+        newDate: effectiveDate,
       );
       return true;
     }
