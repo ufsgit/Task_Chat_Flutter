@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import '../../core/theme.dart';
+import '../../core/widgets/app_pill_notification.dart';
 import '../../customer_details/customer_details_model.dart';
 import '../../login_page/token_storage.dart';
 import '../models/status_chip_model.dart';
@@ -313,14 +313,11 @@ class CoordinatorUpdateStatusViewModel extends ChangeNotifier {
 
       if (success) {
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                'Status updated to $_selectedStatus for ${customer.name} (Assigned: $_selectedBranchManager)',
-              ),
-              backgroundColor: AppColors.primaryGreen,
-              duration: const Duration(seconds: 1),
-            ),
+          AppNotification.showStatusChange(
+            context,
+            status: _selectedStatus,
+            customerName: customer.name,
+            assignment: _selectedBranchManager,
           );
         }
         _isSaving = false;
@@ -329,12 +326,7 @@ class CoordinatorUpdateStatusViewModel extends ChangeNotifier {
       } else {
         _errorMessage = 'Failed to update status on server';
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Failed to update status on server'),
-              backgroundColor: Color(0xFFEF4444),
-            ),
-          );
+          AppNotification.showError(context, _errorMessage!);
         }
         _isSaving = false;
         notifyListeners();
@@ -343,12 +335,7 @@ class CoordinatorUpdateStatusViewModel extends ChangeNotifier {
     } catch (e) {
       _errorMessage = 'Connection error';
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Connection error'),
-            backgroundColor: Color(0xFFEF4444),
-          ),
-        );
+        AppNotification.showError(context, _errorMessage!);
       }
       _isSaving = false;
       notifyListeners();

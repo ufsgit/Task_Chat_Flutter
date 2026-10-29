@@ -30,9 +30,12 @@ class CoordinatorViewModel extends ChangeNotifier {
 
   final Duration debounceDuration;
 
+  final TodayViewModel? todayViewModel;
+
   CoordinatorViewModel({
     http.Client? client,
     this.tokenStorage,
+    this.todayViewModel,
     TextEditingController? searchController,
     List<Map<String, dynamic>>? initialItems,
     int initialFilterIndex = 0,
@@ -43,7 +46,9 @@ class CoordinatorViewModel extends ChangeNotifier {
         _isInternalClient = client == null,
         _items = initialItems != null
             ? List<Map<String, dynamic>>.from(initialItems)
-            : [],
+            : (todayViewModel != null && todayViewModel.todayChatItems.isNotEmpty
+                ? List<Map<String, dynamic>>.from(todayViewModel.todayChatItems)
+                : []),
         debounceDuration = debounceDuration ??
             (TokenStorage.isTestEnvironment
                 ? Duration.zero

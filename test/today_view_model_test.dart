@@ -13,6 +13,7 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   setUp(() {
+    TodayViewModel.resetSession();
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(
       const MethodChannel('plugins.it_nomads.com/flutter_secure_storage'),
@@ -26,6 +27,7 @@ void main() {
   });
 
   tearDown(() {
+    TodayViewModel.resetSession();
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(
       const MethodChannel('plugins.it_nomads.com/flutter_secure_storage'),
@@ -260,6 +262,25 @@ void main() {
       expect(todayChatItems.first['tagText'], 'Scheduled');
       expect(todayChatItems.first['date'], '10/29/2026');
       expect(todayChatItems.first['scheduleDate'], '10/29/2026');
+    });
+
+    test('TodayViewModel session isolation prevents data leaking across unauthenticated sessions', () {
+      // User A logs in and has chat items
+      final userAVm = TodayViewModel(initialChatItems: [
+        {'title': 'User A Lead', 'tagText': 'New'},
+      ]);
+      expect(userAVm.todayChatItems.length, 1);
+      expect(todayChatItems.first['title'], 'User A Lead');
+
+      // User A logs out -> resetSession called
+      TodayViewModel.resetSession();
+      expect(todayChatItems, isEmpty);
+      expect(userAVm.todayChatItems, isEmpty);
+
+      // User B logs in fresh without process restart
+      final userBVm = TodayViewModel();
+      expect(userBVm.todayChatItems, isEmpty);
+      expect(todayChatItems, isEmpty);
     });
 
     test('TodayViewModel buildQueryParameters includes provided fields and omits null/all fields', () {

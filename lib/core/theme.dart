@@ -300,6 +300,21 @@ abstract final class AppTheme {
       actionIconTheme: ActionIconThemeData(
         backButtonIconBuilder: (BuildContext context) => const CircularBackButton(),
       ),
+      snackBarTheme: SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: Colors.white,
+        elevation: 6,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(28),
+          side: const BorderSide(color: Color(0xFFE2E8F0), width: 1),
+        ),
+        contentTextStyle: const TextStyle(
+          fontFamily: 'Helvetica Neue',
+          fontSize: 14.5,
+          fontWeight: FontWeight.w500,
+          color: Color(0xFF0F172A),
+        ),
+      ),
       pageTransitionsTheme: _pageTransitionsTheme,
     );
   }
@@ -394,6 +409,21 @@ abstract final class AppTheme {
       ),
       actionIconTheme: ActionIconThemeData(
         backButtonIconBuilder: (BuildContext context) => const CircularBackButton(),
+      ),
+      snackBarTheme: SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: AppDarkColors.surfaceCard,
+        elevation: 6,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(28),
+          side: const BorderSide(color: AppDarkColors.border, width: 1),
+        ),
+        contentTextStyle: const TextStyle(
+          fontFamily: 'Helvetica Neue',
+          fontSize: 14.5,
+          fontWeight: FontWeight.w500,
+          color: AppDarkColors.textPrimary,
+        ),
       ),
       pageTransitionsTheme: _pageTransitionsTheme,
     );

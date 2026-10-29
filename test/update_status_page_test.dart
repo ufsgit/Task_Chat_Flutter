@@ -22,11 +22,13 @@ void main() {
   setUp(() {
     SharedPreferences.setMockInitialValues({});
     TokenStorage.useMemoryOnly = true;
+    TodayViewModel.resetSession();
     todayChatItems.clear();
   });
 
   tearDown(() {
     TokenStorage.useMemoryOnly = false;
+    TodayViewModel.resetSession();
   });
 
   test(
@@ -158,12 +160,12 @@ void main() {
       id: '1',
       name: 'Abhijith',
       inquiry: 'Fitmate Inquiry',
-      status: 'New',
+      status: 'Scheduled',
       phoneNumber: '+91 9876543210',
       addressLine1: 'Kochi',
       addressLine2: 'Kerala',
       notes: '',
-      hasBeenScheduled: false,
+      hasBeenScheduled: true,
     );
 
     http.Request? capturedRequest;
@@ -313,9 +315,12 @@ void main() {
       final bmViewModel = BranchManagerUpdateStatusViewModel(
         customer: customer,
       );
-      expect(bmViewModel.selectedStatus, 'Scheduled');
+      expect(bmViewModel.selectedStatus, 'New');
       expect(bmViewModel.showSchedule, isTrue);
-      expect(bmViewModel.availableOptions, equals(['Scheduled', 'Cancelled']));
+      expect(
+        bmViewModel.availableOptions,
+        equals(['New', 'Scheduled', 'Cancelled']),
+      );
 
       bmViewModel.setStatus('Cancelled');
       expect(bmViewModel.selectedStatus, 'Cancelled');
@@ -328,11 +333,11 @@ void main() {
       final coordViewModel = CoordinatorUpdateStatusViewModel(
         customer: customer,
       );
-      expect(coordViewModel.selectedStatus, 'Scheduled');
+      expect(coordViewModel.selectedStatus, 'New');
       expect(coordViewModel.showSchedule, isTrue);
       expect(
         coordViewModel.availableOptions,
-        equals(['Scheduled', 'Cancelled']),
+        equals(['New', 'Scheduled', 'Cancelled']),
       );
 
       coordViewModel.setBranchManager('Ramesh Kumar');
@@ -778,10 +783,10 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Attach Documents'), findsOneWidget);
+      expect(find.text('Documents'), findsOneWidget);
       expect(find.text('invoice.pdf'), findsOneWidget);
-      expect(find.text('Upload'), findsOneWidget);
-      expect(find.text('Add Document'), findsOneWidget);
+      expect(find.text('Preview'), findsOneWidget);
+      expect(find.text('Add File'), findsOneWidget);
       // Delete icon is hidden for Branch Manager
       expect(find.byIcon(Icons.delete_outline_rounded), findsNothing);
     },
@@ -819,10 +824,10 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Attach Documents'), findsOneWidget);
+      expect(find.text('Documents'), findsOneWidget);
       expect(find.text('contract.pdf'), findsOneWidget);
-      expect(find.text('Upload'), findsOneWidget);
-      expect(find.text('Add Document'), findsOneWidget);
+      expect(find.text('Preview'), findsOneWidget);
+      expect(find.text('Add File'), findsOneWidget);
       // Delete icon is visible for Coordinator
       expect(find.byIcon(Icons.delete_outline_rounded), findsOneWidget);
     },

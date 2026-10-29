@@ -5,10 +5,17 @@ import '../report_data.dart';
 import '../task_report_page.dart';
 import '../widgets/report_menu_card.dart';
 
-/// Report & Activity landing screen.
-/// Keeps data cleanly separated in `report_data.dart` and UI modular in `widgets/`.
+/// Report & Activity landing screen with the 2 section cards (Task Report & Activity).
+/// Clicking on Activity opens the live booking history list.
 class ReportActivity extends StatelessWidget {
-  const ReportActivity({super.key});
+  final ActivityViewModel? activityViewModel;
+  final ReportViewModel? reportViewModel;
+
+  const ReportActivity({
+    super.key,
+    this.activityViewModel,
+    this.reportViewModel,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -40,7 +47,9 @@ class ReportActivity extends StatelessWidget {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => const ActivityPage(),
+                            builder: (context) => ActivityPage(
+                              viewModel: activityViewModel,
+                            ),
                           ),
                         );
                       } else if (item.title == 'Report 1' ||
@@ -48,7 +57,9 @@ class ReportActivity extends StatelessWidget {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => const TaskReportPage(),
+                            builder: (context) => TaskReportPage(
+                              viewModel: reportViewModel,
+                            ),
                           ),
                         );
                       }

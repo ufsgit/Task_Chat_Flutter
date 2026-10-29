@@ -68,7 +68,8 @@ class _BottomNavigatorState extends State<BottomNavigator> {
       _coordinatorViewModel = widget.coordinatorViewModel!;
       _isLocalCoordinatorViewModel = false;
     } else {
-      _coordinatorViewModel = CoordinatorViewModel();
+      _coordinatorViewModel =
+          CoordinatorViewModel(todayViewModel: _todayViewModel);
       _isLocalCoordinatorViewModel = true;
     }
 

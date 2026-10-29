@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/theme.dart';
+import '../../core/widgets/user_circle_avatar.dart';
 import '../activity_data.dart';
 
 /// Reusable card widget for displaying an activity record.
@@ -22,30 +23,25 @@ class ActivityItemCard extends StatelessWidget {
           width: 1.2,
         ),
       ),
-      padding: const EdgeInsets.all(14),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Circular Avatar Badge
-          Container(
-            width: 46,
-            height: 46,
-            decoration: BoxDecoration(
-              color: item.avatarBgColor,
-              shape: BoxShape.circle,
-            ),
-            child: Center(
-              child: Text(
-                item.avatarLetter,
-                style: TextStyle(
-                  color: item.avatarTextColor,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Circular Person Avatar matching Today page
+                UserCircleAvatar(
+                  size: 46,
+                  backgroundColor: item.avatarBgColor,
+                  iconColor: item.avatarTextColor,
+                  status: item.statusTag ?? item.status,
+                  name: item.title,
                 ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 14),
+                const SizedBox(width: 14),
 
           // Main Content
           Expanded(
@@ -149,63 +145,14 @@ class ActivityItemCard extends StatelessWidget {
                     ),
                   ),
                 ],
-
-                // Optional Sub-card / Note box (e.g. Rescheduled to monday, Tomorrow 10:00 AM...)
-                if (item.noteText != null) ...[
-                  const SizedBox(height: 8),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: isDark
-                          ? AppDarkColors.surfaceSecondary
-                          : AppColors.surfaceWhite,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: isDark ? AppDarkColors.border : AppColors.border,
-                        width: 1,
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        if (item.noteIcon != null) ...[
-                          Icon(
-                            item.noteIcon,
-                            size: 16,
-                            color:
-                                item.noteIconColor ??
-                                (isDark
-                                    ? AppDarkColors.textSubtitle
-                                    : const Color(0xFF64748B)),
-                          ),
-                          const SizedBox(width: 8),
-                        ],
-                        Expanded(
-                          child: Text(
-                            item.noteText!,
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: item.subtitlePrefix != null
-                                  ? FontWeight.w700
-                                  : FontWeight.w500,
-                              color: isDark
-                                  ? AppDarkColors.textPrimary
-                                  : AppColors.textPrimary,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
               ],
             ),
           ),
         ],
       ),
-    );
+    ),
+  ),
+),
+);
   }
 }

@@ -107,26 +107,35 @@ void invalidateCoordinatorCache() {
   _cachedCoordinatorChatItems = [];
 }
 
+final bool _coordinatorResetHookRegistered = () {
+  TodayViewModel.registerOnReset(invalidateCoordinatorCache);
+  return true;
+}();
+
 /// Separated data source for Coordinator (formerly Super Admin).
 /// Wraps centralized chat items with the extra role badge field ('Branch Manager')
 /// and assigned branch manager names.
 List<Map<String, dynamic>> get coordinatorChatItems {
+  // Ensure reset listener is registered
+  assert(_coordinatorResetHookRegistered);
   final currentVersion = todayChatItemsVersion;
-  if (todayChatItems.isEmpty) {
+  final items =
+      TodayViewModel.currentSession?.todayChatItems ?? todayChatItems;
+  if (items.isEmpty) {
     _lastTodayLength = 0;
     _lastTodayVersion = currentVersion;
     _cachedCoordinatorChatItems = [];
     return _cachedCoordinatorChatItems;
   }
   if (_cachedCoordinatorChatItems.isNotEmpty &&
-      _lastTodayLength == todayChatItems.length &&
+      _lastTodayLength == items.length &&
       _lastTodayVersion == currentVersion) {
     return _cachedCoordinatorChatItems;
   }
   final managers = availableBranchManagers;
-  _lastTodayLength = todayChatItems.length;
+  _lastTodayLength = items.length;
   _lastTodayVersion = currentVersion;
-  _cachedCoordinatorChatItems = todayChatItems.asMap().entries.map((entry) {
+  _cachedCoordinatorChatItems = items.asMap().entries.map((entry) {
     final index = entry.key;
     final item = entry.value;
     final assignedManager = managers[index % managers.length];

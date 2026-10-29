@@ -37,11 +37,11 @@ void main() {
       ),
     );
 
-    // Only Add Document button is shown for upload, not "Upload"
-    expect(find.text('Add Document'), findsOneWidget);
+    // Only Add File button is shown for upload, not "Upload"
+    expect(find.text('Add File'), findsOneWidget);
     expect(find.text('Upload'), findsNothing);
 
-    await tester.tap(find.text('Add Document'));
+    await tester.tap(find.text('Add File'));
     await tester.pump();
     expect(attached, isTrue);
   });

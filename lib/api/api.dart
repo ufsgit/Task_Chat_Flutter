@@ -15,4 +15,5 @@ abstract final class ApiConfig {
   static const String uploads = '$baseUrl/api/uploads/multiple';
   static const String multipleUploads = uploads;
   static const String dashboard = '$baseUrl/api/mobile-dashboard/metrics';
+  static const String history_list = '$baseUrl/api/booking-history';
 }

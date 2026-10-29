@@ -55,7 +55,7 @@ class AuthenticatedClient extends http.BaseClient {
       final storage = tokenStorage ?? TokenStorage();
       await storage.deleteToken();
       await UserProfileData.clear();
-      todayChatItems.clear();
+      TodayViewModel.resetSession();
     } catch (_) {}
 
     if (onUnauthorized != null) {

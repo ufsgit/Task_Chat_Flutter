@@ -55,7 +55,7 @@ class SettingsViewModel extends ChangeNotifier {
     try {
       await UserProfileData.clear();
       await _tokenStorage.deleteToken();
-      todayChatItems.clear();
+      TodayViewModel.resetSession();
       _profile = null;
     } finally {
       _isLoading = false;

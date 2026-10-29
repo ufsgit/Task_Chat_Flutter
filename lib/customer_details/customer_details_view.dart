@@ -6,6 +6,8 @@ import '../core/widgets/circular_back_button.dart';
 import '../core/widgets/document_preview_upload_page.dart';
 import '../core/slide_up_route.dart';
 import '../core/theme.dart';
+import '../report_activity/activity/activity_model.dart';
+import '../report_activity/activity/booking_history_page.dart';
 import '../update_status/branch_manager/branch_manager_update_status_view.dart';
 import '../update_status/coordinators/coordinator_update_status_view.dart';
 import '../update_status/status_update_result.dart';
@@ -327,6 +329,29 @@ class _CustomerDetailsViewState extends State<CustomerDetailsView> {
                       _handleDeleteContact();
                     } else if (value == 'Edit' || value == 'Edit Contact') {
                       _handleEditContact();
+                    } else if (value == 'History' || value == 'Booking History') {
+                      Navigator.of(context, rootNavigator: true).push(
+                        MaterialPageRoute(
+                          builder: (_) => BookingHistoryPage(
+                            initialBooking: ActivityModel(
+                              id: _viewModel.customer.id,
+                              bookingId: int.tryParse(_viewModel.customer.id),
+                              title: _viewModel.customer.name,
+                              avatarLetter: _viewModel.customer.name.isNotEmpty
+                                  ? _viewModel.customer.name[0].toUpperCase()
+                                  : 'C',
+                              avatarBgColor: const Color(0xFFDCFCE7),
+                              avatarTextColor: const Color(0xFF16A34A),
+                              date: _viewModel.customer.scheduleDate ?? 'Today',
+                              statusTag: _viewModel.customer.status,
+                              notes: _viewModel.customer.notes,
+                              subtitleHighlight:
+                                  _viewModel.customer.branchHeadName,
+                              location: _viewModel.customer.addressLine2,
+                            ),
+                          ),
+                        ),
+                      );
                     } else {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
@@ -337,6 +362,17 @@ class _CustomerDetailsViewState extends State<CustomerDetailsView> {
                     }
                   },
                   itemBuilder: (context) => [
+                    PopupMenuItem(
+                      value: 'History',
+                      child: Text(
+                        'Booking History',
+                        style: TextStyle(
+                          fontFamily: 'Helvetica Neue',
+                          color: primaryTextColor,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
                     PopupMenuItem(
                       value: 'Edit',
                       child: Text(

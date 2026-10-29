@@ -8,8 +8,13 @@ import '../core/theme.dart';
 import '../login_page/token_storage.dart';
 import 'today_model.dart';
 
-/// Centralized in-memory list for Today chat items, populated dynamically from the API.
-final List<Map<String, dynamic>> todayChatItems = [];
+/// Fallback list for legacy / unauthenticated usage when no TodayViewModel session is active.
+final List<Map<String, dynamic>> _legacyTodayChatItems = [];
+
+/// Centralized in-memory list for Today chat items, scoped to the current authenticated session.
+/// Scoped [TodayViewModel.todayChatItems] should be preferred.
+List<Map<String, dynamic>> get todayChatItems =>
+    TodayViewModel.currentSession?.todayChatItems ?? _legacyTodayChatItems;
 
 /// Updates the status and appearance of a chat item in a given list of chat items by customer title/name.
 bool updateChatItemInList(
@@ -65,20 +70,31 @@ bool updateChatItemInList(
   return false;
 }
 
-/// Updates the status and appearance of a chat item by customer title/name in the shared list.
+/// Updates the status and appearance of a chat item by customer title/name in the active session.
 void updateChatItemStatus({
   required String customerName,
   required String newStatus,
   String? newLocation,
   String? newDate,
 }) {
+  final targetList =
+      TodayViewModel.currentSession?.todayChatItems ?? _legacyTodayChatItems;
   final updated = updateChatItemInList(
-    todayChatItems,
+    targetList,
     customerName: customerName,
     newStatus: newStatus,
     newLocation: newLocation,
     newDate: newDate,
   );
+  if (targetList != _legacyTodayChatItems) {
+    updateChatItemInList(
+      _legacyTodayChatItems,
+      customerName: customerName,
+      newStatus: newStatus,
+      newLocation: newLocation,
+      newDate: newDate,
+    );
+  }
   if (updated) {
     _todayVersion++;
   }
@@ -90,6 +106,30 @@ void incrementTodayChatItemsVersion() => _todayVersion++;
 
 /// ViewModel managing state, search, filters, and API data fetching for TodayPage.
 class TodayViewModel extends ChangeNotifier {
+  static TodayViewModel? currentSession;
+
+  bool _isDisposed = false;
+  bool get isDisposed => _isDisposed;
+
+  static final List<VoidCallback> _onResetCallbacks = [];
+  static void registerOnReset(VoidCallback callback) => _onResetCallbacks.add(callback);
+  static void unregisterOnReset(VoidCallback callback) => _onResetCallbacks.remove(callback);
+
+  /// Resets the current session, clearing all in-memory chat items and unauthenticated state.
+  static void resetSession() {
+    final session = currentSession;
+    currentSession = null;
+    _legacyTodayChatItems.clear();
+    if (session != null && !session._isDisposed) {
+      session.clear();
+    }
+    for (final cb in List.of(_onResetCallbacks)) {
+      try {
+        cb();
+      } catch (_) {}
+    }
+  }
+
   final http.Client _client;
   final bool _isInternalClient;
   final TokenStorage? tokenStorage;
@@ -99,19 +139,44 @@ class TodayViewModel extends ChangeNotifier {
     http.Client? client,
     this.tokenStorage,
     Duration? debounceDuration,
+    List<Map<String, dynamic>>? initialChatItems,
   }) : _client = client ?? AuthenticatedClient(),
        _isInternalClient = client == null,
        debounceDuration =
            debounceDuration ??
            (TokenStorage.isTestEnvironment
                ? Duration.zero
-               : const Duration(milliseconds: 300));
+               : const Duration(milliseconds: 300)) {
+    if (initialChatItems != null) {
+      _chatItems.addAll(initialChatItems);
+    } else if (currentSession != null &&
+        currentSession!.todayChatItems.isNotEmpty &&
+        !identical(currentSession, this)) {
+      _chatItems.addAll(currentSession!.todayChatItems);
+    } else if (_legacyTodayChatItems.isNotEmpty) {
+      _chatItems.addAll(_legacyTodayChatItems);
+    }
+    currentSession = this;
+  }
 
   Timer? _searchDebounceTimer;
   bool _isLoading = false;
   String? _errorMessage;
   List<BookingModel> _bookings = [];
-  List<Map<String, dynamic>> _chatItems = [];
+  final List<Map<String, dynamic>> _chatItems = [];
+
+  List<Map<String, dynamic>> get chatItems => _chatItems;
+  List<Map<String, dynamic>> get todayChatItems => _chatItems;
+
+  /// Clears stored chat items and bookings for this scoped ViewModel session.
+  void clear() {
+    _bookings.clear();
+    _chatItems.clear();
+    _errorMessage = null;
+    if (!_isDisposed) {
+      notifyListeners();
+    }
+  }
 
   int _selectedFilterIndex = 0; // 0: All, 1: Unread, 2: Pending
   String _selectedStatusFilter = 'All';
@@ -390,11 +455,8 @@ class TodayViewModel extends ChangeNotifier {
               .map((e) => BookingModel.fromJson(e as Map<String, dynamic>))
               .toList();
 
-          _chatItems = _bookings.map((b) => b.toChatItem()).toList();
-
-          // Sync shared in-memory list for backward compatibility with Coordinator / UpdateStatus
-          todayChatItems.clear();
-          todayChatItems.addAll(_chatItems);
+          _chatItems.clear();
+          _chatItems.addAll(_bookings.map((b) => b.toChatItem()));
           incrementTodayChatItemsVersion();
         }
       } else {
@@ -422,17 +484,25 @@ class TodayViewModel extends ChangeNotifier {
       newLocation: newLocation,
       newDate: newDate,
     );
-    updateChatItemStatus(
-      customerName: customerName,
-      newStatus: newStatus,
-      newLocation: newLocation,
-      newDate: newDate,
-    );
+    if (_legacyTodayChatItems.isNotEmpty) {
+      updateChatItemInList(
+        _legacyTodayChatItems,
+        customerName: customerName,
+        newStatus: newStatus,
+        newLocation: newLocation,
+        newDate: newDate,
+      );
+    }
+    incrementTodayChatItemsVersion();
     notifyListeners();
   }
 
   @override
   void dispose() {
+    _isDisposed = true;
+    if (identical(currentSession, this)) {
+      currentSession = null;
+    }
     _searchDebounceTimer?.cancel();
     if (_isInternalClient) {
       _client.close();
