@@ -356,6 +356,7 @@ class _CoordinatorViewState extends State<CoordinatorView> {
                                                   .where((s) => s.isNotEmpty)
                                                   .join(', '),
                                               notes: booking.notes,
+                                              staffNotes: booking.staffNotes,
                                               documents: booking.documents,
                                               hasBeenScheduled: booking.status
                                                           .toLowerCase() ==

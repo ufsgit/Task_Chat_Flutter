@@ -240,7 +240,7 @@ class _CustomerDetailsViewState extends State<CustomerDetailsView> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Contact updated successfully'),
-            backgroundColor: AppColors.whatsappGreen,
+            backgroundColor: AppColors.surfaceWhite,
           ),
         );
       } else {
@@ -329,7 +329,8 @@ class _CustomerDetailsViewState extends State<CustomerDetailsView> {
                       _handleDeleteContact();
                     } else if (value == 'Edit' || value == 'Edit Contact') {
                       _handleEditContact();
-                    } else if (value == 'History' || value == 'Booking History') {
+                    } else if (value == 'History' ||
+                        value == 'Booking History') {
                       Navigator.of(context, rootNavigator: true).push(
                         MaterialPageRoute(
                           builder: (_) => BookingHistoryPage(
@@ -566,7 +567,7 @@ class _EditContactDialogState extends State<_EditContactDialog> {
               maxLines: 2,
               style: TextStyle(color: primaryTextColor),
               decoration: const InputDecoration(
-                labelText: 'Notes',
+                labelText: 'Customer Notes',
                 hintText: 'Notes',
               ),
             ),

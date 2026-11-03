@@ -7,7 +7,6 @@ import '../api/authenticated_client.dart';
 import '../login_page/token_storage.dart';
 import '../today/today_model.dart';
 import '../today/today_view_model.dart';
-import '../update_status/coordinators/coordinator_update_status_logic.dart';
 import 'coordinator_model.dart';
 
 /// ViewModel managing state, search, API data fetching, and dynamic filtering for Coordinator.
@@ -78,7 +77,7 @@ class CoordinatorViewModel extends ChangeNotifier {
     if (dynamicManagers.isNotEmpty) {
       return ['All', ...dynamicManagers];
     }
-    return ['All', ...availableBranchManagers];
+    return const ['All'];
   }
 
   bool get hasActiveFilters =>
@@ -180,10 +179,7 @@ class CoordinatorViewModel extends ChangeNotifier {
               .map((e) => BookingModel.fromJson(e as Map<String, dynamic>))
               .toList();
 
-          final managers = availableBranchManagers;
-          _items = _bookings.asMap().entries.map((entry) {
-            final index = entry.key;
-            final booking = entry.value;
+          _items = _bookings.map((booking) {
             final baseChat = booking.toChatItem();
             final assignedManager = (booking.branchHeadName != null &&
                     booking.branchHeadName!.trim().isNotEmpty)
@@ -191,7 +187,7 @@ class CoordinatorViewModel extends ChangeNotifier {
                 : ((booking.loginName != null &&
                         booking.loginName!.trim().isNotEmpty)
                     ? booking.loginName!.trim()
-                    : managers[index % managers.length]);
+                    : 'Unassigned');
 
             return {
               ...baseChat,

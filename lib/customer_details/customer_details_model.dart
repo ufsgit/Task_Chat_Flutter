@@ -11,6 +11,7 @@ class CustomerDetailsModel {
   final String addressLine1;
   final String addressLine2;
   final String notes;
+  final String staffNotes;
   final bool hasBeenScheduled;
   final List<String> documents;
   final int? branchHeadId;
@@ -31,6 +32,7 @@ class CustomerDetailsModel {
     required this.addressLine1,
     required this.addressLine2,
     this.notes = '',
+    this.staffNotes = '',
     this.hasBeenScheduled = false,
     this.documents = const [],
     this.branchHeadId,
@@ -47,6 +49,7 @@ class CustomerDetailsModel {
     String? addressLine1,
     String? addressLine2,
     String? notes,
+    String? staffNotes,
     bool? hasBeenScheduled,
     List<String>? documents,
     int? branchHeadId,
@@ -62,6 +65,7 @@ class CustomerDetailsModel {
       addressLine1: addressLine1 ?? this.addressLine1,
       addressLine2: addressLine2 ?? this.addressLine2,
       notes: notes ?? this.notes,
+      staffNotes: staffNotes ?? this.staffNotes,
       hasBeenScheduled: hasBeenScheduled ?? this.hasBeenScheduled,
       documents: documents ?? this.documents,
       branchHeadId: branchHeadId ?? this.branchHeadId,
@@ -82,6 +86,7 @@ class CustomerDetailsModel {
     String? scheduleDate,
     String? phoneNumber,
     String? notes,
+    String? staffNotes,
     String? inquiry,
   }) {
     final resolvedStatus =
@@ -104,6 +109,7 @@ class CustomerDetailsModel {
           : '742 Evergreen Terrace',
       addressLine2: 'Springfield, OR 97477',
       notes: notes ?? '',
+      staffNotes: staffNotes ?? '',
       hasBeenScheduled: isScheduledOrCompleted,
       documents: documents ?? const [],
       branchHeadId: branchHeadId,

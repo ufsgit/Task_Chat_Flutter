@@ -81,7 +81,8 @@ class _CoordinatorUpdateStatusViewState
         StatusUpdateResult(
           status: _viewModel.selectedStatus,
           scheduleDate: _viewModel.scheduleDate,
-          notes: _viewModel.notesController.text.trim(),
+          notes: widget.customer.notes,
+          staffNotes: _viewModel.notesController.text.trim(),
           documents: _viewModel.documents,
           branchManager: _viewModel.selectedBranchManager,
         ),

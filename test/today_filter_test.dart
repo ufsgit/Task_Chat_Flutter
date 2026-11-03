@@ -123,4 +123,122 @@ void main() {
     expect(find.text('24/10/2026'), findsOneWidget);
     expect(find.text('10/24/2026'), findsNothing);
   });
+
+  testWidgets(
+      'ChatListItemTile does not overflow with extremely long title and badges',
+      (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(360, 640);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    const longTitle = 'tessssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss';
+    const longBadge = 'Branch Head - Ernakulam - Very Long District Office Title';
+
+    final mockClient = MockClient((request) async {
+      return http.Response('''
+      {
+        "data": [
+          {
+            "id": 100,
+            "name": "$longTitle",
+            "mobile": "9876543210",
+            "address": "Edapally",
+            "notes": "",
+            "status": "NEW",
+            "stateName": "Kerala",
+            "districtName": "Ernakulam",
+            "areaName": "Edapally",
+            "documents": [],
+            "scheduleDate": "10/24/2026",
+            "createdAt": "2026-10-21T10:38:24.000Z",
+            "branchHeadName": "$longBadge"
+          }
+        ]
+      }
+      ''', 200, headers: {'content-type': 'application/json'});
+    });
+    final vm = TodayViewModel(client: mockClient);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: TodayPage(viewModel: vm),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text(longTitle), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+      'TodayPage pop up arrow button appears when scrolled down and scrolls to top fast on tap',
+      (WidgetTester tester) async {
+    final mockItems = List.generate(
+      25,
+      (i) => '''
+      {
+        "id": ${i + 1},
+        "name": "Customer ${i + 1}",
+        "mobile": "987654321$i",
+        "address": "Address $i",
+        "notes": "",
+        "status": "NEW",
+        "stateName": "Kerala",
+        "districtName": "Ernakulam",
+        "areaName": "Edapally",
+        "documents": [],
+        "scheduleDate": "10/24/2026",
+        "createdAt": "2026-10-21T10:38:24.000Z"
+      }
+      ''',
+    ).join(',');
+
+    final mockClient = MockClient((request) async {
+      return http.Response('{"data": [$mockItems]}', 200,
+          headers: {'content-type': 'application/json'});
+    });
+    final vm = TodayViewModel(client: mockClient);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: TodayPage(viewModel: vm),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final scrollToTopButtonFinder = find.byKey(const Key('today_scroll_to_top_button'));
+    expect(scrollToTopButtonFinder, findsOneWidget);
+
+    // At top (offset 0), AnimatedScale should have scale 0.0
+    final AnimatedScale initialScale = tester.widget(scrollToTopButtonFinder);
+    expect(initialScale.scale, 0.0);
+
+    // Scroll down by 500 pixels
+    final listViewFinder = find.byType(ListView);
+    await tester.drag(listViewFinder, const Offset(0, -600));
+    await tester.pumpAndSettle();
+
+    // Now button should pop up (scale 1.0)
+    final AnimatedScale poppedScale = tester.widget(scrollToTopButtonFinder);
+    expect(poppedScale.scale, 1.0);
+
+    // Tap the scroll to top button
+    await tester.tap(scrollToTopButtonFinder);
+    await tester.pumpAndSettle();
+
+    // Verify it reached the top (offset <= 1.0)
+    final ScrollableState scrollable = tester.state(find.byType(Scrollable).first);
+    expect(scrollable.position.pixels, 0.0);
+
+    // Verify button scaled back down to 0.0
+    final AnimatedScale endScale = tester.widget(scrollToTopButtonFinder);
+    expect(endScale.scale, 0.0);
+  });
 }

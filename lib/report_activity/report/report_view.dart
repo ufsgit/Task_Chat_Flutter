@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/circular_back_button.dart';
-import '../widgets/attention_efficiency_card.dart';
-import '../widgets/daily_average_card.dart';
-import '../widgets/staff_performance_card.dart';
+import '../widgets/report_date_range_bar.dart';
+import '../widgets/weekly_activity_graph_card.dart';
+
 import 'report_view_model.dart';
 
 /// Report section / page displaying performance metrics, daily average, and staff tracking.
@@ -37,6 +37,7 @@ class _ReportViewState extends State<ReportView> {
       _viewModel = ReportViewModel();
       _isLocalViewModel = true;
     }
+    _viewModel.fetchGraphReport();
   }
 
   @override
@@ -59,8 +60,6 @@ class _ReportViewState extends State<ReportView> {
     return AnimatedBuilder(
       animation: _viewModel,
       builder: (context, _) {
-        final data = _viewModel.data;
-
         return RefreshIndicator(
           color: AppColors.primaryGreen,
           onRefresh: _viewModel.refreshReport,
@@ -70,16 +69,29 @@ class _ReportViewState extends State<ReportView> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // 1. Attention & Efficiency Card
-                AttentionEfficiencyCard(data: data.attentionEfficiency),
-                const SizedBox(height: 16),
+                // 1. Date Range Filter Bar (From Date & To Date) - FIRST
+                ReportDateRangeBar(
+                  dateFrom: _viewModel.dateFrom,
+                  dateTo: _viewModel.dateTo,
+                  onDateRangeChanged: (from, to) {
+                    _viewModel.setDateRange(from: from, to: to);
+                  },
+                  onClear: () {
+                    _viewModel.clearDateRange();
+                  },
+                ),
+                const SizedBox(height: 14),
 
-                // 2. Staff Performance Card
-                StaffPerformanceCard(staffList: data.staffList),
+                // 2. Weekly Activity Graph from /api/reports/bookings
+                WeeklyActivityGraphCard(
+                  graphData: _viewModel.graphData,
+                  isLoading: _viewModel.isGraphLoading,
+                  errorMessage: _viewModel.graphErrorMessage,
+                  dateFrom: _viewModel.dateFrom,
+                  dateTo: _viewModel.dateTo,
+                  onRefresh: () => _viewModel.fetchGraphReport(force: true),
+                ),
                 const SizedBox(height: 16),
-
-                // 3. Daily Average Summary Card with Stacked Bar Chart
-                DailyAverageCard(summary: data.dailyAverage),
               ],
             ),
           ),
@@ -106,11 +118,7 @@ class _ReportViewState extends State<ReportView> {
         leadingWidth: 58,
         leading: Padding(
           padding: const EdgeInsets.only(left: 16.0),
-          child: Center(
-            child: CircularBackButton(
-              onBack: _handleBack,
-            ),
-          ),
+          child: Center(child: CircularBackButton(onBack: _handleBack)),
         ),
         titleSpacing: 8,
         title: Text(
@@ -123,9 +131,7 @@ class _ReportViewState extends State<ReportView> {
           ),
         ),
       ),
-      body: SafeArea(
-        child: _buildBody(context, isDark),
-      ),
+      body: SafeArea(child: _buildBody(context, isDark)),
     );
   }
 }

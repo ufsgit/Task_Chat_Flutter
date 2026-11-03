@@ -39,7 +39,7 @@ void main() {
         'clientName': 'Abhijith',
         'status': 'Scheduled',
         'scheduleDate': '10/24/2024',
-        'notes': 'Client confirmed fitting for tomorrow afternoon.',
+        'staffNotes': 'Client confirmed fitting for tomorrow afternoon.',
         'createdBy': 4,
         'createdByName': 'Rajesh Menon',
       };
@@ -69,35 +69,38 @@ void main() {
     expect(cancelledVis.showSchedule, isFalse);
   });
 
-  test('Setting status to Completed automatically assigns current date and hides schedule', () {
-    const customer = CustomerDetailsData(
-      id: '1',
-      name: 'Test Customer',
-      inquiry: 'Fitmate Inquiry',
-      status: 'Scheduled',
-      phoneNumber: '1234567890',
-      addressLine1: 'Test',
-      addressLine2: '',
-      notes: '',
-      hasBeenScheduled: true,
-    );
+  test(
+    'Setting status to Completed automatically assigns current date and hides schedule',
+    () {
+      const customer = CustomerDetailsData(
+        id: '1',
+        name: 'Test Customer',
+        inquiry: 'Fitmate Inquiry',
+        status: 'Scheduled',
+        phoneNumber: '1234567890',
+        addressLine1: 'Test',
+        addressLine2: '',
+        notes: '',
+        hasBeenScheduled: true,
+      );
 
-    final vm = BranchManagerUpdateStatusViewModel(customer: customer);
-    expect(vm.showSchedule, isTrue);
+      final vm = BranchManagerUpdateStatusViewModel(customer: customer);
+      expect(vm.showSchedule, isTrue);
 
-    vm.setStatus('Completed');
-    expect(vm.showSchedule, isFalse);
-    expect(vm.scheduleDate, equals(formatCurrentDate()));
-    vm.dispose();
+      vm.setStatus('Completed');
+      expect(vm.showSchedule, isFalse);
+      expect(vm.scheduleDate, equals(formatCurrentDate()));
+      vm.dispose();
 
-    final coordVm = CoordinatorUpdateStatusViewModel(customer: customer);
-    expect(coordVm.showSchedule, isTrue);
+      final coordVm = CoordinatorUpdateStatusViewModel(customer: customer);
+      expect(coordVm.showSchedule, isTrue);
 
-    coordVm.setStatus('Completed');
-    expect(coordVm.showSchedule, isFalse);
-    expect(coordVm.scheduleDate, equals(formatCurrentDate()));
-    coordVm.dispose();
-  });
+      coordVm.setStatus('Completed');
+      expect(coordVm.showSchedule, isFalse);
+      expect(coordVm.scheduleDate, equals(formatCurrentDate()));
+      coordVm.dispose();
+    },
+  );
 
   testWidgets(
     'UpdateStatusPage hides Schedule card when Cancelled is selected',
@@ -221,7 +224,7 @@ void main() {
     expect(parsedBody['clientId'], 1);
     expect(parsedBody['clientName'], 'Abhijith');
     expect(parsedBody['status'], 'Scheduled');
-    expect(parsedBody['notes'], 'Fitting confirmed');
+    expect(parsedBody['staffNotes'], 'Fitting confirmed');
     expect(parsedBody['createdBy'], 4);
     expect(parsedBody['createdByName'], 'Rajesh Menon');
 
@@ -349,11 +352,11 @@ void main() {
   test('ApiConfig contains branch_head_listing and users endpoint', () {
     expect(
       ApiConfig.branch_head_listing,
-      '${ApiConfig.baseUrl}/api/users?role=branch_head',
+      '${ApiConfig.baseUrl}/api/users/get_branch_heads_for_status_update',
     );
     expect(
       ApiConfig.branch_manager_listing,
-      '${ApiConfig.baseUrl}/api/users?role=branch_head',
+      '${ApiConfig.baseUrl}/api/users/get_branch_heads_for_status_update',
     );
     expect(ApiConfig.users, '${ApiConfig.baseUrl}/api/users');
   });
@@ -768,7 +771,9 @@ void main() {
         branchHeadName: 'Branch Head User',
       );
 
-      final mockClient = MockClient((request) async => http.Response('{}', 200));
+      final mockClient = MockClient(
+        (request) async => http.Response('{}', 200),
+      );
       final storage = TokenStorage();
       await storage.savetoken('bm_token');
 
@@ -809,7 +814,9 @@ void main() {
         branchHeadName: 'Branch Head User',
       );
 
-      final mockClient = MockClient((request) async => http.Response('{}', 200));
+      final mockClient = MockClient(
+        (request) async => http.Response('{}', 200),
+      );
       final storage = TokenStorage();
       await storage.savetoken('coord_token');
 

@@ -131,8 +131,11 @@ class CustomerHeaderCard extends StatelessWidget {
           Divider(height: 1, thickness: 1, color: colors.border),
           const SizedBox(height: 16),
 
-          // 5. Note Block
+          // 5. Note Block (Customer Notes)
           _buildNoteSection(context, colors),
+          const SizedBox(height: 16),
+          // 6. Staff Notes Block (from Update Status)
+          _buildStaffNoteSection(context, colors),
         ],
       ),
     );
@@ -363,6 +366,47 @@ class CustomerHeaderCard extends StatelessWidget {
                 ),
               ),
           ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStaffNoteSection(BuildContext context, AppThemeColors colors) {
+    final hasStaffNotes = customer.staffNotes.trim().isNotEmpty;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'STAFF NOTES',
+          style: TextStyle(
+            fontFamily: 'Helvetica Neue',
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            color: colors.textSubtitle,
+            letterSpacing: 0.6,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            color: colors.surfaceSecondary,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: colors.border, width: 1),
+          ),
+          child: Text(
+            hasStaffNotes ? customer.staffNotes.trim() : 'No staff notes added',
+            style: TextStyle(
+              fontFamily: 'Helvetica Neue',
+              fontSize: 14,
+              fontWeight: FontWeight.w400,
+              color: hasStaffNotes ? colors.textPrimary : colors.textSubtitle,
+              height: 1.45,
+              fontStyle: hasStaffNotes ? FontStyle.normal : FontStyle.italic,
+            ),
+          ),
         ),
       ],
     );

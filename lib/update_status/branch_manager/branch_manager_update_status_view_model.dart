@@ -48,7 +48,9 @@ class BranchManagerUpdateStatusViewModel extends ChangeNotifier {
       _selectedStatus = 'Scheduled';
     }
 
-    _notesController = TextEditingController(text: customer.notes);
+    _notesController = TextEditingController(
+      text: customer.staffNotes.isNotEmpty ? customer.staffNotes : '',
+    );
     _scheduleDate =
         (customer.scheduleDate != null && customer.scheduleDate!.isNotEmpty)
         ? customer.scheduleDate!
@@ -102,9 +104,15 @@ class BranchManagerUpdateStatusViewModel extends ChangeNotifier {
         _statusChips = chips;
 
         // Ensure selectedStatus uses chip.label for display
-        final matchingChip = statusChips.where((c) =>
-            c.label.toLowerCase().trim() == _selectedStatus.toLowerCase().trim() ||
-            c.code.toLowerCase().trim() == _selectedStatus.toLowerCase().trim()).firstOrNull;
+        final matchingChip = statusChips
+            .where(
+              (c) =>
+                  c.label.toLowerCase().trim() ==
+                      _selectedStatus.toLowerCase().trim() ||
+                  c.code.toLowerCase().trim() ==
+                      _selectedStatus.toLowerCase().trim(),
+            )
+            .firstOrNull;
         if (matchingChip != null) {
           _selectedStatus = matchingChip.label;
         } else if (statusChips.isNotEmpty) {
@@ -143,9 +151,13 @@ class BranchManagerUpdateStatusViewModel extends ChangeNotifier {
   bool get showSchedule => visibility.showSchedule;
 
   void setStatus(String status) {
-    final matchingChip = statusChips.where((c) =>
-        c.label.toLowerCase().trim() == status.toLowerCase().trim() ||
-        c.code.toLowerCase().trim() == status.toLowerCase().trim()).firstOrNull;
+    final matchingChip = statusChips
+        .where(
+          (c) =>
+              c.label.toLowerCase().trim() == status.toLowerCase().trim() ||
+              c.code.toLowerCase().trim() == status.toLowerCase().trim(),
+        )
+        .firstOrNull;
     final resolvedStatus = matchingChip != null ? matchingChip.label : status;
 
     if (_selectedStatus != resolvedStatus) {

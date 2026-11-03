@@ -71,22 +71,24 @@ class ChatListItemTile extends StatelessWidget {
                   children: [
                     // Top Row: Title + Date
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       crossAxisAlignment: CrossAxisAlignment.baseline,
                       textBaseline: TextBaseline.alphabetic,
                       children: [
-                        Text(
-                          title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontFamily: 'Helvetica Neue',
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: primaryTextColor,
-                            letterSpacing: -0.1,
+                        Expanded(
+                          child: Text(
+                            title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontFamily: 'Helvetica Neue',
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: primaryTextColor,
+                              letterSpacing: -0.1,
+                            ),
                           ),
                         ),
+                        const SizedBox(width: 8),
                         Text(
                           date,
                           style: TextStyle(
@@ -167,21 +169,25 @@ class ChatListItemTile extends StatelessWidget {
                         // Optional extra badge (e.g. 'Branch Manager' for Super Admin)
                         if (extraBadgeText != null && extraBadgeText!.isNotEmpty) ...[
                           const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 2.5,
-                            ),
-                            decoration: BoxDecoration(
-                              color: extraBadgeBgColor ?? const Color(0xFFDCFCE7),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Text(
-                              extraBadgeText!,
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700,
-                                color: extraBadgeTextColor ?? AppColors.primaryGreen,
+                          Flexible(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 2.5,
+                              ),
+                              decoration: BoxDecoration(
+                                color: extraBadgeBgColor ?? const Color(0xFFDCFCE7),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Text(
+                                extraBadgeText!,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  color: extraBadgeTextColor ?? AppColors.primaryGreen,
+                                ),
                               ),
                             ),
                           ),

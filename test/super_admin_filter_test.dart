@@ -41,9 +41,23 @@ void main() {
   testWidgets(
       'SuperAdminPage renders search bar and filter button with Status and Branch Manager options',
       (WidgetTester tester) async {
+    final vm = CoordinatorViewModel(
+      initialItems: [
+        {
+          'id': '1',
+          'title': 'Test Customer',
+          'location': 'Bangalore',
+          'tagText': 'New',
+          'date': '01/01/2026',
+          'branchManager': 'Sarah Jenkins',
+          'isPending': true,
+        }
+      ],
+    );
+
     await tester.pumpWidget(
-      const MaterialApp(
-        home: SuperAdminPage(),
+      MaterialApp(
+        home: SuperAdminPage(viewModel: vm),
       ),
     );
 

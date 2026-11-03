@@ -10,6 +10,7 @@ class BookingModel {
   final String mobile;
   final String address;
   final String notes;
+  final String staffNotes;
   final String status;
   final int? loginRoleId;
   final int? loginId;
@@ -33,6 +34,7 @@ class BookingModel {
     required this.mobile,
     required this.address,
     required this.notes,
+    this.staffNotes = '',
     required this.status,
     this.loginRoleId,
     this.loginId,
@@ -51,6 +53,56 @@ class BookingModel {
     this.scheduleDate,
   });
 
+  BookingModel copyWith({
+    int? id,
+    String? name,
+    String? mobile,
+    String? address,
+    String? notes,
+    String? staffNotes,
+    String? status,
+    int? loginRoleId,
+    int? loginId,
+    String? loginName,
+    int? branchHeadId,
+    String? branchHeadName,
+    int? stateId,
+    String? stateName,
+    int? districtId,
+    String? districtName,
+    int? areaId,
+    String? areaName,
+    List<String>? documents,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    String? scheduleDate,
+  }) {
+    return BookingModel(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      mobile: mobile ?? this.mobile,
+      address: address ?? this.address,
+      notes: notes ?? this.notes,
+      staffNotes: staffNotes ?? this.staffNotes,
+      status: status ?? this.status,
+      loginRoleId: loginRoleId ?? this.loginRoleId,
+      loginId: loginId ?? this.loginId,
+      loginName: loginName ?? this.loginName,
+      branchHeadId: branchHeadId ?? this.branchHeadId,
+      branchHeadName: branchHeadName ?? this.branchHeadName,
+      stateId: stateId ?? this.stateId,
+      stateName: stateName ?? this.stateName,
+      districtId: districtId ?? this.districtId,
+      districtName: districtName ?? this.districtName,
+      areaId: areaId ?? this.areaId,
+      areaName: areaName ?? this.areaName,
+      documents: documents ?? this.documents,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      scheduleDate: scheduleDate ?? this.scheduleDate,
+    );
+  }
+
   factory BookingModel.fromJson(Map<String, dynamic> json) {
     final rawDocs = json['documents'];
     final docs = rawDocs is List
@@ -65,6 +117,7 @@ class BookingModel {
       mobile: json['mobile']?.toString() ?? '',
       address: json['address']?.toString() ?? '',
       notes: json['notes']?.toString() ?? '',
+      staffNotes: json['staffNotes']?.toString() ?? json['staff_notes']?.toString() ?? '',
       status: json['status']?.toString() ?? 'NEW',
       loginRoleId: json['loginRoleId'] as int?,
       loginId: json['loginId'] as int?,
@@ -166,7 +219,9 @@ class BookingModel {
       'notes': notes,
       'documents': documents,
       'booking': this,
-      'searchIndex': '$name $status $locationStr $formattedDate'.toLowerCase(),
+      'searchIndex':
+          '$name $mobile $status $locationStr $formattedDate $notes $areaName $districtName'
+              .toLowerCase(),
     };
   }
 }

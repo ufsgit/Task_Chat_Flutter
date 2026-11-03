@@ -90,7 +90,7 @@ class StatusUpdateRequest {
     'clientName': clientName,
     'status': status,
     'scheduleDate': scheduleDate,
-    'notes': notes,
+    'staffNotes': notes,
     'createdBy': createdBy,
     'createdByName': createdByName,
     if (branchManager != null && branchManager!.isNotEmpty)
@@ -111,7 +111,7 @@ class StatusUpdateRequest {
       clientName: json['clientName']?.toString() ?? '',
       status: json['status']?.toString() ?? '',
       scheduleDate: json['scheduleDate']?.toString() ?? '',
-      notes: json['notes']?.toString() ?? '',
+      notes: json['staffNotes']?.toString() ?? json['notes']?.toString() ?? '',
       createdBy: json['createdBy'] is int
           ? json['createdBy'] as int
           : int.tryParse(json['createdBy']?.toString() ?? '') ?? 0,
@@ -157,12 +157,6 @@ class BranchManagerUpdateStatusLogic {
     List<String>? documents,
   }) async {
     final isTest = TokenStorage.isTestEnvironment;
-    String? token;
-    try {
-      token = await tokenStorage.getToken().timeout(
-        isTest ? const Duration(milliseconds: 50) : const Duration(seconds: 5),
-      );
-    } catch (_) {}
 
     UserModel? user;
     try {
@@ -190,17 +184,11 @@ class BranchManagerUpdateStatusLogic {
                 : 'Branch Manager'),
     );
 
+    final headers = await tokenStorage.authHeaders(includeContentType: true);
     final response = await client
         .post(
           Uri.parse(ApiConfig.statusUpdate),
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            if (token != null && token.isNotEmpty)
-              'authorization': token.startsWith('Bearer ')
-                  ? token
-                  : 'Bearer $token',
-          },
+          headers: headers,
           body: jsonEncode(requestPayload.toJson()),
         )
         .timeout(const Duration(seconds: 10));
@@ -212,14 +200,7 @@ class BranchManagerUpdateStatusLogic {
           await client
               .put(
                 bookingUri,
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Accept': 'application/json',
-                  if (token != null && token.isNotEmpty)
-                    'authorization': token.startsWith('Bearer ')
-                        ? token
-                        : 'Bearer $token',
-                },
+                headers: headers,
                 body: jsonEncode({'documents': documents}),
               )
               .timeout(const Duration(seconds: 10));
@@ -230,6 +211,7 @@ class BranchManagerUpdateStatusLogic {
         customerName: customer.name,
         newStatus: status,
         newDate: effectiveDate,
+        newStaffNotes: notes.trim(),
       );
       return true;
     }

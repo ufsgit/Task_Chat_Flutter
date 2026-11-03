@@ -24,12 +24,6 @@ const List<String> availableSuperAdminStatusOptions =
     availableCoordinatorStatusOptions;
 
 /// Available branch managers for assignment by Coordinator (fallback).
-const List<String> availableBranchManagers = [
-  'Sarah Jenkins',
-  'Ramesh Kumar',
-  'Alex Morgan',
-  'Priya Sharma',
-];
 
 /// Data model representing a Branch Head user returned by GET /api/users?role=branch_head.
 class BranchHeadUser {
@@ -127,24 +121,12 @@ class CoordinatorUpdateStatusLogic {
     ).fetchStatusChips();
   }
 
-  /// Fetches branch head managers from backend GET /api/users?role=branch_head.
+  /// Fetches branch head managers from backend GET /api/users/get_branch_heads_for_status_update.
   Future<List<BranchHeadUser>> fetchBranchManagers() async {
-    final isTest = TokenStorage.isTestEnvironment;
-    String? token;
-    try {
-      token = await tokenStorage
-          .getToken()
-          .timeout(isTest ? const Duration(milliseconds: 50) : const Duration(seconds: 5));
-    } catch (_) {}
-
     try {
       final response = await client.get(
         Uri.parse(ApiConfig.branch_head_listing),
-        headers: {
-          'Accept': 'application/json',
-          if (token != null && token.isNotEmpty)
-            'authorization': token.startsWith('Bearer ') ? token : 'Bearer $token',
-        },
+        headers: await tokenStorage.authHeaders(),
       ).timeout(const Duration(seconds: 10));
 
       if (response.statusCode >= 200 && response.statusCode < 300) {
@@ -165,6 +147,8 @@ class CoordinatorUpdateStatusLogic {
   }
 
   /// Submits the updated status to the backend POST /api/status endpoint.
+  /// Callers must resolve [branchManagerId], [branchManagerName], [districtId],
+  /// and [districtName] before calling — use [selectedBranchHead] from the ViewModel.
   Future<bool> submitStatusUpdate({
     required CustomerDetailsData customer,
     required String status,
@@ -178,12 +162,6 @@ class CoordinatorUpdateStatusLogic {
     List<String>? documents,
   }) async {
     final isTest = TokenStorage.isTestEnvironment;
-    String? token;
-    try {
-      token = await tokenStorage
-          .getToken()
-          .timeout(isTest ? const Duration(milliseconds: 50) : const Duration(seconds: 5));
-    } catch (_) {}
 
     UserModel? user;
     try {
@@ -191,39 +169,16 @@ class CoordinatorUpdateStatusLogic {
           .timeout(isTest ? const Duration(milliseconds: 50) : const Duration(seconds: 2));
     } catch (_) {}
 
-    int effectiveCreatedBy = branchManagerId ?? 0;
-    String effectiveCreatedByName = branchManagerName ?? branchManager;
-    int? effectiveDistrictId = districtId;
-    String? effectiveDistrictName = districtName;
-
-    if ((effectiveCreatedBy == 0 || effectiveDistrictId == null || effectiveDistrictName == null) &&
-        branchManager.isNotEmpty) {
-      final managers = await fetchBranchManagers();
-      final match = managers
-          .where((m) =>
-              m.name.toLowerCase().trim() == branchManager.toLowerCase().trim() ||
-              m.username.toLowerCase().trim() == branchManager.toLowerCase().trim() ||
-              (branchManagerId != null && m.id == branchManagerId))
-          .firstOrNull;
-      if (match != null) {
-        if (effectiveCreatedBy == 0) {
-          effectiveCreatedBy = match.id;
-          effectiveCreatedByName = match.name;
-        }
-        effectiveDistrictId ??= match.districtId;
-        effectiveDistrictName ??= match.districtName;
-      }
-    }
-
-    if (effectiveCreatedBy == 0) {
-      effectiveCreatedBy = user?.id ?? 0;
-      effectiveCreatedByName = (user?.name != null && user!.name.isNotEmpty)
-          ? user.name
-          : (user?.username.isNotEmpty == true ? user!.username : 'Coordinator');
-    }
-
-    effectiveDistrictId ??= user?.districtId;
-    effectiveDistrictName ??= user?.districtName;
+    final effectiveCreatedBy = (branchManagerId != null && branchManagerId > 0)
+        ? branchManagerId
+        : (user?.id ?? 0);
+    final effectiveCreatedByName = (branchManagerName != null && branchManagerName.isNotEmpty)
+        ? branchManagerName
+        : ((user?.name != null && user!.name.isNotEmpty)
+            ? user.name
+            : (user?.username.isNotEmpty == true ? user!.username : 'Coordinator'));
+    final effectiveDistrictId = districtId ?? user?.districtId;
+    final effectiveDistrictName = districtName ?? user?.districtName;
 
     final isCompleted = status.toLowerCase() == 'completed';
     final effectiveDate = isCompleted
@@ -245,14 +200,10 @@ class CoordinatorUpdateStatusLogic {
       districtName: effectiveDistrictName,
     );
 
+    final headers = await tokenStorage.authHeaders(includeContentType: true);
     final response = await client.post(
       Uri.parse(ApiConfig.statusUpdate),
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        if (token != null && token.isNotEmpty)
-          'authorization': token.startsWith('Bearer ') ? token : 'Bearer $token',
-      },
+      headers: headers,
       body: jsonEncode(requestPayload.toJson()),
     ).timeout(const Duration(seconds: 10));
 
@@ -262,12 +213,7 @@ class CoordinatorUpdateStatusLogic {
           final bookingUri = Uri.parse('${ApiConfig.bookings}/${customer.id}');
           await client.put(
             bookingUri,
-            headers: {
-              'Content-Type': 'application/json',
-              'Accept': 'application/json',
-              if (token != null && token.isNotEmpty)
-                'authorization': token.startsWith('Bearer ') ? token : 'Bearer $token',
-            },
+            headers: headers,
             body: jsonEncode({'documents': documents}),
           ).timeout(const Duration(seconds: 10));
         } catch (_) {}
@@ -277,6 +223,7 @@ class CoordinatorUpdateStatusLogic {
         customerName: customer.name,
         newStatus: status,
         newDate: effectiveDate,
+        newStaffNotes: notes.trim(),
       );
       return true;
     }

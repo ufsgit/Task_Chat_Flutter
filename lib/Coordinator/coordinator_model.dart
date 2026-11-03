@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../core/theme.dart';
 import '../today/today_view_model.dart';
-import '../update_status/coordinators/coordinator_update_status_logic.dart';
 
 /// Available quick tab filters for Coordinator.
 const List<String> coordinatorQuickFilters = ['All', 'Unread', 'Pending'];
@@ -132,17 +131,12 @@ List<Map<String, dynamic>> get coordinatorChatItems {
       _lastTodayVersion == currentVersion) {
     return _cachedCoordinatorChatItems;
   }
-  final managers = availableBranchManagers;
-  _lastTodayLength = items.length;
-  _lastTodayVersion = currentVersion;
-  _cachedCoordinatorChatItems = items.asMap().entries.map((entry) {
-    final index = entry.key;
-    final item = entry.value;
-    final assignedManager = managers[index % managers.length];
+  _cachedCoordinatorChatItems = items.map((item) {
     return {
       ...item,
       'role': 'Branch Manager',
-      'branchManager': assignedManager,
+      // branchManager comes from live API data on the item; keep as-is
+      'branchManager': item['branchManager']?.toString() ?? item['role']?.toString() ?? 'Branch Manager',
     };
   }).toList();
   return _cachedCoordinatorChatItems;

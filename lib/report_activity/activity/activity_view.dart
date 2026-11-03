@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../api/api.dart';
+import '../../core/slide_up_route.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/circular_back_button.dart';
 import '../../today/widgets/filter_chips_bar.dart';
@@ -374,8 +375,8 @@ class _ActivityViewState extends State<ActivityView> {
                 .toList();
 
             Navigator.of(context, rootNavigator: true).push(
-              MaterialPageRoute(
-                builder: (_) => BookingHistoryPage(
+              SlideRightRoute(
+                page: BookingHistoryPage(
                   initialBooking: activityItem,
                   allActivities: userOnlyActivities.isNotEmpty
                       ? userOnlyActivities

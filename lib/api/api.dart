@@ -1,5 +1,6 @@
 /// Central API configuration.
 abstract final class ApiConfig {
+  //static const String baseUrl = 'https://steeldoorapi.ufstech.co.in';
   static const String baseUrl = 'https://fg34kvb9-5000.inc1.devtunnels.ms';
   static const String mobileLogin = '$baseUrl/api/auth/mobile-login';
   static const String bookings = '$baseUrl/api/bookings';
@@ -9,11 +10,12 @@ abstract final class ApiConfig {
   static const String status_chips = '$baseUrl/api/status';
   static const String district_listing = '$baseUrl/api/dropdowns/districts';
   static const String branch_head_listing =
-      '$baseUrl/api/users?role=branch_head';
+      '$baseUrl/api/users/get_branch_heads_for_status_update';
   static const String branch_manager_listing = branch_head_listing;
   static const String users = '$baseUrl/api/users';
   static const String uploads = '$baseUrl/api/uploads/multiple';
   static const String multipleUploads = uploads;
   static const String dashboard = '$baseUrl/api/mobile-dashboard/metrics';
   static const String history_list = '$baseUrl/api/booking-history';
+  static const String report_graph = '$baseUrl/api/reports/bookings';
 }

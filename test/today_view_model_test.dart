@@ -375,6 +375,100 @@ void main() {
       await vm.fetchBookings(force: true);
       expect(capturedUri!.queryParameters, isEmpty);
     });
+
+    test('TodayViewModel pagination loads next page and appends bookings seamlessly', () async {
+      final List<Uri> requestedUris = [];
+      final page1Response = json.encode({
+        'data': List.generate(
+          15,
+          (i) => {
+            'id': 1000 + i,
+            'name': 'Customer $i',
+            'mobile': '+91 98000000$i',
+            'address': 'Address $i',
+            'notes': 'Note $i',
+            'status': 'New',
+            'stateName': 'Kerala',
+            'districtName': 'Ernakulam',
+            'areaName': 'Area $i',
+            'documents': [],
+          },
+        ),
+        'pagination': {
+          'total': 30,
+          'page': 1,
+          'limit': 15,
+          'totalPages': 2,
+        },
+      });
+
+      final page2Response = json.encode({
+        'data': List.generate(
+          15,
+          (i) => {
+            'id': 2000 + i,
+            'name': 'Customer Page 2 - $i',
+            'mobile': '+91 99000000$i',
+            'address': 'Address 2 - $i',
+            'notes': 'Note 2 - $i',
+            'status': 'Completed',
+            'stateName': 'Kerala',
+            'districtName': 'Ernakulam',
+            'areaName': 'Area 2 - $i',
+            'documents': [],
+          },
+        ),
+        'pagination': {
+          'total': 30,
+          'page': 2,
+          'limit': 15,
+          'totalPages': 2,
+        },
+      });
+
+      final mockClient = MockClient((request) async {
+        requestedUris.add(request.url);
+        final requestedPage = request.url.queryParameters['page'];
+        final body = requestedPage == '2' ? page2Response : page1Response;
+        return http.Response(body, 200,
+            headers: {'content-type': 'application/json'});
+      });
+
+      final vm = TodayViewModel(client: mockClient);
+      await vm.fetchBookings();
+
+      expect(vm.bookings.length, 15);
+      expect(vm.todayChatItems.length, 15);
+      expect(vm.currentPage, 1);
+      expect(vm.hasMore, isTrue);
+
+      // Load next page (page 2)
+      await vm.loadNextPage();
+
+      expect(requestedUris.length, 2);
+      expect(requestedUris.last.queryParameters['page'], '2');
+      expect(requestedUris.last.queryParameters['limit'], '15');
+      expect(vm.bookings.length, 30);
+      expect(vm.todayChatItems.length, 30);
+      expect(vm.currentPage, 2);
+      // Since page 2 == totalPages (2), hasMore should now be false
+      expect(vm.hasMore, isFalse);
+
+      // Attempting to load next page again should not trigger another network call
+      await vm.loadNextPage();
+      expect(requestedUris.length, 2);
+
+      // Refreshing bookings resets to page 1 to bring the latest top chats
+      await vm.refreshBookings();
+      expect(vm.currentPage, 1);
+      expect(requestedUris.last.queryParameters.containsKey('page'), isFalse);
+
+      // Search query resets page to 1
+      await vm.loadNextPage(); // advance to page 2
+      expect(vm.currentPage, 2);
+      vm.setSearchQuery('Customer', immediate: true);
+      expect(vm.currentPage, 1);
+    });
   });
 }
 

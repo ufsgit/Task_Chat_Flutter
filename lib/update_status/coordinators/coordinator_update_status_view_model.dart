@@ -54,7 +54,9 @@ class CoordinatorUpdateStatusViewModel extends ChangeNotifier {
       _selectedStatus = 'Scheduled';
     }
 
-    _notesController = TextEditingController(text: customer.notes);
+    _notesController = TextEditingController(
+        text: customer.staffNotes.isNotEmpty ? customer.staffNotes : '',
+      );
     _scheduleDate =
         (customer.scheduleDate != null && customer.scheduleDate!.isNotEmpty)
         ? customer.scheduleDate!
@@ -71,8 +73,7 @@ class CoordinatorUpdateStatusViewModel extends ChangeNotifier {
               ? customer.branchHeadName!.trim()
               : null);
 
-    _selectedBranchManager =
-        resolvedInitialManager ?? availableBranchManagers.first;
+    _selectedBranchManager = resolvedInitialManager ?? '';
 
     if (autoLoadManagers) {
       loadBranchManagers();
@@ -108,6 +109,7 @@ class CoordinatorUpdateStatusViewModel extends ChangeNotifier {
       }).toList();
     }
   }
+
   List<String> get documents => _documents;
 
   void addDocument(String docUrl) {
@@ -129,9 +131,8 @@ class CoordinatorUpdateStatusViewModel extends ChangeNotifier {
   }
 
   List<String> get availableManagers {
-    final list = _branchManagers.isNotEmpty
-        ? _branchManagers.map((m) => m.name).toList()
-        : List<String>.from(availableBranchManagers);
+    final list = _branchManagers.map((m) => m.name).toList();
+
     if (_selectedBranchManager.isNotEmpty &&
         !list.contains(_selectedBranchManager)) {
       list.insert(0, _selectedBranchManager);
@@ -178,7 +179,9 @@ class CoordinatorUpdateStatusViewModel extends ChangeNotifier {
           _selectedBranchManager = matched.name;
         } else if (targetName != null) {
           _selectedBranchManager = targetName;
-        } else if (!names.contains(_selectedBranchManager)) {
+        } else if ((_selectedBranchManager.isEmpty ||
+                !names.contains(_selectedBranchManager)) &&
+            names.isNotEmpty) {
           _selectedBranchManager = names.first;
         }
       }
@@ -205,9 +208,15 @@ class CoordinatorUpdateStatusViewModel extends ChangeNotifier {
         _statusChips = chips;
 
         // Ensure selectedStatus uses chip.label for display
-        final matchingChip = statusChips.where((c) =>
-            c.label.toLowerCase().trim() == _selectedStatus.toLowerCase().trim() ||
-            c.code.toLowerCase().trim() == _selectedStatus.toLowerCase().trim()).firstOrNull;
+        final matchingChip = statusChips
+            .where(
+              (c) =>
+                  c.label.toLowerCase().trim() ==
+                      _selectedStatus.toLowerCase().trim() ||
+                  c.code.toLowerCase().trim() ==
+                      _selectedStatus.toLowerCase().trim(),
+            )
+            .firstOrNull;
         if (matchingChip != null) {
           _selectedStatus = matchingChip.label;
         } else if (statusChips.isNotEmpty) {
@@ -229,9 +238,13 @@ class CoordinatorUpdateStatusViewModel extends ChangeNotifier {
   bool get showBranchManager => visibility.showBranchManager;
 
   void setStatus(String status) {
-    final matchingChip = statusChips.where((c) =>
-        c.label.toLowerCase().trim() == status.toLowerCase().trim() ||
-        c.code.toLowerCase().trim() == status.toLowerCase().trim()).firstOrNull;
+    final matchingChip = statusChips
+        .where(
+          (c) =>
+              c.label.toLowerCase().trim() == status.toLowerCase().trim() ||
+              c.code.toLowerCase().trim() == status.toLowerCase().trim(),
+        )
+        .firstOrNull;
     final resolvedStatus = matchingChip != null ? matchingChip.label : status;
 
     if (_selectedStatus != resolvedStatus) {

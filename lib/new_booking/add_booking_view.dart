@@ -94,7 +94,10 @@ class _add_bookingState extends State<add_booking> {
       if (_isCoordinator) {
         _viewModel.areaViewModel.isCoordinator = true;
         final dId = _viewModel.districtViewModel.selectedDistrictId;
-        _viewModel.areaViewModel.fetchAreas(isCoordinator: true, districtId: dId);
+        _viewModel.areaViewModel.fetchAreas(
+          isCoordinator: true,
+          districtId: dId,
+        );
         _viewModel.districtViewModel.fetchDistricts();
       } else {
         _viewModel.areaViewModel.isCoordinator = false;
@@ -158,8 +161,8 @@ class _add_bookingState extends State<add_booking> {
     final selectedDistrictItem = districtVm.selectedDistrict;
     final effectiveDistrictId = _isCoordinator
         ? (selectedDistrictItem != null && selectedDistrictItem.id > 0
-            ? selectedDistrictItem.id
-            : null)
+              ? selectedDistrictItem.id
+              : null)
         : null;
     final effectiveDistrictName = _isCoordinator
         ? (_selectedDistrict ?? selectedDistrictItem?.name)
@@ -281,14 +284,11 @@ class _add_bookingState extends State<add_booking> {
   }
 
   Future<void> _handlePreviewDocument(String doc) async {
-    final fileName =
-        doc.split('/').last.isNotEmpty ? doc.split('/').last : doc;
+    final fileName = doc.split('/').last.isNotEmpty ? doc.split('/').last : doc;
     await Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => DocumentPreviewUploadPage(
-          fileName: fileName,
-          fileUrl: doc,
-        ),
+        builder: (context) =>
+            DocumentPreviewUploadPage(fileName: fileName, fileUrl: doc),
       ),
     );
   }
@@ -392,7 +392,7 @@ class _add_bookingState extends State<add_booking> {
                       ),
                     ),
                     Text(
-                      'Notes',
+                      'Customer Notes',
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w700,

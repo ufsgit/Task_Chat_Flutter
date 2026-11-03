@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../core/theme.dart';
-import '../coordinators/coordinator_update_status_logic.dart';
 
 /// Reusable Branch Manager dropdown selection card for Super Admin.
 class BranchManagerFieldCard extends StatelessWidget {
@@ -40,7 +39,7 @@ class BranchManagerFieldCard extends StatelessWidget {
             final cardWidth = constraints.maxWidth;
             final list = (managers != null && managers!.isNotEmpty)
                 ? managers!
-                : availableBranchManagers;
+                : const <String>[];
 
             return Theme(
               data: Theme.of(context).copyWith(
@@ -73,6 +72,18 @@ class BranchManagerFieldCard extends StatelessWidget {
                 tooltip: 'Select Branch Manager',
                 onSelected: onManagerChanged,
                 itemBuilder: (context) {
+                  if (list.isEmpty) {
+                    return [
+                      const PopupMenuItem<String>(
+                        enabled: false,
+                        value: '',
+                        child: Text(
+                          'No branch managers available',
+                          style: TextStyle(fontSize: 13.5),
+                        ),
+                      ),
+                    ];
+                  }
                   return list.map((name) {
                     final isSelected = name == selectedManager;
                     return PopupMenuItem<String>(
@@ -91,11 +102,11 @@ class BranchManagerFieldCard extends StatelessWidget {
                                     : FontWeight.w500,
                                 color: isSelected
                                     ? (isDark
-                                        ? AppDarkColors.whatsappGreen
-                                        : AppColors.primaryGreen)
+                                          ? AppDarkColors.whatsappGreen
+                                          : AppColors.primaryGreen)
                                     : (isDark
-                                        ? AppDarkColors.textPrimary
-                                        : AppColors.textPrimary),
+                                          ? AppDarkColors.textPrimary
+                                          : AppColors.textPrimary),
                               ),
                             ),
                           ),
@@ -166,15 +177,21 @@ class BranchManagerFieldCard extends StatelessWidget {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              selectedManager,
+                              selectedManager.isNotEmpty
+                                  ? selectedManager
+                                  : 'Select Branch Manager',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 fontSize: 13.5,
                                 fontWeight: FontWeight.w700,
-                                color: isDark
-                                    ? AppDarkColors.textPrimary
-                                    : AppColors.textPrimary,
+                                color: selectedManager.isNotEmpty
+                                    ? (isDark
+                                        ? AppDarkColors.textPrimary
+                                        : AppColors.textPrimary)
+                                    : (isDark
+                                        ? AppDarkColors.textSubtitle
+                                        : AppColors.textSubtitle),
                               ),
                             ),
                           ],

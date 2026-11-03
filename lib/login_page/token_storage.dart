@@ -53,6 +53,26 @@ class TokenStorage {
     return _memoryCache[_primaryKey] ?? _memoryCache[_legacyKey];
   }
 
+  /// Returns the standard HTTP auth headers map for API requests.
+  /// Returns `{'Accept': 'application/json'}` with `'authorization': 'Bearer <token>'`
+  /// appended when a token is available. Uses the same timeout logic as other callers.
+  Future<Map<String, String>> authHeaders({bool includeContentType = false}) async {
+    final isTest = isTestEnvironment;
+    String? token;
+    try {
+      token = await getToken().timeout(
+        isTest ? const Duration(milliseconds: 50) : const Duration(seconds: 5),
+      );
+    } catch (_) {}
+
+    return <String, String>{
+      if (includeContentType) 'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      if (token != null && token.isNotEmpty)
+        'authorization': token.startsWith('Bearer ') ? token : 'Bearer $token',
+    };
+  }
+
   Future<void> deleteToken() async {
     _memoryCache.remove(_primaryKey);
     _memoryCache.remove(_legacyKey);

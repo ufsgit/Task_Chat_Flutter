@@ -79,7 +79,8 @@ class _BranchManagerUpdateStatusViewState
         StatusUpdateResult(
           status: _viewModel.selectedStatus,
           scheduleDate: _viewModel.scheduleDate,
-          notes: _viewModel.notesController.text.trim(),
+          notes: widget.customer.notes,
+          staffNotes: _viewModel.notesController.text.trim(),
           documents: _viewModel.documents,
         ),
       );

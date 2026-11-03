@@ -13,6 +13,11 @@ import 'package:task_chat/report_activity/activity/booking_history_page.dart';
 import 'package:task_chat/report_activity/main/report_activity.dart';
 import 'package:task_chat/report_activity/widgets/activity_item_card.dart';
 import 'package:task_chat/report_activity/widgets/activity_skeleton_loading.dart';
+import 'package:task_chat/report_activity/report/report_model.dart';
+import 'package:task_chat/report_activity/report/report_view.dart';
+import 'package:task_chat/report_activity/report/report_view_model.dart';
+import 'package:task_chat/report_activity/widgets/report_date_range_bar.dart';
+import 'package:task_chat/report_activity/widgets/weekly_activity_graph_card.dart';
 
 void main() {
   setUp(() {
@@ -249,6 +254,39 @@ void main() {
         // Verify ActivityPage is displayed with the live history items
         expect(find.byType(ActivityView), findsOneWidget);
         expect(find.text('Devika'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'ReportActivity navigates to TaskReportPage on tapping Task Report card',
+      (tester) async {
+        final mockReportData = {
+          'success': true,
+          'data': [],
+        };
+        final client = MockClient((request) async {
+          return http.Response(
+            jsonEncode(mockReportData),
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        });
+
+        final reportVm = ReportViewModel(client: client);
+
+        await tester.pumpWidget(
+          MaterialApp(home: ReportActivity(reportViewModel: reportVm)),
+        );
+
+        await tester.pumpAndSettle();
+
+        // Tap on 'Task Report' menu card
+        await tester.tap(find.text('Task Report'));
+        await tester.pumpAndSettle();
+
+        // Verify TaskReportPage (ReportView) is displayed
+        expect(find.byType(ReportView), findsOneWidget);
+        expect(find.text('Weekly activity'), findsOneWidget);
       },
     );
 
@@ -495,6 +533,272 @@ void main() {
         findsOneWidget,
       );
       expect(find.byIcon(Icons.check_circle_rounded), findsOneWidget);
+    });
+  });
+
+  group('Weekly Activity Report Graph Tests', () {
+    test('BookingReportGraphItem.fromJson parses example API json correctly', () {
+      final json = {
+        'periodLabel': 'Mon',
+        'periodDate': '2026-11-02',
+        'newCount': 15,
+        'scheduledCount': 11,
+        'completedCount': 9,
+        'cancelledCount': 3,
+        'totalActivities': 38,
+      };
+
+      final item = BookingReportGraphItem.fromJson(json);
+
+      expect(item.periodLabel, equals('Mon'));
+      expect(item.periodDate, equals('2026-11-02'));
+      expect(item.newCount, equals(15));
+      expect(item.scheduledCount, equals(11));
+      expect(item.completedCount, equals(9));
+      expect(item.cancelledCount, equals(3));
+      expect(item.totalActivities, equals(38));
+    });
+
+    test('ReportViewModel.fetchGraphReport calls ApiConfig.report_graph and updates graphData', () async {
+      final mockData = {
+        'success': true,
+        'data': [
+          {
+            'periodLabel': 'Mon',
+            'periodDate': '2026-11-02',
+            'newCount': 15,
+            'scheduledCount': 11,
+            'completedCount': 9,
+            'cancelledCount': 3,
+            'totalActivities': 38,
+          },
+          {
+            'periodLabel': 'Tue',
+            'periodDate': '2026-11-03',
+            'newCount': 12,
+            'scheduledCount': 10,
+            'completedCount': 8,
+            'cancelledCount': 2,
+            'totalActivities': 32,
+          },
+        ],
+      };
+
+      final client = MockClient((request) async {
+        expect(request.url.path, equals(Uri.parse(ApiConfig.report_graph).path));
+        expect(request.url.queryParameters['dateFrom'], equals(ReportViewModel.defaultDateFrom));
+        expect(request.url.queryParameters['dateTo'], equals(ReportViewModel.defaultDateTo));
+        return http.Response(
+          jsonEncode(mockData),
+          200,
+          headers: {'content-type': 'application/json'},
+        );
+      });
+
+      final vm = ReportViewModel(client: client);
+      expect(vm.isGraphLoading, isFalse);
+
+      await vm.fetchGraphReport();
+
+      expect(vm.isGraphLoading, isFalse);
+      expect(vm.graphData.length, equals(2));
+      expect(vm.graphData[0].periodLabel, equals('Mon'));
+      expect(vm.graphData[0].newCount, equals(15));
+      expect(vm.graphData[1].periodLabel, equals('Tue'));
+      expect(vm.graphErrorMessage, isNull);
+    });
+
+    testWidgets('WeeklyActivityGraphCard renders header, legend, and day labels', (tester) async {
+      final items = [
+        const BookingReportGraphItem(
+          periodLabel: 'Mon',
+          periodDate: '2026-11-02',
+          newCount: 15,
+          scheduledCount: 11,
+          completedCount: 9,
+          cancelledCount: 3,
+          totalActivities: 38,
+        ),
+      ];
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: WeeklyActivityGraphCard(graphData: items),
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('Weekly activity'), findsOneWidget);
+      expect(find.text('Mon to Sun, by status'), findsOneWidget);
+      expect(find.text('Mon'), findsOneWidget);
+
+      // By default, Monday info is displayed below the graph
+      expect(find.text('Mon (2026-11-02)'), findsOneWidget);
+      expect(find.text('Total: 38'), findsOneWidget);
+      // '15' appears on the dynamic Y-axis tick mark and in the breakdown card below
+      expect(find.text('15'), findsNWidgets(2));
+      expect(find.text('11'), findsOneWidget);
+      expect(find.text('9'), findsOneWidget);
+      expect(find.text('3'), findsOneWidget);
+    });
+
+    testWidgets('WeeklyActivityGraphCard dynamically adapts Y-axis to max count', (tester) async {
+      // Small data with max count = 8
+      final smallItems = [
+        const BookingReportGraphItem(
+          periodLabel: 'Wed',
+          periodDate: '2026-11-04',
+          newCount: 8,
+          scheduledCount: 4,
+          completedCount: 2,
+          cancelledCount: 1,
+          totalActivities: 15,
+        ),
+      ];
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: WeeklyActivityGraphCard(graphData: smallItems),
+            ),
+          ),
+        ),
+      );
+
+      // Y-axis dynamically scales to 8 instead of hardcoded 20
+      expect(find.text('8'), findsNWidgets(2)); // Tick mark + count
+      expect(find.text('20'), findsNothing); // 20 does not appear
+    });
+
+    testWidgets('WeeklyActivityGraphCard makes graph horizontally scrollable when data count > 3', (tester) async {
+      final weekItems = [
+        const BookingReportGraphItem(periodLabel: 'Mon', periodDate: '2026-11-02', newCount: 10, scheduledCount: 8, completedCount: 5, cancelledCount: 2, totalActivities: 25),
+        const BookingReportGraphItem(periodLabel: 'Tue', periodDate: '2026-11-03', newCount: 12, scheduledCount: 6, completedCount: 4, cancelledCount: 1, totalActivities: 23),
+        const BookingReportGraphItem(periodLabel: 'Wed', periodDate: '2026-11-04', newCount: 8, scheduledCount: 9, completedCount: 7, cancelledCount: 3, totalActivities: 27),
+        const BookingReportGraphItem(periodLabel: 'Thu', periodDate: '2026-11-05', newCount: 14, scheduledCount: 11, completedCount: 8, cancelledCount: 2, totalActivities: 35),
+        const BookingReportGraphItem(periodLabel: 'Fri', periodDate: '2026-11-06', newCount: 18, scheduledCount: 14, completedCount: 12, cancelledCount: 4, totalActivities: 48),
+        const BookingReportGraphItem(periodLabel: 'Sat', periodDate: '2026-11-07', newCount: 7, scheduledCount: 5, completedCount: 3, cancelledCount: 1, totalActivities: 16),
+        const BookingReportGraphItem(periodLabel: 'Sun', periodDate: '2026-11-08', newCount: 3, scheduledCount: 2, completedCount: 1, cancelledCount: 0, totalActivities: 6),
+      ];
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: WeeklyActivityGraphCard(graphData: weekItems),
+            ),
+          ),
+        ),
+      );
+
+      // Verify horizontal SingleChildScrollView exists for chart content (> 3 items) and legend
+      final horizontalScrollFinder = find.byWidgetPredicate(
+        (widget) =>
+            widget is SingleChildScrollView &&
+            widget.scrollDirection == Axis.horizontal,
+      );
+      expect(horizontalScrollFinder, findsNWidgets(2));
+
+      // Verify all 7 day labels are present in the widget tree
+      expect(find.text('Mon'), findsOneWidget);
+      expect(find.text('Tue'), findsOneWidget);
+      expect(find.text('Wed'), findsOneWidget);
+      expect(find.text('Thu'), findsOneWidget);
+      expect(find.text('Fri'), findsOneWidget);
+      expect(find.text('Sat'), findsOneWidget);
+      expect(find.text('Sun'), findsOneWidget);
+    });
+
+    testWidgets('WeeklyActivityGraphCard renders GraphSkeletonLoading when isLoading is true', (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: WeeklyActivityGraphCard(
+                graphData: [],
+                isLoading: true,
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(find.byType(GraphSkeletonLoading), findsOneWidget);
+    });
+
+    testWidgets('ReportView renders WeeklyActivityGraphCard and fetches report', (tester) async {
+      final mockData = {
+        'success': true,
+        'data': [
+          {
+            'periodLabel': 'Mon',
+            'periodDate': '2026-11-02',
+            'newCount': 15,
+            'scheduledCount': 11,
+            'completedCount': 9,
+            'cancelledCount': 3,
+            'totalActivities': 38,
+          },
+        ],
+      };
+
+      final client = MockClient((request) async {
+        return http.Response(
+          jsonEncode(mockData),
+          200,
+          headers: {'content-type': 'application/json'},
+        );
+      });
+
+      final vm = ReportViewModel(client: client);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ReportView(viewModel: vm),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ReportDateRangeBar), findsOneWidget);
+      expect(find.byType(WeeklyActivityGraphCard), findsOneWidget);
+      expect(find.text('Weekly activity'), findsOneWidget);
+      expect(find.text('From'), findsOneWidget);
+      expect(find.text('To'), findsOneWidget);
+    });
+
+    test('ReportViewModel sends dateFrom and dateTo query parameters', () async {
+      Uri? capturedUri;
+      final mockData = {
+        'success': true,
+        'data': [],
+      };
+
+      final client = MockClient((request) async {
+        capturedUri = request.url;
+        return http.Response(
+          jsonEncode(mockData),
+          200,
+          headers: {'content-type': 'application/json'},
+        );
+      });
+
+      final vm = ReportViewModel(client: client);
+      vm.setDateRange(from: '2026-11-01', to: '2026-11-07');
+      await vm.fetchGraphReport(force: true);
+
+      expect(capturedUri, isNotNull);
+      expect(capturedUri!.queryParameters['dateFrom'], equals('2026-11-01'));
+      expect(capturedUri!.queryParameters['dateTo'], equals('2026-11-07'));
+
+      // Clear date range
+      vm.clearDateRange();
+      await vm.fetchGraphReport(force: true);
+      expect(capturedUri!.queryParameters.containsKey('dateFrom'), isFalse);
+      expect(capturedUri!.queryParameters.containsKey('dateTo'), isFalse);
     });
   });
 }

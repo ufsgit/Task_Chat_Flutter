@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/slide_up_route.dart';
 import '../../core/widgets/fitmate_app_bar_title.dart';
 import '../activity_page.dart';
 import '../report_data.dart';
@@ -46,8 +47,8 @@ class ReportActivity extends StatelessWidget {
                       if (item.title == 'Activity') {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(
-                            builder: (context) => ActivityPage(
+                          SlideRightRoute(
+                            page: ActivityPage(
                               viewModel: activityViewModel,
                             ),
                           ),
@@ -56,8 +57,8 @@ class ReportActivity extends StatelessWidget {
                           item.title == 'Task Report') {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(
-                            builder: (context) => TaskReportPage(
+                          SlideRightRoute(
+                            page: TaskReportPage(
                               viewModel: reportViewModel,
                             ),
                           ),

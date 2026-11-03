@@ -197,6 +197,9 @@ class CustomerDetailsViewModel extends ChangeNotifier {
           ? result.scheduleDate
           : customer.scheduleDate,
       notes: result.notes.isNotEmpty ? result.notes : customer.notes,
+      staffNotes: result.staffNotes.isNotEmpty
+          ? result.staffNotes
+          : customer.staffNotes,
       documents: result.documents.isNotEmpty
           ? result.documents
           : customer.documents,

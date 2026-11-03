@@ -1,4 +1,6 @@
+import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:task_chat/new_booking/add_booking_view.dart';
 import '../core/theme.dart';
 import 'today_model.dart';
@@ -35,15 +37,48 @@ class _TodayPageState extends State<TodayPage> {
     'Cancelled',
   ];
 
+  late final ScrollController _scrollController;
+  bool _showScrollToTop = false;
+
   @override
   void initState() {
     super.initState();
+    _scrollController = ScrollController();
+    _scrollController.addListener(_onScroll);
     _viewModel = widget.viewModel ?? TodayViewModel();
     _viewModel.fetchBookings();
   }
 
+  void _onScroll() {
+    if (!_scrollController.hasClients) return;
+    final position = _scrollController.position;
+
+    final shouldShow = position.pixels > 250;
+    if (shouldShow != _showScrollToTop) {
+      setState(() {
+        _showScrollToTop = shouldShow;
+      });
+    }
+    // Only fetch next page when actively scrolling downwards
+    if (position.userScrollDirection != ScrollDirection.reverse) return;
+    if (position.pixels <= 0) return;
+
+    final maxScroll = position.maxScrollExtent;
+    final currentScroll = position.pixels;
+
+    if (maxScroll - currentScroll <= 200 &&
+        !_viewModel.isLoading &&
+        !_viewModel.isLoadingMore &&
+        _viewModel.hasMore &&
+        _viewModel.filteredChatItems.length >= 15) {
+      _viewModel.loadNextPage();
+    }
+  }
+
   @override
   void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
     _searchController.dispose();
     if (widget.viewModel == null) {
       _viewModel.dispose();
@@ -67,6 +102,9 @@ class _TodayPageState extends State<TodayPage> {
         selectedDateTo: _viewModel.dateTo,
         onApply: (status) {
           _viewModel.setStatusFilter(status);
+          if (_scrollController.hasClients) {
+            _scrollController.jumpTo(0.0);
+          }
         },
         onApplyAdvanced: ({
           required String status,
@@ -77,12 +115,20 @@ class _TodayPageState extends State<TodayPage> {
         }) {
           _viewModel.applyFilters(
             status: status,
+            districtId: districtId,
             dateFrom: dateFrom,
             dateTo: dateTo,
+            filterRole: filterRole,
           );
+          if (_scrollController.hasClients) {
+            _scrollController.jumpTo(0.0);
+          }
         },
         onReset: () {
           _viewModel.resetFilters();
+          if (_scrollController.hasClients) {
+            _scrollController.jumpTo(0.0);
+          }
         },
       ),
     );
@@ -120,6 +166,65 @@ class _TodayPageState extends State<TodayPage> {
             child: Icon(Icons.close_rounded, size: 14, color: fg),
           ),
         ],
+      ),
+    );
+  }
+
+  void _scrollToTop() {
+    if (!_scrollController.hasClients) return;
+    HapticFeedback.lightImpact();
+    _scrollController.animateTo(
+      0.0,
+      duration: const Duration(milliseconds: 350),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
+  Widget _buildScrollToTopButton(bool isDark) {
+    final btnBg = isDark ? AppDarkColors.whatsappGreen : AppColors.primaryGreen;
+    final iconColor = isDark ? const Color(0xFF06140D) : Colors.white;
+
+    return AnimatedScale(
+      key: const Key('today_scroll_to_top_button'),
+      scale: _showScrollToTop ? 1.0 : 0.0,
+      duration: const Duration(milliseconds: 240),
+      curve: Curves.easeOutBack,
+      child: AnimatedOpacity(
+        opacity: _showScrollToTop ? 1.0 : 0.0,
+        duration: const Duration(milliseconds: 200),
+        child: IgnorePointer(
+          ignoring: !_showScrollToTop,
+          child: Tooltip(
+            message: 'Scroll to top',
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(22),
+                onTap: _scrollToTop,
+                child: Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: btnBg,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.22),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Icon(
+                    Icons.arrow_upward_rounded,
+                    color: iconColor,
+                    size: 22,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -214,7 +319,9 @@ class _TodayPageState extends State<TodayPage> {
         ],
       ),
       body: SafeArea(
-        child: Column(
+        child: Stack(
+          children: [
+            Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Search Input Field & Filter Option Row
@@ -229,9 +336,26 @@ class _TodayPageState extends State<TodayPage> {
                     child: SearchInputField(
                       controller: _searchController,
                       padding: EdgeInsets.zero,
-                      onChanged: (val) => _viewModel.setSearchQuery(val),
-                      onClear: () =>
-                          _viewModel.setSearchQuery('', immediate: true),
+                      onChanged: (val) {
+                        _viewModel.setSearchQuery(val);
+                        if (_scrollController.hasClients) {
+                          _scrollController.animateTo(
+                            0.0,
+                            duration: const Duration(milliseconds: 200),
+                            curve: Curves.easeOut,
+                          );
+                        }
+                      },
+                      onClear: () {
+                        _viewModel.setSearchQuery('', immediate: true);
+                        if (_scrollController.hasClients) {
+                          _scrollController.animateTo(
+                            0.0,
+                            duration: const Duration(milliseconds: 200),
+                            curve: Curves.easeOut,
+                          );
+                        }
+                      },
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -370,7 +494,7 @@ class _TodayPageState extends State<TodayPage> {
                       // Leads / Task List with Pull-to-refresh
                       Expanded(
                         child: RefreshIndicator(
-                    onRefresh: _viewModel.fetchBookings,
+                    onRefresh: _viewModel.refreshBookings,
                     color: AppColors.primaryGreen,
                     child: _viewModel.isLoading && filtered.isEmpty
                         ? const TodaySkeletonLoading()
@@ -391,21 +515,63 @@ class _TodayPageState extends State<TodayPage> {
                                 ],
                               )
                             : ListView.separated(
+                                controller: _scrollController,
                                 physics: const AlwaysScrollableScrollPhysics(),
                                 padding: const EdgeInsets.only(bottom: 100),
-                                itemCount: filtered.length,
-                                separatorBuilder: (context, index) => Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 16.0,
-                                  ),
-                                  child: Container(
-                                    height: 1.0,
-                                    color: isDark
-                                        ? AppDarkColors.divider
-                                        : const Color(0xFFE2E8F0),
-                                  ),
-                                ),
+                                itemCount: filtered.length +
+                                    (_viewModel.isLoadingMore ? 1 : 0),
+                                separatorBuilder: (context, index) {
+                                  if (index >= filtered.length - 1 &&
+                                      _viewModel.isLoadingMore) {
+                                    return const SizedBox.shrink();
+                                  }
+                                  return Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16.0,
+                                    ),
+                                    child: Container(
+                                      height: 1.0,
+                                      color: isDark
+                                          ? AppDarkColors.divider
+                                          : const Color(0xFFE2E8F0),
+                                    ),
+                                  );
+                                },
                                 itemBuilder: (context, index) {
+                                  if (index >= filtered.length) {
+                                    return const Padding(
+                                      padding: EdgeInsets.symmetric(
+                                        vertical: 20,
+                                      ),
+                                      child: Center(
+                                        child: SizedBox(
+                                          width: 22,
+                                          height: 22,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: AppColors.primaryGreen,
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  }
+
+                                  if (index >= 14 &&
+                                      index >= filtered.length - 2 &&
+                                      !_viewModel.isLoading &&
+                                      !_viewModel.isLoadingMore &&
+                                      _viewModel.hasMore) {
+                                    WidgetsBinding.instance
+                                        .addPostFrameCallback((_) {
+                                      if (mounted &&
+                                          !_viewModel.isLoading &&
+                                          !_viewModel.isLoadingMore &&
+                                          _viewModel.hasMore) {
+                                        _viewModel.loadNextPage();
+                                      }
+                                    });
+                                  }
+
                                   final item = filtered[index];
                                   return ChatListItemTile(
                                     title: item['title'] ?? '',
@@ -448,6 +614,7 @@ class _TodayPageState extends State<TodayPage> {
                                                   .where((s) => s.isNotEmpty)
                                                   .join(', '),
                                               notes: booking.notes,
+                                              staffNotes: booking.staffNotes,
                                               documents: booking.documents,
                                               hasBeenScheduled: booking.status
                                                           .toLowerCase() ==
@@ -522,6 +689,14 @@ class _TodayPageState extends State<TodayPage> {
       ),
     ],
   ),
+  // Floating pop-up scroll to top button
+  Positioned(
+    right: 18,
+    bottom: 96,
+    child: _buildScrollToTopButton(isDark),
+  ),
+],
+),
 ),
 );
 }

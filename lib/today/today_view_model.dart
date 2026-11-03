@@ -23,6 +23,7 @@ bool updateChatItemInList(
   required String newStatus,
   String? newLocation,
   String? newDate,
+  String? newStaffNotes,
 }) {
   final index = items.indexWhere(
     (item) =>
@@ -41,6 +42,17 @@ bool updateChatItemInList(
     if (newDate != null && newDate.isNotEmpty) {
       item['date'] = newDate;
       item['scheduleDate'] = newDate;
+    }
+    if (newStaffNotes != null) {
+      item['staffNotes'] = newStaffNotes;
+      final booking = item['booking'];
+      if (booking is BookingModel) {
+        item['booking'] = booking.copyWith(
+          status: newStatus,
+          scheduleDate: newDate ?? booking.scheduleDate,
+          staffNotes: newStaffNotes,
+        );
+      }
     }
 
     switch (newStatus.toLowerCase()) {
@@ -76,6 +88,7 @@ void updateChatItemStatus({
   required String newStatus,
   String? newLocation,
   String? newDate,
+  String? newStaffNotes,
 }) {
   final targetList =
       TodayViewModel.currentSession?.todayChatItems ?? _legacyTodayChatItems;
@@ -85,6 +98,7 @@ void updateChatItemStatus({
     newStatus: newStatus,
     newLocation: newLocation,
     newDate: newDate,
+    newStaffNotes: newStaffNotes,
   );
   if (targetList != _legacyTodayChatItems) {
     updateChatItemInList(
@@ -93,6 +107,7 @@ void updateChatItemStatus({
       newStatus: newStatus,
       newLocation: newLocation,
       newDate: newDate,
+      newStaffNotes: newStaffNotes,
     );
   }
   if (updated) {
@@ -161,18 +176,27 @@ class TodayViewModel extends ChangeNotifier {
 
   Timer? _searchDebounceTimer;
   bool _isLoading = false;
+  bool _isLoadingMore = false;
+  bool _hasMore = true;
+  int _currentPage = 1;
   String? _errorMessage;
   List<BookingModel> _bookings = [];
   final List<Map<String, dynamic>> _chatItems = [];
 
   List<Map<String, dynamic>> get chatItems => _chatItems;
   List<Map<String, dynamic>> get todayChatItems => _chatItems;
+  bool get isLoadingMore => _isLoadingMore;
+  bool get hasMore => _hasMore;
+  int get currentPage => _currentPage;
 
   /// Clears stored chat items and bookings for this scoped ViewModel session.
   void clear() {
     _bookings.clear();
     _chatItems.clear();
     _errorMessage = null;
+    _currentPage = 1;
+    _hasMore = true;
+    _isLoadingMore = false;
     if (!_isDisposed) {
       notifyListeners();
     }
@@ -288,6 +312,8 @@ class TodayViewModel extends ChangeNotifier {
     if (_page != page || _limit != limit) {
       _page = page;
       _limit = limit;
+      _currentPage = int.tryParse(page ?? '1') ?? 1;
+      _hasMore = true;
       notifyListeners();
       fetchBookings();
     }
@@ -307,8 +333,14 @@ class TodayViewModel extends ChangeNotifier {
     _dateFrom = dateFrom;
     _dateTo = dateTo;
     _filterRole = filterRole;
-    if (page != null) _page = page;
+    if (page != null) {
+      _page = page;
+      _currentPage = int.tryParse(page) ?? 1;
+    } else {
+      _currentPage = 1;
+    }
     if (limit != null) _limit = limit;
+    _hasMore = true;
     notifyListeners();
     fetchBookings();
   }
@@ -321,28 +353,28 @@ class TodayViewModel extends ChangeNotifier {
     _filterRole = null;
     _page = null;
     _limit = null;
+    _currentPage = 1;
+    _hasMore = true;
     _searchQuery = '';
     notifyListeners();
     fetchBookings();
   }
 
   void setSearchQuery(String query, {bool immediate = false}) {
+    _searchDebounceTimer?.cancel();
+    if (_searchQuery != query) {
+      _searchQuery = query;
+      _currentPage = 1;
+      if (_page != null) _page = '1';
+      _hasMore = true;
+      notifyListeners();
+    }
     if (immediate || debounceDuration == Duration.zero) {
-      _searchDebounceTimer?.cancel();
-      if (_searchQuery != query) {
-        _searchQuery = query;
-        notifyListeners();
-        fetchBookings();
-      }
+      fetchBookings(force: true);
       return;
     }
-    _searchDebounceTimer?.cancel();
     _searchDebounceTimer = Timer(debounceDuration, () {
-      if (_searchQuery != query) {
-        _searchQuery = query;
-        notifyListeners();
-        fetchBookings();
-      }
+      fetchBookings(force: true);
     });
   }
 
@@ -405,6 +437,14 @@ class TodayViewModel extends ChangeNotifier {
     return queryParameters;
   }
 
+  /// Refreshes bookings from page 1, used for pull-to-refresh to bring the latest top chats.
+  Future<void> refreshBookings() async {
+    _currentPage = 1;
+    if (_page != null) _page = '1';
+    _hasMore = true;
+    await fetchBookings(force: true);
+  }
+
   /// Fetches bookings from the backend API using query parameters.
   Future<void> fetchBookings({
     Map<String, String>? queryParams,
@@ -413,6 +453,8 @@ class TodayViewModel extends ChangeNotifier {
     if (_isLoading && !force) return;
     _isLoading = true;
     _errorMessage = null;
+    _currentPage = int.tryParse(_page ?? '1') ?? 1;
+    _hasMore = true;
     notifyListeners();
 
     String? token;
@@ -458,6 +500,23 @@ class TodayViewModel extends ChangeNotifier {
           _chatItems.clear();
           _chatItems.addAll(_bookings.map((b) => b.toChatItem()));
           incrementTodayChatItemsVersion();
+
+          if (decoded is Map<String, dynamic> &&
+              decoded['pagination'] is Map<String, dynamic>) {
+            final pagination = decoded['pagination'] as Map<String, dynamic>;
+            final totalPages = pagination['totalPages'];
+            if (totalPages is int) {
+              _hasMore = _currentPage < totalPages;
+            } else if (totalPages is String) {
+              final parsed = int.tryParse(totalPages);
+              if (parsed != null) _hasMore = _currentPage < parsed;
+            }
+          } else {
+            final effectiveLimit = int.tryParse(_limit ?? '15') ?? 15;
+            if (_bookings.length < effectiveLimit) {
+              _hasMore = false;
+            }
+          }
         }
       } else {
         _errorMessage = 'Failed to load bookings (${response.statusCode})';
@@ -466,6 +525,90 @@ class TodayViewModel extends ChangeNotifier {
       _errorMessage = 'Connection error';
     } finally {
       _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  /// Fetches the next page of bookings and appends them to the current list.
+  /// Typically called when user scrolls to around the 15th chat item.
+  Future<void> loadNextPage() async {
+    if (_isLoading || _isLoadingMore || !_hasMore) return;
+    _isLoadingMore = true;
+    notifyListeners();
+
+    try {
+      final nextPage = _currentPage + 1;
+      final params = buildQueryParameters();
+      params['page'] = nextPage.toString();
+      if (!params.containsKey('limit')) {
+        params['limit'] = (_limit != null && _limit!.isNotEmpty) ? _limit! : '15';
+      }
+
+      final isTest = TokenStorage.isTestEnvironment;
+      String? token;
+      try {
+        token = await (tokenStorage ?? TokenStorage()).getToken().timeout(
+          isTest ? const Duration(milliseconds: 50) : const Duration(seconds: 5),
+        );
+      } catch (_) {}
+
+      final headers = <String, String>{
+        'Accept': 'application/json',
+        if (token != null && token.isNotEmpty)
+          'authorization': token.startsWith('Bearer ')
+              ? token
+              : 'Bearer $token',
+      };
+
+      final baseUri = Uri.parse(ApiConfig.bookings);
+      final uri = baseUri.replace(queryParameters: params);
+
+      final response = await _client
+          .get(uri, headers: headers)
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final decoded = json.decode(response.body);
+        final dynamic rawList = decoded is Map<String, dynamic>
+            ? (decoded['data'] ?? decoded['items'] ?? decoded['bookings'])
+            : (decoded is List ? decoded : []);
+
+        if (rawList is List && rawList.isNotEmpty) {
+          final newBookings = rawList
+              .map((e) => BookingModel.fromJson(e as Map<String, dynamic>))
+              .toList();
+
+          _currentPage = nextPage;
+          _bookings.addAll(newBookings);
+          _chatItems.addAll(newBookings.map((b) => b.toChatItem()));
+          incrementTodayChatItemsVersion();
+
+          if (decoded is Map<String, dynamic> &&
+              decoded['pagination'] is Map<String, dynamic>) {
+            final pagination = decoded['pagination'] as Map<String, dynamic>;
+            final totalPages = pagination['totalPages'];
+            if (totalPages is int) {
+              _hasMore = _currentPage < totalPages;
+            } else if (totalPages is String) {
+              final parsed = int.tryParse(totalPages);
+              if (parsed != null) _hasMore = _currentPage < parsed;
+            }
+          } else {
+            final effectiveLimit = int.tryParse(params['limit'] ?? '15') ?? 15;
+            if (newBookings.length < effectiveLimit) {
+              _hasMore = false;
+            }
+          }
+        } else {
+          _hasMore = false;
+        }
+      } else {
+        _hasMore = false;
+      }
+    } catch (_) {
+      // Do not crash, keep state intact for possible retry
+    } finally {
+      _isLoadingMore = false;
       notifyListeners();
     }
   }
