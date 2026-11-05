@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import '../login_page/token_storage.dart';
+import '../services/notification_service.dart';
 import '../today/today_view_model.dart';
 import 'settings_model.dart';
 
@@ -53,6 +54,14 @@ class SettingsViewModel extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
+      final token = await _tokenStorage.getToken();
+      if (token != null && token.isNotEmpty) {
+        try {
+          await NotificationService.unregisterDeviceFromBackend(
+            jwtToken: token,
+          );
+        } catch (_) {}
+      }
       await UserProfileData.clear();
       await _tokenStorage.deleteToken();
       TodayViewModel.resetSession();

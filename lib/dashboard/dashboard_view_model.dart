@@ -11,7 +11,7 @@ class DashboardViewModel extends ChangeNotifier {
 
   bool _isLoading = false;
   String? _errorMessage;
-  DashboardPeriod _selectedPeriod = DashboardPeriod.currentMonth;
+  DashboardPeriod _selectedPeriod = DashboardPeriod.allTime;
   DateTimeRange? _customDateRange;
   DashboardModel? _dashboardData;
 
@@ -19,7 +19,7 @@ class DashboardViewModel extends ChangeNotifier {
     DashboardService? service,
     http.Client? client,
     TokenStorage? tokenStorage,
-    DashboardPeriod initialPeriod = DashboardPeriod.currentMonth,
+    DashboardPeriod initialPeriod = DashboardPeriod.allTime,
     DateTimeRange? initialDateRange,
   }) : _selectedPeriod = initialPeriod,
        _customDateRange = initialDateRange,
@@ -65,9 +65,9 @@ class DashboardViewModel extends ChangeNotifier {
 
   /// Available filter chip labels.
   List<String> get availableFilters => [
+    DashboardPeriod.allTime.label,
     DashboardPeriod.currentMonth.label,
     DashboardPeriod.last30Days.label,
-    DashboardPeriod.allTime.label,
     if (_selectedPeriod == DashboardPeriod.custom)
       customDateLabel
     else

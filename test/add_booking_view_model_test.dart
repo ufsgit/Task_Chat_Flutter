@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:task_chat/api/api.dart';
 import 'package:task_chat/new_booking/add_booking_view.dart';
 import 'package:task_chat/new_booking/add_booking_view_model.dart';
 import 'package:task_chat/new_booking/model/area_model.dart';
@@ -469,8 +470,7 @@ void main() {
       final areaVm = AreaViewModel(client: mockClient, isCoordinator: false);
       await areaVm.fetchAreas();
 
-      expect(requestedUrl, contains('/api/dropdowns?'));
-      expect(requestedUrl, isNot(contains('/api/dropdowns/areas')));
+      expect(requestedUrl, contains(ApiConfig.area_listing));
       expect(areaVm.areas.length, 1);
       expect(areaVm.areas.first.id, 3);
       expect(areaVm.areas.first.name, 'Aluva');

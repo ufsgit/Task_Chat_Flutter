@@ -39,21 +39,8 @@ class CustomerDetailsViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      String? token;
-      try {
-        final isTest = TokenStorage.isTestEnvironment;
-        token = await (tokenStorage ?? TokenStorage())
-            .getToken()
-            .timeout(isTest ? const Duration(milliseconds: 50) : const Duration(seconds: 5));
-      } catch (_) {}
-
+      final headers = await (tokenStorage ?? TokenStorage()).authHeaders();
       final uri = Uri.parse('${ApiConfig.bookings}/${customer.id}');
-      final headers = <String, String>{
-        'Accept': 'application/json',
-        if (token != null && token.isNotEmpty)
-          'authorization':
-              token.startsWith('Bearer ') ? token : 'Bearer $token',
-      };
 
       final response = await _client
           .delete(uri, headers: headers)
@@ -99,22 +86,8 @@ class CustomerDetailsViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      String? token;
-      try {
-        final isTest = TokenStorage.isTestEnvironment;
-        token = await (tokenStorage ?? TokenStorage())
-            .getToken()
-            .timeout(isTest ? const Duration(milliseconds: 50) : const Duration(seconds: 5));
-      } catch (_) {}
-
+      final headers = await (tokenStorage ?? TokenStorage()).authHeaders(includeContentType: true);
       final uri = Uri.parse('${ApiConfig.bookings}/${customer.id}');
-      final headers = <String, String>{
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        if (token != null && token.isNotEmpty)
-          'authorization':
-              token.startsWith('Bearer ') ? token : 'Bearer $token',
-      };
 
       final updatedName = name ?? customer.name;
       final updatedPhone = phoneNumber ?? customer.phoneNumber;

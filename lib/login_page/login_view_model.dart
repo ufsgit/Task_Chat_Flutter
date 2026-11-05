@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:task_chat/login_page/token_storage.dart';
 import '../api/api.dart';
+import '../services/notification_service.dart';
 import 'login_model.dart';
 
 /// ViewModel managing login business logic, API communication, and state.
@@ -55,9 +56,17 @@ class LoginViewModel extends ChangeNotifier {
           )
           .timeout(const Duration(seconds: 10));
 
-      final Map<String, dynamic> data = response.body.isNotEmpty
-          ? jsonDecode(response.body) as Map<String, dynamic>
-          : {};
+      Map<String, dynamic> data = {};
+      if (response.body.isNotEmpty) {
+        try {
+          final decoded = jsonDecode(response.body);
+          if (decoded is Map<String, dynamic>) {
+            data = decoded;
+          }
+        } catch (_) {
+          // Response body was not JSON (e.g. HTML or plain text server error page)
+        }
+      }
 
       if (response.statusCode >= 200 && response.statusCode < 300) {
         final token =
@@ -66,6 +75,13 @@ class LoginViewModel extends ChangeNotifier {
             data['access_token']?.toString();
 
         await _tokenStorage.savetoken(token ?? "");
+
+        // Step 2: Immediately register device FCM token with backend
+        if (token != null && token.isNotEmpty) {
+          unawaited(
+            NotificationService.registerDeviceWithBackend(jwtToken: token),
+          );
+        }
 
         final userMap = data['user'] is Map<String, dynamic>
             ? data['user'] as Map<String, dynamic>
@@ -82,10 +98,11 @@ class LoginViewModel extends ChangeNotifier {
           isCoordinator: isCoordinator,
         );
       } else {
-        _errorMessage = "Invalid login";
+        final friendlyMsg = _formatErrorMessage(response.statusCode, data);
+        _errorMessage = friendlyMsg;
         _isLoading = false;
         notifyListeners();
-        return LoginResult.failure("Invalid login");
+        return LoginResult.failure(friendlyMsg);
       }
     } on SocketException {
       const errorMsg = 'Connection failed. Please check your network.';
@@ -111,6 +128,86 @@ class LoginViewModel extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
       return LoginResult.failure(errorMsg);
+    }
+  }
+
+  /// Converts raw server errors and status codes into clear, user-friendly messages.
+  static String _formatErrorMessage(int statusCode, dynamic data) {
+    String? rawMessage;
+    if (data is Map) {
+      final val = data['message'] ?? data['error'] ?? data['detail'];
+      if (val != null) {
+        rawMessage = val.toString().trim();
+      }
+    } else if (data is String && data.trim().isNotEmpty) {
+      rawMessage = data.trim();
+    }
+
+    // 5xx Server errors
+    if (statusCode >= 500) {
+      return 'Our server is temporarily unavailable. Please try again shortly.';
+    }
+
+    if (rawMessage != null && rawMessage.isNotEmpty) {
+      final lower = rawMessage.toLowerCase();
+
+      // Check for technical/developer details: "(role 2 or 3)" or "unauthorized for mobile login"
+      if (lower.contains('role') ||
+          lower.contains('not authorized for mobile')) {
+        return 'Incorrect username or password, or your account is not authorized for mobile access.';
+      }
+
+      // Deactivated or locked accounts
+      if (lower.contains('deactivat') ||
+          lower.contains('inactive') ||
+          lower.contains('suspend') ||
+          lower.contains('lock') ||
+          lower.contains('disabled')) {
+        return 'Your account is deactivated. Please contact your administrator.';
+      }
+
+      // Invalid credentials
+      if (lower.contains('invalid credential') ||
+          lower.contains('invalid login') ||
+          lower.contains('wrong password') ||
+          lower.contains('user not found') ||
+          lower.contains('incorrect password') ||
+          lower.contains('bad credentials')) {
+        return 'Incorrect username or password. Please try again.';
+      }
+
+      // Rate limit
+      if (lower.contains('too many') || lower.contains('rate limit')) {
+        return 'Too many login attempts. Please wait a moment and try again.';
+      }
+
+      // Filter out technical leaks like SQL syntax, exceptions, stack traces
+      final hasTechnicalJargon =
+          lower.contains('exception') ||
+          lower.contains('sql') ||
+          lower.contains('null pointer') ||
+          lower.contains('syntax') ||
+          lower.contains('econnrefused') ||
+          lower.contains('stack trace');
+
+      if (!hasTechnicalJargon) {
+        final clean = rawMessage[0].toUpperCase() + rawMessage.substring(1);
+        return clean.endsWith('.') ? clean : '$clean.';
+      }
+    }
+
+    // Fallbacks based on status code
+    switch (statusCode) {
+      case 401:
+        return 'Incorrect username or password. Please try again.';
+      case 403:
+        return 'You do not have permission to log in. Please contact your administrator.';
+      case 404:
+        return 'Account not found. Please check your credentials and try again.';
+      case 429:
+        return 'Too many login attempts. Please wait a moment and try again.';
+      default:
+        return 'Unable to log in. Please check your credentials and try again.';
     }
   }
 

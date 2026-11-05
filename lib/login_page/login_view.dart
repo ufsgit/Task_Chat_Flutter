@@ -1,7 +1,10 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import '../api/authenticated_client.dart';
 import '../bottom_navigator/bottom_navigator.dart';
 import '../core/theme.dart';
 import '../core/widgets/fitmate_logo.dart';
+import '../services/notification_service.dart';
 import '../settings/settings_model.dart';
 import 'login_view_model.dart';
 
@@ -38,8 +41,9 @@ class _LoginPageState extends State<LoginPage> {
     if (!mounted) return;
 
     if (result.isSuccess) {
+      AuthenticatedClient.resetRedirectLock();
       if (result.user != null) {
-        UserProfileData.save(result.user!);
+        await UserProfileData.save(result.user!);
       }
       if (!mounted) return;
       Navigator.of(context).pushReplacement(

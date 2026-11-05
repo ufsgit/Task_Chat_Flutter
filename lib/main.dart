@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'core/theme.dart';
+import 'services/firebase_options.dart';
+import 'services/notification_service.dart';
 import 'splash/splash_screen.dart';
 
 void main() {
@@ -23,7 +26,23 @@ void main() {
     ),
   );
 
+  // Mount UI immediately so the splash screen renders instantly on the 1st frame
   runApp(const FitmateApp());
+
+  // Initialize Firebase and notifications asynchronously in the background
+  _initServices();
+}
+
+Future<void> _initServices() async {
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    NotificationService.navigatorKey = FitmateApp.navigatorKey;
+    await NotificationService.initialize();
+  } catch (e) {
+    debugPrint('>>> [Services Init Error] $e');
+  }
 }
 
 class FitmateApp extends StatelessWidget {

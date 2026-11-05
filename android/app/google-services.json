@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "660139934246",
+    "project_id": "fitmate-20a45",
+    "storage_bucket": "fitmate-20a45.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:660139934246:android:61e0ae22b5ad638baa5ce7",
+        "android_client_info": {
+          "package_name": "com.example.task_chat"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCM0npiwzcWT6sdgQs-1TAqXBb2U6YLFbo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

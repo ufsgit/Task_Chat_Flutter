@@ -439,14 +439,6 @@ class DashboardService {
     DateTime? dateFrom,
     DateTime? dateTo,
   }) async {
-    final isTest = TokenStorage.isTestEnvironment;
-    String? token;
-    try {
-      token = await tokenStorage.getToken().timeout(
-        isTest ? const Duration(milliseconds: 50) : const Duration(seconds: 5),
-      );
-    } catch (_) {}
-
     final queryParams = <String, String>{
       'period': period.queryValue,
     };
@@ -461,17 +453,12 @@ class DashboardService {
 
     final baseUri = Uri.parse(ApiConfig.dashboard);
     final uri = baseUri.replace(queryParameters: queryParams);
+    final headers = await tokenStorage.authHeaders();
 
     final response = await client
         .get(
           uri,
-          headers: {
-            'Accept': 'application/json',
-            if (token != null && token.isNotEmpty)
-              'authorization': token.startsWith('Bearer ')
-                  ? token
-                  : 'Bearer $token',
-          },
+          headers: headers,
         )
         .timeout(const Duration(seconds: 10));
 

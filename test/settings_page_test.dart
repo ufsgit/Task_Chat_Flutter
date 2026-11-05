@@ -3,6 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:task_chat/bottom_navigator/bottom_navigator.dart';
 import 'package:task_chat/login_page/login_model.dart';
+import 'package:task_chat/login_page/token_storage.dart';
+import 'package:task_chat/services/notification_service.dart';
 import 'package:task_chat/settings/settings_model.dart';
 import 'package:task_chat/settings/settings_view.dart';
 import 'package:task_chat/settings/settings_view_model.dart';
@@ -13,7 +15,7 @@ void main() {
     initials: 'RM',
     phone: '+91 98470 12345',
     email: 'rajesh.menon@steeldoor.com',
-    stateName: 'Kerala',
+    stateName: 'Kerala',  
     districtName: 'Ernakulam Hub',
   );
 
@@ -105,6 +107,18 @@ void main() {
 
     await vm.logout();
     expect(vm.profile, isNull);
+    expect(await UserProfileData.load(), isNull);
+  });
+
+  test('SettingsViewModel.logout unregisters device token before deleting session', () async {
+    final storage = TokenStorage();
+    await storage.savetoken('logout_jwt_token');
+    NotificationService.fcmToken = 'fcm_token_to_remove';
+
+    final vm = SettingsViewModel(tokenStorage: storage);
+    await vm.logout();
+
+    expect(await storage.getToken(), isNull);
     expect(await UserProfileData.load(), isNull);
   });
 }

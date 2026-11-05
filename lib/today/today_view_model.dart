@@ -457,24 +457,8 @@ class TodayViewModel extends ChangeNotifier {
     _hasMore = true;
     notifyListeners();
 
-    String? token;
     try {
-      final isTest = TokenStorage.isTestEnvironment;
-      token = await (tokenStorage ?? TokenStorage()).getToken().timeout(
-        isTest ? const Duration(milliseconds: 50) : const Duration(seconds: 5),
-      );
-    } catch (_) {
-      // Ignored in test environment if platform channel is absent or times out
-    }
-
-    try {
-      final headers = <String, String>{
-        'Accept': 'application/json',
-        if (token != null && token.isNotEmpty)
-          'authorization': token.startsWith('Bearer ')
-              ? token
-              : 'Bearer $token',
-      };
+      final headers = await (tokenStorage ?? TokenStorage()).authHeaders();
 
       final params = queryParams ?? buildQueryParameters();
       final baseUri = Uri.parse(ApiConfig.bookings);
@@ -544,21 +528,7 @@ class TodayViewModel extends ChangeNotifier {
         params['limit'] = (_limit != null && _limit!.isNotEmpty) ? _limit! : '15';
       }
 
-      final isTest = TokenStorage.isTestEnvironment;
-      String? token;
-      try {
-        token = await (tokenStorage ?? TokenStorage()).getToken().timeout(
-          isTest ? const Duration(milliseconds: 50) : const Duration(seconds: 5),
-        );
-      } catch (_) {}
-
-      final headers = <String, String>{
-        'Accept': 'application/json',
-        if (token != null && token.isNotEmpty)
-          'authorization': token.startsWith('Bearer ')
-              ? token
-              : 'Bearer $token',
-      };
+      final headers = await (tokenStorage ?? TokenStorage()).authHeaders();
 
       final baseUri = Uri.parse(ApiConfig.bookings);
       final uri = baseUri.replace(queryParameters: params);

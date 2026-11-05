@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import '../../api/api.dart';
 import '../../core/slide_up_route.dart';
 import '../../core/theme.dart';
@@ -33,10 +34,15 @@ class _ActivityViewState extends State<ActivityView> {
   late final ActivityViewModel _viewModel;
   late final bool _isLocalViewModel;
   final TextEditingController _searchController = TextEditingController();
+  late final ScrollController _scrollController;
+  bool _showScrollToTop = false;
 
   @override
   void initState() {
     super.initState();
+    _scrollController = ScrollController();
+    _scrollController.addListener(_onScroll);
+
     if (widget.viewModel != null) {
       _viewModel = widget.viewModel!;
       _isLocalViewModel = false;
@@ -46,12 +52,102 @@ class _ActivityViewState extends State<ActivityView> {
     }
 
     // Immediate fetch from backend API
-    debugPrint('>>> [ActivityView] initState -> calling fetchHistory() on ${ApiConfig.history_list}');
+    debugPrint(
+      '>>> [ActivityView] initState -> calling fetchHistory() on ${ApiConfig.history_list}',
+    );
     _viewModel.fetchHistory();
+  }
+
+  void _onScroll() {
+    if (!_scrollController.hasClients) return;
+    final position = _scrollController.position;
+
+    final shouldShow = position.pixels > 250;
+    if (shouldShow != _showScrollToTop) {
+      setState(() {
+        _showScrollToTop = shouldShow;
+      });
+    }
+
+    if (position.userScrollDirection != ScrollDirection.reverse) return;
+    if (position.pixels <= 0) return;
+
+    final maxScroll = position.maxScrollExtent;
+    final currentScroll = position.pixels;
+
+    if (maxScroll - currentScroll <= 200 &&
+        !_viewModel.isLoading &&
+        !_viewModel.isLoadingMore &&
+        _viewModel.hasMore &&
+        _viewModel.filteredActivities.length >= 10) {
+      _viewModel.loadNextPage();
+    }
+  }
+
+  void _scrollToTop() {
+    if (!_scrollController.hasClients) return;
+    _scrollController.animateTo(
+      0.0,
+      duration: const Duration(milliseconds: 400),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
+  Widget _buildScrollToTopButton(bool isDark) {
+    final btnBg = isDark ? AppDarkColors.whatsappGreen : AppColors.primaryGreen;
+    final iconColor = isDark ? const Color(0xFF06140D) : Colors.white;
+
+    return AnimatedScale(
+      key: const Key('activity_scroll_to_top_button'),
+      scale: _showScrollToTop ? 1.0 : 0.0,
+      duration: const Duration(milliseconds: 240),
+      curve: Curves.easeOutBack,
+      child: AnimatedOpacity(
+        opacity: _showScrollToTop ? 1.0 : 0.0,
+        duration: const Duration(milliseconds: 200),
+        child: IgnorePointer(
+          ignoring: !_showScrollToTop,
+          child: Tooltip(
+            message: 'Scroll to top',
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(22),
+                onTap: _scrollToTop,
+                child: Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: btnBg,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(isDark ? 0.4 : 0.18),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Center(
+                    child: Icon(
+                      Icons.arrow_upward_rounded,
+                      color: iconColor,
+                      size: 22,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   @override
   void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
     _searchController.dispose();
     if (_isLocalViewModel) {
       _viewModel.dispose();
@@ -73,9 +169,15 @@ class _ActivityViewState extends State<ActivityView> {
         statusOptions: _viewModel.statusOptions,
         onApply: (status) {
           _viewModel.setStatusFilter(status);
+          if (_scrollController.hasClients) {
+            _scrollController.jumpTo(0.0);
+          }
         },
         onReset: () {
           _viewModel.setStatusFilter('All');
+          if (_scrollController.hasClients) {
+            _scrollController.jumpTo(0.0);
+          }
         },
       ),
     );
@@ -123,128 +225,159 @@ class _ActivityViewState extends State<ActivityView> {
       builder: (context, _) {
         final items = _viewModel.filteredActivities;
         final hasActiveFilters = _viewModel.hasActiveFilters;
-        final iconBtnBg =
-            isDark ? AppDarkColors.surfaceCard : AppColors.surfaceGrey;
+        final iconBtnBg = isDark
+            ? AppDarkColors.surfaceCard
+            : AppColors.surfaceGrey;
 
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        return Stack(
           children: [
-            // 1. Search Input Field & Filter Option Row
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 16.0,
-                vertical: 6.0,
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: SearchInputField(
-                      controller: _searchController,
-                      padding: EdgeInsets.zero,
-                      onChanged: (val) => _viewModel.setSearchQuery(val),
-                      onClear: () => _viewModel.setSearchQuery(''),
-                    ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 1. Search Input Field & Filter Option Row
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16.0,
+                    vertical: 6.0,
                   ),
-                  const SizedBox(width: 10),
-                  Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(24),
-                      onTap: _openFilterBottomSheet,
-                      child: Container(
-                        width: 48,
-                        height: 48,
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: hasActiveFilters
-                              ? (isDark
-                                  ? AppDarkColors.chipPendingBg
-                                  : AppColors.chipPendingBg)
-                              : iconBtnBg,
-                          borderRadius: BorderRadius.circular(24),
-                          border: hasActiveFilters
-                              ? Border.all(
-                                  color: isDark
-                                      ? AppDarkColors.primaryGreen
-                                      : AppColors.brandGreen,
-                                  width: 1.5,
-                                )
-                              : (isDark
-                                  ? Border.all(
-                                      color: AppDarkColors.border,
-                                      width: 1,
-                                    )
-                                  : null),
-                        ),
-                        child: Stack(
-                          clipBehavior: Clip.none,
-                          alignment: Alignment.center,
-                          children: [
-                            Icon(
-                              Icons.tune_rounded,
-                              size: 22,
-                              color: hasActiveFilters
-                                  ? (isDark
-                                      ? AppDarkColors.primaryGreen
-                                      : AppColors.brandGreen)
-                                  : (isDark
-                                      ? AppDarkColors.textSubtitle
-                                      : AppColors.textSecondary),
-                            ),
-                            if (hasActiveFilters)
-                              Positioned(
-                                top: 2,
-                                right: 2,
-                                child: Container(
-                                  width: 7,
-                                  height: 7,
-                                  decoration: const BoxDecoration(
-                                    color: AppColors.brandGreen,
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
-                              ),
-                          ],
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: SearchInputField(
+                          controller: _searchController,
+                          padding: EdgeInsets.zero,
+                          onChanged: (val) {
+                            _viewModel.setSearchQuery(val);
+                            if (_scrollController.hasClients) {
+                              _scrollController.jumpTo(0.0);
+                            }
+                          },
+                          onClear: () {
+                            _viewModel.setSearchQuery('');
+                            if (_scrollController.hasClients) {
+                              _scrollController.jumpTo(0.0);
+                            }
+                          },
                         ),
                       ),
+                      const SizedBox(width: 10),
+                      Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(24),
+                          onTap: _openFilterBottomSheet,
+                          child: Container(
+                            width: 48,
+                            height: 48,
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: hasActiveFilters
+                                  ? (isDark
+                                        ? AppDarkColors.chipPendingBg
+                                        : AppColors.chipPendingBg)
+                                  : iconBtnBg,
+                              borderRadius: BorderRadius.circular(24),
+                              border: hasActiveFilters
+                                  ? Border.all(
+                                      color: isDark
+                                          ? AppDarkColors.primaryGreen
+                                          : AppColors.brandGreen,
+                                      width: 1.5,
+                                    )
+                                  : (isDark
+                                        ? Border.all(
+                                            color: AppDarkColors.border,
+                                            width: 1,
+                                          )
+                                        : null),
+                            ),
+                            child: Stack(
+                              clipBehavior: Clip.none,
+                              alignment: Alignment.center,
+                              children: [
+                                Icon(
+                                  Icons.tune_rounded,
+                                  size: 22,
+                                  color: hasActiveFilters
+                                      ? (isDark
+                                            ? AppDarkColors.primaryGreen
+                                            : AppColors.brandGreen)
+                                      : (isDark
+                                            ? AppDarkColors.textSubtitle
+                                            : AppColors.textSecondary),
+                                ),
+                                if (hasActiveFilters)
+                                  Positioned(
+                                    top: 2,
+                                    right: 2,
+                                    child: Container(
+                                      width: 7,
+                                      height: 7,
+                                      decoration: const BoxDecoration(
+                                        color: AppColors.brandGreen,
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Active Filter Chip Row
+                if (hasActiveFilters)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16.0, 4.0, 16.0, 6.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      children: [
+                        _buildActiveFilterChip(
+                          label: 'Status: ${_viewModel.selectedStatusFilter}',
+                          isDark: isDark,
+                          onDeleted: () {
+                            _viewModel.setStatusFilter('All');
+                            if (_scrollController.hasClients) {
+                              _scrollController.jumpTo(0.0);
+                            }
+                          },
+                        ),
+                      ],
                     ),
                   ),
-                ],
-              ),
-            ),
 
-            // Active Filter Chip Row
-            if (hasActiveFilters)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16.0, 4.0, 16.0, 6.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  children: [
-                    _buildActiveFilterChip(
-                      label: 'Status: ${_viewModel.selectedStatusFilter}',
-                      isDark: isDark,
-                      onDeleted: () => _viewModel.setStatusFilter('All'),
-                    ),
-                  ],
+                // 2. Horizontal Filter Chips Bar ('Today', 'This Week', 'This Month')
+                FilterChipsBar(
+                  filters: _viewModel.filters,
+                  selectedIndex: _viewModel.selectedFilterIndex,
+                  onSelected: (index) {
+                    _viewModel.setFilterIndex(index);
+                    if (_scrollController.hasClients) {
+                      _scrollController.jumpTo(0.0);
+                    }
+                  },
                 ),
-              ),
 
-            // 2. Horizontal Filter Chips Bar ('Today', 'This Week', 'This Month')
-            FilterChipsBar(
-              filters: _viewModel.filters,
-              selectedIndex: _viewModel.selectedFilterIndex,
-              onSelected: (index) => _viewModel.setFilterIndex(index),
+                const SizedBox(height: 6),
+
+                // 3. Activity List / Loading / Error / Empty states
+                Expanded(
+                  child: RefreshIndicator(
+                    color: AppColors.primaryGreen,
+                    onRefresh: () => _viewModel.fetchHistory(force: true),
+                    child: _buildListContent(items, isDark),
+                  ),
+                ),
+              ],
             ),
-
-            const SizedBox(height: 6),
-
-            // 3. Activity List / Loading / Error / Empty states
-            Expanded(
-              child: RefreshIndicator(
-                color: AppColors.primaryGreen,
-                onRefresh: () => _viewModel.fetchHistory(force: true),
-                child: _buildListContent(items, isDark),
-              ),
+            // Floating pop up scroll to top button
+            Positioned(
+              right: 18,
+              bottom: 20,
+              child: _buildScrollToTopButton(isDark),
             ),
           ],
         );
@@ -353,11 +486,50 @@ class _ActivityViewState extends State<ActivityView> {
     }
 
     return ListView.separated(
+      controller: _scrollController,
       physics: const AlwaysScrollableScrollPhysics(),
-      itemCount: items.length,
+      itemCount: items.length + (_viewModel.isLoadingMore ? 1 : 0),
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 80),
-      separatorBuilder: (context, index) => const SizedBox(height: 12),
+      separatorBuilder: (context, index) {
+        if (index >= items.length - 1 && _viewModel.isLoadingMore) {
+          return const SizedBox.shrink();
+        }
+        return const SizedBox(height: 12);
+      },
       itemBuilder: (context, index) {
+        if (index == items.length) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 20),
+            child: Center(
+              child: SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.5,
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    AppColors.primaryGreen,
+                  ),
+                ),
+              ),
+            ),
+          );
+        }
+
+        if (index >= 10 &&
+            index >= items.length - 2 &&
+            !_viewModel.isLoading &&
+            !_viewModel.isLoadingMore &&
+            _viewModel.hasMore) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted &&
+                !_viewModel.isLoading &&
+                !_viewModel.isLoadingMore &&
+                _viewModel.hasMore) {
+              _viewModel.loadNextPage();
+            }
+          });
+        }
+
         final activityItem = items[index];
         return ActivityItemCard(
           item: activityItem,
@@ -367,11 +539,13 @@ class _ActivityViewState extends State<ActivityView> {
             );
             // Filter to only include activities belonging to this specific user / booking
             final userOnlyActivities = _viewModel.activities
-                .where((act) =>
-                    (activityItem.bookingId != null &&
-                        act.bookingId == activityItem.bookingId) ||
-                    act.title.trim().toLowerCase() ==
-                        activityItem.title.trim().toLowerCase())
+                .where(
+                  (act) =>
+                      (activityItem.bookingId != null &&
+                          act.bookingId == activityItem.bookingId) ||
+                      act.title.trim().toLowerCase() ==
+                          activityItem.title.trim().toLowerCase(),
+                )
                 .toList();
 
             Navigator.of(context, rootNavigator: true).push(
@@ -382,6 +556,8 @@ class _ActivityViewState extends State<ActivityView> {
                       ? userOnlyActivities
                       : [activityItem],
                   onRefresh: () => _viewModel.fetchHistory(force: true),
+                  viewModel: _viewModel,
+                  client: _viewModel.client,
                 ),
               ),
             );
@@ -432,9 +608,7 @@ class _ActivityViewState extends State<ActivityView> {
           ),
         ),
       ),
-      body: SafeArea(
-        child: _buildBody(context, isDark),
-      ),
+      body: SafeArea(child: _buildBody(context, isDark)),
     );
   }
 }

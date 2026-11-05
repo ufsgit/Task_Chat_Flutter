@@ -229,5 +229,122 @@ void main() {
 
     expect(requestCount, 1);
   });
+
+  test('CoordinatorViewModel scroll pagination loadNextPage fetches and appends items', () async {
+    final page1Data = List.generate(
+      15,
+      (i) => {
+        'id': i + 1,
+        'name': 'Client ${i + 1}',
+        'mobile': '987654321$i',
+        'address': 'Kochi',
+        'status': 'NEW',
+        'branchHeadName': 'Manager A',
+      },
+    );
+
+    final page2Data = List.generate(
+      5,
+      (i) => {
+        'id': i + 16,
+        'name': 'Client ${i + 16}',
+        'mobile': '987654322$i',
+        'address': 'Calicut',
+        'status': 'SCHEDULED',
+        'branchHeadName': 'Manager B',
+      },
+    );
+
+    final mockClient = MockClient((request) async {
+      final page = request.url.queryParameters['page'] ?? '1';
+      if (page == '1') {
+        return http.Response(
+          jsonEncode({
+            'status': 'success',
+            'data': page1Data,
+            'pagination': {'currentPage': 1, 'totalPages': 2},
+          }),
+          200,
+        );
+      } else {
+        return http.Response(
+          jsonEncode({
+            'status': 'success',
+            'data': page2Data,
+            'pagination': {'currentPage': 2, 'totalPages': 2},
+          }),
+          200,
+        );
+      }
+    });
+
+    final vm = CoordinatorViewModel(client: mockClient);
+    await vm.fetchBookings();
+
+    expect(vm.currentPage, 1);
+    expect(vm.hasMore, isTrue);
+    expect(vm.filteredChatItems.length, 15);
+
+    await vm.loadNextPage();
+
+    expect(vm.currentPage, 2);
+    expect(vm.hasMore, isFalse);
+    expect(vm.filteredChatItems.length, 20);
+    expect(vm.filteredChatItems.last['title'], 'Client 20');
+  });
+
+  testWidgets(
+      'CoordinatorPage pop up arrow button appears when scrolled down and scrolls to top fast on tap',
+      (WidgetTester tester) async {
+    final manyItems = List.generate(
+      30,
+      (i) => {
+        'id': '$i',
+        'title': 'Coordinator Lead $i',
+        'location': 'Location $i',
+        'tagText': 'New',
+        'date': '04/11/2026',
+        'branchManager': 'Manager $i',
+        'isPending': true,
+      },
+    );
+
+    final vm = CoordinatorViewModel(initialItems: manyItems);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CoordinatorPage(viewModel: vm),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final scrollToTopButtonFinder = find.byKey(const Key('coordinator_scroll_to_top_button'));
+    expect(scrollToTopButtonFinder, findsOneWidget);
+
+    // At top (offset 0), AnimatedScale should have scale 0.0
+    final AnimatedScale initialScale = tester.widget(scrollToTopButtonFinder);
+    expect(initialScale.scale, 0.0);
+
+    // Scroll down by 600 pixels
+    final listViewFinder = find.byType(ListView);
+    await tester.drag(listViewFinder, const Offset(0, -600));
+    await tester.pumpAndSettle();
+
+    // Now button should pop up (scale 1.0)
+    final AnimatedScale poppedScale = tester.widget(scrollToTopButtonFinder);
+    expect(poppedScale.scale, 1.0);
+
+    // Tap the scroll to top button
+    await tester.tap(scrollToTopButtonFinder);
+    await tester.pumpAndSettle();
+
+    // Verify it reached top
+    final ScrollableState scrollable = tester.state(find.byType(Scrollable).first);
+    expect(scrollable.position.pixels, 0.0);
+
+    // Verify button scaled back down to 0.0
+    final AnimatedScale endScale = tester.widget(scrollToTopButtonFinder);
+    expect(endScale.scale, 0.0);
+  });
 }
 

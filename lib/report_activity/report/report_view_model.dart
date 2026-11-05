@@ -27,12 +27,11 @@ class ReportViewModel extends ChangeNotifier {
     return '${dt.year.toString().padLeft(4, '0')}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}';
   }
 
-  /// Default To date: Current date (YYYY-MM-DD)
-  static String get defaultDateTo => formatIsoDate(DateTime.now());
+  /// Default To date: 04/11/2026 (YYYY-MM-DD)
+  static String get defaultDateTo => '2026-11-04';
 
-  /// Default From date: Past 7th day (YYYY-MM-DD)
-  static String get defaultDateFrom =>
-      formatIsoDate(DateTime.now().subtract(const Duration(days: 7)));
+  /// Default From date: 07/10/2026 (YYYY-MM-DD)
+  static String get defaultDateFrom => '2026-10-07';
 
   ReportViewModel({
     TaskReportData? initialData,
@@ -42,14 +41,13 @@ class ReportViewModel extends ChangeNotifier {
     http.Client? client,
     this.tokenStorage,
     bool useDefaultDateRange = true,
-  })  : _client = client ?? AuthenticatedClient(),
-        _isInternalClient = client == null,
-        _data = initialData ?? defaultTaskReportData,
-        _graphData = initialGraphData ?? [],
-        _dateFrom =
-            initialDateFrom ?? (useDefaultDateRange ? defaultDateFrom : null),
-        _dateTo =
-            initialDateTo ?? (useDefaultDateRange ? defaultDateTo : null);
+  }) : _client = client ?? AuthenticatedClient(),
+       _isInternalClient = client == null,
+       _data = initialData ?? defaultTaskReportData,
+       _graphData = initialGraphData ?? [],
+       _dateFrom =
+           initialDateFrom ?? (useDefaultDateRange ? defaultDateFrom : null),
+       _dateTo = initialDateTo ?? (useDefaultDateRange ? defaultDateTo : null);
 
   TaskReportData get data => _data;
   bool get isLoading => _isLoading;
@@ -108,16 +106,18 @@ class ReportViewModel extends ChangeNotifier {
     try {
       final isTest = TokenStorage.isTestEnvironment;
       token = await (tokenStorage ?? TokenStorage()).getToken().timeout(
-            isTest ? const Duration(milliseconds: 50) : const Duration(seconds: 2),
-            onTimeout: () => null,
-          );
+        isTest ? const Duration(milliseconds: 50) : const Duration(seconds: 2),
+        onTimeout: () => null,
+      );
     } catch (_) {}
 
     try {
       final headers = <String, String>{
         'Accept': 'application/json',
         if (token != null && token.isNotEmpty)
-          'authorization': token.startsWith('Bearer ') ? token : 'Bearer $token',
+          'authorization': token.startsWith('Bearer ')
+              ? token
+              : 'Bearer $token',
       };
 
       final queryParams = <String, String>{};
@@ -145,13 +145,17 @@ class ReportViewModel extends ChangeNotifier {
 
         if (rawList is List) {
           _graphData = rawList
-              .map((e) => BookingReportGraphItem.fromJson(e as Map<String, dynamic>))
+              .map(
+                (e) =>
+                    BookingReportGraphItem.fromJson(e as Map<String, dynamic>),
+              )
               .toList();
         } else {
           _graphData = [];
         }
       } else {
-        _graphErrorMessage = 'Failed to load report graph (${response.statusCode})';
+        _graphErrorMessage =
+            'Failed to load report graph (${response.statusCode})';
         _graphData = [];
       }
     } catch (e) {

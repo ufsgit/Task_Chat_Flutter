@@ -9,9 +9,20 @@ import '../today/today_view_model.dart';
 
 /// An HTTP client interceptor that detects 401 Unauthorized responses.
 /// When a 401 occurs on any authenticated endpoint, it wipes the local session
-/// and routes the user back to the login screen.
+/// and routes the user back to the login screen with a deduplication lock
+/// preventing concurrent 401 redirect floods.
 class AuthenticatedClient extends http.BaseClient {
   static final AuthenticatedClient instance = AuthenticatedClient();
+
+  static bool _isRedirectingToLogin = false;
+
+  /// Resets the 401 redirect lock (e.g. after a new login or in tests).
+  static void resetRedirectLock() {
+    _isRedirectingToLogin = false;
+  }
+
+  /// Whether a 401 redirect is currently being handled.
+  static bool get isRedirectingToLogin => _isRedirectingToLogin;
 
   http.Client _inner;
   final TokenStorage? tokenStorage;
@@ -51,6 +62,11 @@ class AuthenticatedClient extends http.BaseClient {
   }
 
   Future<void> _handleUnauthorized() async {
+    if (_isRedirectingToLogin) {
+      return;
+    }
+    _isRedirectingToLogin = true;
+
     try {
       final storage = tokenStorage ?? TokenStorage();
       await storage.deleteToken();

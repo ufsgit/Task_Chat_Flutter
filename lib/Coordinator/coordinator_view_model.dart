@@ -19,6 +19,10 @@ class CoordinatorViewModel extends ChangeNotifier {
   Timer? _searchDebounceTimer;
 
   bool _isLoading = false;
+  bool _isLoadingMore = false;
+  bool _hasMore = true;
+  int _currentPage = 1;
+  String _limit = '15';
   String? _errorMessage;
   List<BookingModel> _bookings = [];
   List<Map<String, dynamic>> _items = [];
@@ -60,6 +64,9 @@ class CoordinatorViewModel extends ChangeNotifier {
 
   // Getters
   bool get isLoading => _isLoading;
+  bool get isLoadingMore => _isLoadingMore;
+  bool get hasMore => _hasMore;
+  int get currentPage => _currentPage;
   String? get errorMessage => _errorMessage;
   List<BookingModel> get bookings => _bookings;
   int get selectedFilterIndex => _selectedFilterIndex;
@@ -137,31 +144,23 @@ class CoordinatorViewModel extends ChangeNotifier {
   Future<void> fetchBookings() async {
     if (_isLoading) return;
     _isLoading = true;
+    _isLoadingMore = false;
+    _currentPage = 1;
+    _hasMore = true;
     _errorMessage = null;
     notifyListeners();
 
-    String? token;
     try {
-      if (TokenStorage.isTestEnvironment) {
-        token = await (tokenStorage ?? TokenStorage()).getToken();
-      } else {
-        token = await (tokenStorage ?? TokenStorage())
-            .getToken()
-            .timeout(const Duration(seconds: 5));
-      }
-    } catch (_) {
-      // Ignored in test environment
-    }
+      final headers = await (tokenStorage ?? TokenStorage()).authHeaders();
 
-    try {
-      final headers = <String, String>{
-        'Accept': 'application/json',
-        if (token != null && token.isNotEmpty)
-          'authorization': token.startsWith('Bearer ') ? token : 'Bearer $token',
-      };
+      final baseUri = Uri.parse(ApiConfig.bookings);
+      final uri = baseUri.replace(queryParameters: {
+        'page': '1',
+        'limit': _limit,
+      });
 
       final future = _client.get(
-        Uri.parse(ApiConfig.bookings),
+        uri,
         headers: headers,
       );
       final response = TokenStorage.isTestEnvironment
@@ -195,6 +194,23 @@ class CoordinatorViewModel extends ChangeNotifier {
               'branchManager': assignedManager,
             };
           }).toList();
+
+          if (decoded is Map<String, dynamic> &&
+              decoded['pagination'] is Map<String, dynamic>) {
+            final pagination = decoded['pagination'] as Map<String, dynamic>;
+            final totalPages = pagination['totalPages'];
+            if (totalPages is int) {
+              _hasMore = _currentPage < totalPages;
+            } else if (totalPages is String) {
+              final parsed = int.tryParse(totalPages);
+              if (parsed != null) _hasMore = _currentPage < parsed;
+            }
+          } else {
+            final effectiveLimit = int.tryParse(_limit) ?? 15;
+            if (_bookings.length < effectiveLimit) {
+              _hasMore = false;
+            }
+          }
         }
       } else {
         _errorMessage = 'Failed to load bookings (${response.statusCode})';
@@ -203,6 +219,92 @@ class CoordinatorViewModel extends ChangeNotifier {
       _errorMessage = 'Connection error';
     } finally {
       _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  /// Fetches the next page of bookings for Coordinator and appends them to the list.
+  Future<void> loadNextPage() async {
+    if (_isLoading || _isLoadingMore || !_hasMore) return;
+    _isLoadingMore = true;
+    notifyListeners();
+
+    try {
+      final nextPage = _currentPage + 1;
+      final queryParams = <String, String>{
+        'page': nextPage.toString(),
+        'limit': _limit,
+      };
+
+      final headers = await (tokenStorage ?? TokenStorage()).authHeaders();
+
+      final baseUri = Uri.parse(ApiConfig.bookings);
+      final uri = baseUri.replace(queryParameters: queryParams);
+
+      final future = _client.get(uri, headers: headers);
+      final response = TokenStorage.isTestEnvironment
+          ? await future
+          : await future.timeout(const Duration(seconds: 10));
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final decoded = json.decode(response.body);
+        final dynamic rawList = decoded is Map<String, dynamic>
+            ? (decoded['data'] ?? decoded['items'] ?? decoded['bookings'])
+            : (decoded is List ? decoded : []);
+
+        if (rawList is List && rawList.isNotEmpty) {
+          final newBookings = rawList
+              .map((e) => BookingModel.fromJson(e as Map<String, dynamic>))
+              .toList();
+
+          _currentPage = nextPage;
+          _bookings.addAll(newBookings);
+
+          final newItems = newBookings.map((booking) {
+            final baseChat = booking.toChatItem();
+            final assignedManager = (booking.branchHeadName != null &&
+                    booking.branchHeadName!.trim().isNotEmpty)
+                ? booking.branchHeadName!.trim()
+                : ((booking.loginName != null &&
+                        booking.loginName!.trim().isNotEmpty)
+                    ? booking.loginName!.trim()
+                    : 'Unassigned');
+
+            return {
+              ...baseChat,
+              'role': 'Branch Manager',
+              'branchManager': assignedManager,
+            };
+          }).toList();
+
+          _items.addAll(newItems);
+
+          if (decoded is Map<String, dynamic> &&
+              decoded['pagination'] is Map<String, dynamic>) {
+            final pagination = decoded['pagination'] as Map<String, dynamic>;
+            final totalPages = pagination['totalPages'];
+            if (totalPages is int) {
+              _hasMore = _currentPage < totalPages;
+            } else if (totalPages is String) {
+              final parsed = int.tryParse(totalPages);
+              if (parsed != null) _hasMore = _currentPage < parsed;
+            }
+          } else {
+            final effectiveLimit = int.tryParse(_limit) ?? 15;
+            if (newBookings.length < effectiveLimit) {
+              _hasMore = false;
+            }
+          }
+        } else {
+          _hasMore = false;
+        }
+      } else {
+        _hasMore = false;
+      }
+    } catch (_) {
+      // Keep state intact
+    } finally {
+      _isLoadingMore = false;
       notifyListeners();
     }
   }

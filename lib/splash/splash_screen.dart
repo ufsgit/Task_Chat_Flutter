@@ -6,6 +6,7 @@ import '../core/widgets/fitmate_logo.dart';
 import '../login_page/login_model.dart';
 import '../login_page/login_view.dart';
 import '../login_page/token_storage.dart';
+import '../services/notification_service.dart';
 import '../settings/settings_model.dart';
 
 /// 1-second splash screen displaying the Fitmate brand logo and typography
@@ -73,6 +74,7 @@ class _SplashScreenState extends State<SplashScreen>
     if (!mounted) return;
 
     if (token != null && token.isNotEmpty) {
+      unawaited(NotificationService.registerDeviceWithBackend(jwtToken: token));
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
@@ -101,7 +103,7 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: Colors.white,
       body: SafeArea(
         child: SizedBox.expand(
           child: Column(

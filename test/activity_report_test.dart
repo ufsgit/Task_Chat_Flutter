@@ -208,6 +208,212 @@ void main() {
       expect(vm.activities.isEmpty, isTrue);
       expect(vm.errorMessage, contains('Failed to load'));
     });
+
+    test('ActivityViewModel parses response with page, limit, and count correctly', () async {
+      final mockData = {
+        'success': true,
+        'data': {
+          'history': [
+            {
+              'history_id': 31756,
+              'booking_id': 10008,
+              'booking_name': 'rija customer',
+              'action_type': 'Status Updated',
+              'customer_note': null,
+              'staff_note': 'assassaaaaa',
+              'old_status_id': 3,
+              'old_status_code': 'Completed',
+              'old_status_label': 'Completed',
+              'old_status_color_code': '#10b981',
+              'new_status_id': 4,
+              'new_status_code': 'Cancelled',
+              'new_status_label': 'Cancelled',
+              'new_status_color_code': '#ef4444',
+              'action_by_id': 15,
+              'action_by_name': 'Company Executive 1',
+              'action_by_role_id': 1,
+              'created_at': '2026-11-04T03:58:27.000Z',
+            },
+            {
+              'history_id': 31752,
+              'booking_id': 10010,
+              'booking_name': 'casds',
+              'action_type': 'New Booking Created',
+              'customer_note': '3245',
+              'staff_note': null,
+              'new_status_id': 1,
+              'new_status_code': 'New',
+              'new_status_label': 'New',
+              'new_status_color_code': '#3b82f6',
+              'action_by_id': 85,
+              'action_by_name': 'Steel Doors Dealer 1',
+              'action_by_role_id': 4,
+              'created_at': '2026-11-04T03:53:12.000Z',
+            },
+          ],
+          'page': 1,
+          'limit': 20,
+          'count': 8,
+        },
+      };
+
+      final client = MockClient((request) async {
+        return http.Response(
+          jsonEncode(mockData),
+          200,
+          headers: {'content-type': 'application/json'},
+        );
+      });
+
+      final vm = ActivityViewModel(client: client);
+      await vm.fetchHistory();
+
+      expect(vm.currentPage, equals(1));
+      expect(vm.limit, equals(20));
+      expect(vm.totalCount, equals(8));
+      expect(vm.activities.length, equals(2));
+      expect(vm.activities[0].title, equals('rija customer'));
+      expect(vm.activities[1].title, equals('casds'));
+      // Since 2 items returned is less than limit (20), hasMore should be false
+      expect(vm.hasMore, isFalse);
+    });
+
+    test('ActivityViewModel.loadNextPage sends page=2&limit=20 and appends activities', () async {
+      int requestCount = 0;
+      final client = MockClient((request) async {
+        requestCount++;
+        if (requestCount == 1) {
+          return http.Response(
+            jsonEncode({
+              'success': true,
+              'data': {
+                'history': List.generate(
+                  20,
+                  (i) => {
+                    'history_id': 1000 + i,
+                    'booking_id': 100 + i,
+                    'booking_name': 'Customer $i',
+                    'new_status_label': 'Completed',
+                    'action_by_name': 'Coordinator 1',
+                    'action_by_role_id': 2,
+                    'created_at': DateTime.now().toIso8601String(),
+                  },
+                ),
+                'page': 1,
+                'limit': 20,
+                'count': 35,
+              },
+            }),
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        } else {
+          expect(request.url.queryParameters['page'], equals('2'));
+          expect(request.url.queryParameters['limit'], equals('20'));
+          return http.Response(
+            jsonEncode({
+              'success': true,
+              'data': {
+                'history': List.generate(
+                  15,
+                  (i) => {
+                    'history_id': 2000 + i,
+                    'booking_id': 200 + i,
+                    'booking_name': 'Customer Page 2 - $i',
+                    'new_status_label': 'Scheduled',
+                    'action_by_name': 'Coordinator 1',
+                    'action_by_role_id': 2,
+                    'created_at': '2026-11-04T04:00:00.000Z',
+                  },
+                ),
+                'page': 2,
+                'limit': 20,
+                'count': 35,
+              },
+            }),
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        }
+      });
+
+      final vm = ActivityViewModel(client: client);
+      await vm.fetchHistory();
+
+      expect(vm.currentPage, equals(1));
+      expect(vm.activities.length, equals(20));
+      expect(vm.hasMore, isTrue);
+
+      await vm.loadNextPage();
+
+      expect(vm.currentPage, equals(2));
+      expect(vm.activities.length, equals(35));
+      expect(vm.hasMore, isFalse); // Total 35 items loaded which equals totalCount
+    });
+
+    test('ActivityViewModel.fetchHistoryByBookingId requests report_graph_bybookingid endpoint and returns list', () async {
+      final client = MockClient((request) async {
+        expect(
+          request.url.toString(),
+          equals(ApiConfig.reportGraphByBookingId('10008')),
+        );
+        return http.Response(
+          jsonEncode({
+            'success': true,
+            'data': {
+              'booking_id': 10008,
+              'page': 1,
+              'limit': 10,
+              'count': 2,
+              'history': [
+                {
+                  'history_id': 31753,
+                  'booking_id': 10008,
+                  'booking_name': 'test wa',
+                  'action_type': 'Transfered',
+                  'customer_note': null,
+                  'staff_note': 'staff notes',
+                  'from_assigned_head_district_name': 'Wayanad',
+                  'to_assigned_head_district_name': 'Wayanad',
+                  'action_by_id': 35,
+                  'action_by_name': 'Coordinator Officer 1',
+                  'action_by_role_id': 2,
+                  'created_at': '2026-11-03T10:43:34.000Z',
+                },
+                {
+                  'history_id': 31750,
+                  'booking_id': 10008,
+                  'booking_name': 'test wa',
+                  'action_type': 'New Booking Created',
+                  'customer_note': '',
+                  'staff_note': null,
+                  'new_status_id': 1,
+                  'new_status_code': 'New',
+                  'new_status_label': 'New',
+                  'new_status_color_code': '#3b82f6',
+                  'to_assigned_head_district_name': 'Wayanad',
+                  'action_by_id': 35,
+                  'action_by_name': 'Coordinator Officer 1',
+                  'action_by_role_id': 2,
+                  'created_at': '2026-11-03T07:21:08.000Z',
+                },
+              ],
+            },
+          }),
+          200,
+          headers: {'content-type': 'application/json'},
+        );
+      });
+
+      final vm = ActivityViewModel(client: client);
+      final history = await vm.fetchHistoryByBookingId(10008);
+
+      expect(history, isNotNull);
+      expect(history!.length, equals(2));
+      expect(history.first['history_id'], equals(31753));
+      expect(history.first['action_type'], equals('Transfered'));
+      expect(history.last['action_type'], equals('New Booking Created'));
+    });
   });
 
   group('ReportActivity UI Tests', () {
@@ -351,6 +557,73 @@ void main() {
     );
 
     testWidgets(
+      'ActivityView displays scroll-to-top pop up arrow button when scrolled down and scrolls to top on tap',
+      (tester) async {
+        final mockItems = List.generate(
+          25,
+          (i) => {
+            'history_id': 1000 + i,
+            'booking_id': 100 + i,
+            'booking_name': 'Customer Activity $i',
+            'new_status_label': 'Completed',
+            'action_by_name': 'Executive',
+            'action_by_role_id': 1,
+            'created_at': DateTime.now().toIso8601String(),
+          },
+        );
+
+        final client = MockClient((request) async {
+          return http.Response(
+            jsonEncode({
+              'success': true,
+              'data': {
+                'history': mockItems,
+                'page': 1,
+                'limit': 20,
+                'count': 50,
+              },
+            }),
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        });
+
+        final vm = ActivityViewModel(client: client);
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: ActivityView(viewModel: vm),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Initially at top (pixels = 0), scroll-to-top button should not be scaled up
+        final btnFinder = find.byKey(const Key('activity_scroll_to_top_button'));
+        expect(btnFinder, findsOneWidget);
+
+        final animatedScaleWidget = tester.widget<AnimatedScale>(btnFinder);
+        expect(animatedScaleWidget.scale, equals(0.0));
+
+        // Scroll down by dragging a list item
+        await tester.drag(find.text('Customer Activity 1'), const Offset(0, -600));
+        await tester.pumpAndSettle();
+
+        final animatedScaleScrolled = tester.widget<AnimatedScale>(btnFinder);
+        expect(animatedScaleScrolled.scale, equals(1.0));
+
+        // Tap scroll-to-top button
+        await tester.tap(btnFinder);
+        await tester.pumpAndSettle();
+
+        // Scroll offset should return to 0
+        final scrollable = tester.state<ScrollableState>(find.byType(Scrollable).last);
+        expect(scrollable.position.pixels, equals(0.0));
+      },
+    );
+
+    testWidgets(
       'Tapping ActivityItemCard opens BookingHistoryPage with timeline demonstrating status, notes, branch head, and schedule date changes',
       (tester) async {
         final booking = ActivityModel(
@@ -424,6 +697,92 @@ void main() {
         expect(find.text('Anas Kabeer (Kozhikode)'), findsOneWidget);
 
         expect(find.text('STATUS'), findsNWidgets(2));
+      },
+    );
+
+    testWidgets(
+      'BookingHistoryPage fetches report_graph_bybookingid API on load and displays events',
+      (tester) async {
+        final booking = ActivityModel(
+          id: '10008',
+          bookingId: 10008,
+          title: 'test wa',
+          avatarLetter: 'T',
+          avatarBgColor: const Color(0xFFDCFCE7),
+          avatarTextColor: const Color(0xFF16A34A),
+          date: '03/11/2026',
+          statusTag: 'Completed',
+        );
+
+        final client = MockClient((request) async {
+          expect(
+            request.url.toString(),
+            equals(ApiConfig.reportGraphByBookingId('10008')),
+          );
+          return http.Response(
+            jsonEncode({
+              'success': true,
+              'data': {
+                'booking_id': 10008,
+                'page': 1,
+                'limit': 10,
+                'count': 2,
+                'history': [
+                  {
+                    'history_id': 31753,
+                    'booking_id': 10008,
+                    'booking_name': 'test wa',
+                    'action_type': 'Transfered',
+                    'customer_note': null,
+                    'staff_note': 'staff notes',
+                    'from_assigned_head_district_name': 'Wayanad',
+                    'to_assigned_head_district_name': 'Wayanad',
+                    'action_by_id': 35,
+                    'action_by_name': 'Coordinator Officer 1',
+                    'action_by_role_id': 2,
+                    'created_at': '2026-11-03T10:43:34.000Z',
+                  },
+                  {
+                    'history_id': 31750,
+                    'booking_id': 10008,
+                    'booking_name': 'test wa',
+                    'action_type': 'New Booking Created',
+                    'customer_note': '',
+                    'staff_note': null,
+                    'new_status_id': 1,
+                    'new_status_code': 'New',
+                    'new_status_label': 'New',
+                    'new_status_color_code': '#3b82f6',
+                    'to_assigned_head_district_name': 'Wayanad',
+                    'action_by_id': 35,
+                    'action_by_name': 'Coordinator Officer 1',
+                    'action_by_role_id': 2,
+                    'created_at': '2026-11-03T07:21:08.000Z',
+                  },
+                ],
+              },
+            }),
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        });
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: BookingHistoryPage(
+              initialBooking: booking,
+              client: client,
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('History'), findsOneWidget);
+        expect(find.text('test wa'), findsOneWidget);
+        expect(find.text('2 updates'), findsOneWidget);
+        expect(find.text('Transfered'), findsNWidgets(2)); // badge & action title
+        expect(find.text('New Booking Created'), findsOneWidget);
+        expect(find.text('staff notes'), findsOneWidget);
       },
     );
 

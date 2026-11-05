@@ -102,21 +102,9 @@ class AddBookingViewModel extends ChangeNotifier {
     _errorMessage = null;
     notifyListeners();
 
-    String? token;
     try {
-      token = await TokenStorage().getToken();
-    } catch (_) {
-      // Ignored if platform channel is absent in test environment
-    }
-
-    try {
+      final headers = await TokenStorage().authHeaders(includeContentType: true);
       final uri = Uri.parse(ApiConfig.bookings);
-      final headers = <String, String>{
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        if (token != null && token.isNotEmpty)
-          'authorization': token.startsWith('Bearer ') ? token : 'Bearer $token',
-      };
 
       final payload = formData.toJson();
 

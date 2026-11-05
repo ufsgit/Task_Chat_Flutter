@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:task_chat/new_booking/add_booking_view.dart';
 import '../core/slide_up_route.dart';
 import '../core/theme.dart';
@@ -33,10 +35,14 @@ typedef SuperAdminPage = CoordinatorView;
 class _CoordinatorViewState extends State<CoordinatorView> {
   late final CoordinatorViewModel _viewModel;
   late final bool _internalViewModel;
+  late final ScrollController _scrollController;
+  bool _showScrollToTop = false;
 
   @override
   void initState() {
     super.initState();
+    _scrollController = ScrollController();
+    _scrollController.addListener(_onScroll);
     if (widget.viewModel != null) {
       _viewModel = widget.viewModel!;
       _internalViewModel = false;
@@ -47,8 +53,46 @@ class _CoordinatorViewState extends State<CoordinatorView> {
     _viewModel.fetchBookings();
   }
 
+  void _onScroll() {
+    if (!_scrollController.hasClients) return;
+    final position = _scrollController.position;
+
+    final shouldShow = position.pixels > 250;
+    if (shouldShow != _showScrollToTop) {
+      setState(() {
+        _showScrollToTop = shouldShow;
+      });
+    }
+
+    if (position.userScrollDirection != ScrollDirection.reverse) return;
+    if (position.pixels <= 0) return;
+
+    final maxScroll = position.maxScrollExtent;
+    final currentScroll = position.pixels;
+
+    if (maxScroll - currentScroll <= 200 &&
+        !_viewModel.isLoading &&
+        !_viewModel.isLoadingMore &&
+        _viewModel.hasMore &&
+        _viewModel.filteredChatItems.length >= 15) {
+      _viewModel.loadNextPage();
+    }
+  }
+
+  void _scrollToTop() {
+    if (!_scrollController.hasClients) return;
+    HapticFeedback.lightImpact();
+    _scrollController.animateTo(
+      0.0,
+      duration: const Duration(milliseconds: 350),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
   @override
   void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
     if (_internalViewModel) {
       _viewModel.dispose();
     }
@@ -70,10 +114,65 @@ class _CoordinatorViewState extends State<CoordinatorView> {
         branchManagerOptions: _viewModel.branchManagerOptions,
         onApply: (status, branchManager) {
           _viewModel.applyFilters(status, branchManager);
+          if (_scrollController.hasClients) {
+            _scrollController.jumpTo(0.0);
+          }
         },
         onReset: () {
           _viewModel.resetFilters();
+          if (_scrollController.hasClients) {
+            _scrollController.jumpTo(0.0);
+          }
         },
+      ),
+    );
+  }
+
+  Widget _buildScrollToTopButton(bool isDark) {
+    final btnBg = isDark ? AppDarkColors.whatsappGreen : AppColors.primaryGreen;
+    final iconColor = isDark ? const Color(0xFF06140D) : Colors.white;
+
+    return AnimatedScale(
+      key: const Key('coordinator_scroll_to_top_button'),
+      scale: _showScrollToTop ? 1.0 : 0.0,
+      duration: const Duration(milliseconds: 240),
+      curve: Curves.easeOutBack,
+      child: AnimatedOpacity(
+        opacity: _showScrollToTop ? 1.0 : 0.0,
+        duration: const Duration(milliseconds: 200),
+        child: IgnorePointer(
+          ignoring: !_showScrollToTop,
+          child: Tooltip(
+            message: 'Scroll to top',
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(22),
+                onTap: _scrollToTop,
+                child: Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: btnBg,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.22),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Icon(
+                    Icons.arrow_upward_rounded,
+                    color: iconColor,
+                    size: 22,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -115,11 +214,14 @@ class _CoordinatorViewState extends State<CoordinatorView> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final scaffoldBg = Theme.of(context).scaffoldBackgroundColor;
 
-    return Scaffold(
-      backgroundColor: scaffoldBg,
-      appBar: AppBar(
+    return Stack(
+      children: [
+        Scaffold(
+          backgroundColor: scaffoldBg,
+          appBar: AppBar(
         backgroundColor: scaffoldBg,
         elevation: 0,
         scrolledUnderElevation: 0,
@@ -167,8 +269,26 @@ class _CoordinatorViewState extends State<CoordinatorView> {
                     child: SearchInputField(
                       controller: _viewModel.searchController,
                       padding: EdgeInsets.zero,
-                      onChanged: (val) => _viewModel.onSearchChanged(val),
-                      onClear: () => _viewModel.clearSearch(),
+                      onChanged: (val) {
+                        _viewModel.onSearchChanged(val);
+                        if (_scrollController.hasClients) {
+                          _scrollController.animateTo(
+                            0.0,
+                            duration: const Duration(milliseconds: 200),
+                            curve: Curves.easeOut,
+                          );
+                        }
+                      },
+                      onClear: () {
+                        _viewModel.clearSearch();
+                        if (_scrollController.hasClients) {
+                          _scrollController.animateTo(
+                            0.0,
+                            duration: const Duration(milliseconds: 200),
+                            curve: Curves.easeOut,
+                          );
+                        }
+                      },
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -301,9 +421,11 @@ class _CoordinatorViewState extends State<CoordinatorView> {
                                 ],
                               )
                             : ListView.separated(
+                                controller: _scrollController,
                                 physics: const AlwaysScrollableScrollPhysics(),
                                 padding: const EdgeInsets.only(bottom: 100),
-                                itemCount: filtered.length,
+                                itemCount: filtered.length +
+                                    (_viewModel.isLoadingMore ? 1 : 0),
                                 separatorBuilder: (context, index) => const Divider(
                                   height: 1,
                                   thickness: 1,
@@ -311,6 +433,38 @@ class _CoordinatorViewState extends State<CoordinatorView> {
                                   indent: 78,
                                 ),
                                 itemBuilder: (context, index) {
+                                  if (index == filtered.length) {
+                                    return const Padding(
+                                      padding: EdgeInsets.symmetric(vertical: 20),
+                                      child: Center(
+                                        child: SizedBox(
+                                          width: 24,
+                                          height: 24,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: AppColors.primaryGreen,
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  }
+
+                                  if (index >= 14 &&
+                                      index >= filtered.length - 2 &&
+                                      !_viewModel.isLoading &&
+                                      !_viewModel.isLoadingMore &&
+                                      _viewModel.hasMore) {
+                                    WidgetsBinding.instance
+                                        .addPostFrameCallback((_) {
+                                      if (mounted &&
+                                          !_viewModel.isLoading &&
+                                          !_viewModel.isLoadingMore &&
+                                          _viewModel.hasMore) {
+                                        _viewModel.loadNextPage();
+                                      }
+                                    });
+                                  }
+
                                   final item = filtered[index];
                                   return ChatListItemTile(
                                     title: item['title'] ?? '',
@@ -430,6 +584,14 @@ class _CoordinatorViewState extends State<CoordinatorView> {
     ],
   ),
 ),
-);
-}
+),
+        // Floating pop-up scroll to top button
+        Positioned(
+          right: 18,
+          bottom: 96,
+          child: _buildScrollToTopButton(isDark),
+        ),
+      ],
+    );
+  }
 }

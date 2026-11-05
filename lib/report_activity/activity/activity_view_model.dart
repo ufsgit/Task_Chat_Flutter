@@ -27,6 +27,11 @@ class ActivityViewModel extends ChangeNotifier {
 
   Timer? _searchDebounceTimer;
   bool _isLoading = false;
+  bool _isLoadingMore = false;
+  bool _hasMore = true;
+  int _currentPage = 1;
+  int _limit = 20;
+  int _totalCount = 0;
   String? _errorMessage;
   List<ActivityModel> _activities = [];
 
@@ -45,6 +50,11 @@ class ActivityViewModel extends ChangeNotifier {
   String _searchQuery = '';
 
   bool get isLoading => _isLoading;
+  bool get isLoadingMore => _isLoadingMore;
+  bool get hasMore => _hasMore;
+  int get currentPage => _currentPage;
+  int get limit => _limit;
+  int get totalCount => _totalCount;
   String? get errorMessage => _errorMessage;
   List<ActivityModel> get activities => _activities;
   int get selectedFilterIndex => _selectedFilterIndex;
@@ -52,6 +62,11 @@ class ActivityViewModel extends ChangeNotifier {
   String get selectedStatusFilter => _selectedStatusFilter;
   List<String> get statusOptions => _statusOptions;
   String get searchQuery => _searchQuery;
+  http.Client get client => _client;
+
+  void setLimit(int limit) {
+    _limit = limit;
+  }
 
   bool get hasActiveFilters => _selectedStatusFilter != 'All';
 
@@ -146,6 +161,9 @@ class ActivityViewModel extends ChangeNotifier {
       return;
     }
     _isLoading = true;
+    _isLoadingMore = false;
+    _hasMore = true;
+    _currentPage = 1;
     _errorMessage = null;
     notifyListeners();
 
@@ -185,6 +203,9 @@ class ActivityViewModel extends ChangeNotifier {
       if (response.statusCode >= 200 && response.statusCode < 300) {
         final decoded = json.decode(response.body);
         dynamic rawList;
+        int? responsePage;
+        int? responseLimit;
+        int? responseCount;
 
         if (decoded is Map<String, dynamic>) {
           final data = decoded['data'];
@@ -193,6 +214,9 @@ class ActivityViewModel extends ChangeNotifier {
                 data['items'] ??
                 data['bookings'] ??
                 data['data'];
+            responsePage = int.tryParse(data['page']?.toString() ?? '');
+            responseLimit = int.tryParse(data['limit']?.toString() ?? '');
+            responseCount = int.tryParse(data['count']?.toString() ?? '');
           } else if (data is List) {
             rawList = data;
           } else {
@@ -201,8 +225,23 @@ class ActivityViewModel extends ChangeNotifier {
                 decoded['bookings'] ??
                 decoded['data'];
           }
+          responsePage ??= int.tryParse(decoded['page']?.toString() ?? '');
+          responseLimit ??= int.tryParse(decoded['limit']?.toString() ?? '');
+          responseCount ??= int.tryParse(decoded['count']?.toString() ?? '');
         } else if (decoded is List) {
           rawList = decoded;
+        }
+
+        if (responseLimit != null && responseLimit > 0) {
+          _limit = responseLimit;
+        }
+        if (responseCount != null) {
+          _totalCount = responseCount;
+        }
+        if (responsePage != null && responsePage > 0) {
+          _currentPage = responsePage;
+        } else {
+          _currentPage = 1;
         }
 
         if (rawList is List) {
@@ -212,8 +251,19 @@ class ActivityViewModel extends ChangeNotifier {
               .toList();
           debugPrint(
               '<<< [ActivityViewModel] Parsed ${_activities.length} activity items');
+
+          if (_activities.isEmpty) {
+            _hasMore = false;
+          } else if (_activities.length < _limit) {
+            _hasMore = false;
+          } else if (_totalCount > 0 && _activities.length >= _totalCount) {
+            _hasMore = false;
+          } else {
+            _hasMore = true;
+          }
         } else {
           _activities = [];
+          _hasMore = false;
         }
         _errorMessage = null;
       } else {
@@ -230,6 +280,187 @@ class ActivityViewModel extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     }
+  }
+
+  /// Fetches the next page of activity history and appends to the current list.
+  Future<void> loadNextPage() async {
+    if (_isLoading || _isLoadingMore || !_hasMore) return;
+    _isLoadingMore = true;
+    notifyListeners();
+
+    final nextPage = _currentPage + 1;
+    final queryParams = <String, String>{
+      'page': nextPage.toString(),
+      'limit': _limit.toString(),
+    };
+
+    String? token;
+    try {
+      final isTest = TokenStorage.isTestEnvironment;
+      token = await (tokenStorage ?? TokenStorage()).getToken().timeout(
+            isTest
+                ? const Duration(milliseconds: 50)
+                : const Duration(seconds: 2),
+            onTimeout: () => null,
+          );
+    } catch (e) {
+      debugPrint('>>> [ActivityViewModel] Token retrieval error/timeout: $e');
+    }
+
+    try {
+      final headers = <String, String>{
+        'Accept': 'application/json',
+        if (token != null && token.isNotEmpty)
+          'authorization':
+              token.startsWith('Bearer ') ? token : 'Bearer $token',
+      };
+
+      final baseUri = Uri.parse(ApiConfig.history_list);
+      final uri = baseUri.replace(queryParameters: queryParams);
+      debugPrint('>>> [ActivityViewModel] GET $uri with headers: $headers');
+
+      final future = _client.get(uri, headers: headers);
+      final response = TokenStorage.isTestEnvironment
+          ? await future
+          : await future.timeout(const Duration(seconds: 10));
+
+      debugPrint('<<< [ActivityViewModel] Status: ${response.statusCode}');
+      debugPrint('<<< [ActivityViewModel] Body: ${response.body}');
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final decoded = json.decode(response.body);
+        dynamic rawList;
+        int? responsePage;
+        int? responseLimit;
+        int? responseCount;
+
+        if (decoded is Map<String, dynamic>) {
+          final data = decoded['data'];
+          if (data is Map<String, dynamic>) {
+            rawList = data['history'] ??
+                data['items'] ??
+                data['bookings'] ??
+                data['data'];
+            responsePage = int.tryParse(data['page']?.toString() ?? '');
+            responseLimit = int.tryParse(data['limit']?.toString() ?? '');
+            responseCount = int.tryParse(data['count']?.toString() ?? '');
+          } else if (data is List) {
+            rawList = data;
+          } else {
+            rawList = decoded['history'] ??
+                decoded['items'] ??
+                decoded['bookings'] ??
+                decoded['data'];
+          }
+          responsePage ??= int.tryParse(decoded['page']?.toString() ?? '');
+          responseLimit ??= int.tryParse(decoded['limit']?.toString() ?? '');
+          responseCount ??= int.tryParse(decoded['count']?.toString() ?? '');
+        } else if (decoded is List) {
+          rawList = decoded;
+        }
+
+        if (responseLimit != null && responseLimit > 0) {
+          _limit = responseLimit;
+        }
+        if (responseCount != null) {
+          _totalCount = responseCount;
+        }
+
+        if (rawList is List && rawList.isNotEmpty) {
+          final newItems = rawList
+              .map(
+                  (item) => ActivityModel.fromJson(item as Map<String, dynamic>))
+              .toList();
+
+          _currentPage = responsePage ?? nextPage;
+          _activities.addAll(newItems);
+          debugPrint(
+              '<<< [ActivityViewModel] Added ${newItems.length} items (total: ${_activities.length})');
+
+          if (newItems.length < _limit) {
+            _hasMore = false;
+          } else if (_totalCount > 0 && _activities.length >= _totalCount) {
+            _hasMore = false;
+          } else {
+            _hasMore = true;
+          }
+        } else {
+          _hasMore = false;
+        }
+      } else {
+        debugPrint(
+            '<<< [ActivityViewModel] loadNextPage failed (${response.statusCode})');
+      }
+    } catch (e, stack) {
+      debugPrint('<<< [ActivityViewModel] loadNextPage error: $e');
+      debugPrint('$stack');
+    } finally {
+      _isLoadingMore = false;
+      notifyListeners();
+    }
+  }
+
+  /// Fetches detailed timeline history for a specific booking from ApiConfig.report_graph_bybookingid.
+  Future<List<Map<String, dynamic>>?> fetchHistoryByBookingId(dynamic bookingId) async {
+    if (bookingId == null) return null;
+    final bId = bookingId.toString().trim();
+    if (bId.isEmpty) return null;
+
+    final url = ApiConfig.reportGraphByBookingId(bId);
+    debugPrint('>>> [ActivityViewModel] Requesting history by booking id: $url');
+
+    String? token;
+    try {
+      final isTest = TokenStorage.isTestEnvironment;
+      token = await (tokenStorage ?? TokenStorage()).getToken().timeout(
+            isTest
+                ? const Duration(milliseconds: 50)
+                : const Duration(seconds: 2),
+            onTimeout: () => null,
+          );
+    } catch (e) {
+      debugPrint('>>> [ActivityViewModel] Token retrieval error/timeout: $e');
+    }
+
+    try {
+      final headers = <String, String>{
+        'Accept': 'application/json',
+        if (token != null && token.isNotEmpty)
+          'authorization':
+              token.startsWith('Bearer ') ? token : 'Bearer $token',
+      };
+
+      final uri = Uri.parse(url);
+      final future = _client.get(uri, headers: headers);
+      final response = TokenStorage.isTestEnvironment
+          ? await future
+          : await future.timeout(const Duration(seconds: 10));
+
+      debugPrint(
+          '<<< [ActivityViewModel] fetchHistoryByBookingId Status: ${response.statusCode}');
+      debugPrint(
+          '<<< [ActivityViewModel] fetchHistoryByBookingId Body: ${response.body}');
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final decoded = json.decode(response.body);
+        if (decoded is Map<String, dynamic>) {
+          final data = decoded['data'];
+          if (data is Map<String, dynamic> && data['history'] is List) {
+            return (data['history'] as List)
+                .map((e) => e as Map<String, dynamic>)
+                .toList();
+          } else if (decoded['history'] is List) {
+            return (decoded['history'] as List)
+                .map((e) => e as Map<String, dynamic>)
+                .toList();
+          }
+        }
+      }
+    } catch (e, stack) {
+      debugPrint('<<< [ActivityViewModel] fetchHistoryByBookingId error: $e');
+      debugPrint('$stack');
+    }
+    return null;
   }
 
   @override

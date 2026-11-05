@@ -89,10 +89,11 @@ class CustomerHeaderCard extends StatelessWidget {
                   name: customer.name,
                   status: customer.status,
                 ),
-                SizedBox(width: 20),
-                Center(
+                const SizedBox(width: 20),
+                Expanded(
                   child: Text(
                     customer.name,
+                    maxLines: 2,
                     style: TextStyle(
                       fontFamily: 'Helvetica Neue',
                       fontSize: 20,
@@ -100,7 +101,6 @@ class CustomerHeaderCard extends StatelessWidget {
                       color: colors.textPrimary,
                       letterSpacing: -0.2,
                     ),
-                    textAlign: TextAlign.center,
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),

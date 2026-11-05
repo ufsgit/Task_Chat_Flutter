@@ -1,6 +1,12 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import '../../api/api.dart';
+import '../../api/authenticated_client.dart';
 import '../../core/theme.dart';
+import '../../login_page/token_storage.dart';
 import 'activity_model.dart';
+import 'activity_view_model.dart';
 
 /// Model representing an individual change diff within a timeline event.
 class TimelineDiffField {
@@ -74,12 +80,18 @@ class BookingHistoryPage extends StatefulWidget {
   final ActivityModel initialBooking;
   final List<ActivityModel> allActivities;
   final Future<void> Function()? onRefresh;
+  final ActivityViewModel? viewModel;
+  final http.Client? client;
+  final TokenStorage? tokenStorage;
 
   const BookingHistoryPage({
     super.key,
     required this.initialBooking,
     this.allActivities = const [],
     this.onRefresh,
+    this.viewModel,
+    this.client,
+    this.tokenStorage,
   });
 
   @override
@@ -89,6 +101,8 @@ class BookingHistoryPage extends StatefulWidget {
 class _BookingHistoryPageState extends State<BookingHistoryPage> {
   // Track which booking accordion cards are expanded
   final Map<String, bool> _expandedGroups = {};
+  bool _isLoading = false;
+  List<TimelineHistoryEvent>? _apiTimelineEvents;
 
   @override
   void initState() {
@@ -96,6 +110,278 @@ class _BookingHistoryPageState extends State<BookingHistoryPage> {
     // Expand initial booking by default
     final initialKey = _getGroupKey(widget.initialBooking);
     _expandedGroups[initialKey] = true;
+
+    _fetchHistory();
+  }
+
+  Future<void> _fetchHistory() async {
+    final bookingId = widget.initialBooking.bookingId ??
+        int.tryParse(widget.initialBooking.id);
+    if (bookingId == null) return;
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      List<Map<String, dynamic>>? rawList;
+      if (widget.viewModel != null) {
+        rawList = await widget.viewModel!.fetchHistoryByBookingId(bookingId);
+      } else {
+        final url = ApiConfig.reportGraphByBookingId(bookingId);
+        debugPrint('>>> [BookingHistoryPage] Fetching history from: $url');
+
+        String? token;
+        try {
+          final isTest = TokenStorage.isTestEnvironment;
+          token = await (widget.tokenStorage ?? TokenStorage())
+              .getToken()
+              .timeout(
+                isTest
+                    ? const Duration(milliseconds: 50)
+                    : const Duration(seconds: 2),
+                onTimeout: () => null,
+              );
+        } catch (_) {}
+
+        final headers = <String, String>{
+          'Accept': 'application/json',
+          if (token != null && token.isNotEmpty)
+            'authorization':
+                token.startsWith('Bearer ') ? token : 'Bearer $token',
+        };
+
+        final isLocalClient = widget.client == null;
+        final client = widget.client ?? AuthenticatedClient();
+        try {
+          final response = TokenStorage.isTestEnvironment
+              ? await client.get(Uri.parse(url), headers: headers)
+              : await client
+                  .get(Uri.parse(url), headers: headers)
+                  .timeout(const Duration(seconds: 10));
+
+          if (response.statusCode >= 200 && response.statusCode < 300) {
+            final decoded = json.decode(response.body);
+            if (decoded is Map<String, dynamic>) {
+              final data = decoded['data'];
+              if (data is Map<String, dynamic> && data['history'] is List) {
+                rawList = (data['history'] as List)
+                    .map((e) => e as Map<String, dynamic>)
+                    .toList();
+              } else if (decoded['history'] is List) {
+                rawList = (decoded['history'] as List)
+                    .map((e) => e as Map<String, dynamic>)
+                    .toList();
+              }
+            }
+          }
+        } finally {
+          if (isLocalClient) {
+            client.close();
+          }
+        }
+      }
+
+      if (rawList != null && rawList.isNotEmpty && mounted) {
+        final parsed = <TimelineHistoryEvent>[];
+        for (int i = 0; i < rawList.length; i++) {
+          parsed.add(_parseApiHistoryItem(
+            rawList[i],
+            isCurrent: i == 0,
+            fallbackBooking: widget.initialBooking,
+          ));
+        }
+        setState(() {
+          _apiTimelineEvents = parsed;
+        });
+      }
+    } catch (e, stack) {
+      debugPrint('<<< [BookingHistoryPage] _fetchHistory error: $e');
+      debugPrint('$stack');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  TimelineHistoryEvent _parseApiHistoryItem(
+    Map<String, dynamic> item, {
+    required bool isCurrent,
+    required ActivityModel fallbackBooking,
+  }) {
+    final actionType = item['action_type']?.toString().trim();
+    final actionTitle = (actionType != null && actionType.isNotEmpty)
+        ? actionType
+        : 'Activity Updated';
+
+    final actor = item['action_by_name']?.toString().trim();
+    final actorName = (actor != null && actor.isNotEmpty)
+        ? actor
+        : (fallbackBooking.actionByName ??
+            fallbackBooking.subtitleHighlight ??
+            'Staff');
+
+    DateTime? createdAt;
+    final rawCreatedAt = item['created_at']?.toString();
+    if (rawCreatedAt != null && rawCreatedAt.isNotEmpty) {
+      createdAt = DateTime.tryParse(rawCreatedAt);
+    }
+
+    String displayDate = '';
+    String displayTime = '';
+    if (createdAt != null) {
+      final local = createdAt.toLocal();
+      displayDate =
+          '${local.day.toString().padLeft(2, '0')}/${local.month.toString().padLeft(2, '0')}/${local.year}';
+      final hour = local.hour == 0
+          ? 12
+          : (local.hour > 12 ? local.hour - 12 : local.hour);
+      final period = local.hour >= 12 ? 'PM' : 'AM';
+      displayTime =
+          '$hour:${local.minute.toString().padLeft(2, '0')} $period';
+    } else {
+      displayDate = fallbackBooking.date;
+      displayTime = '';
+    }
+
+    final newStatusLabel = item['new_status_label']?.toString() ??
+        item['new_status_code']?.toString();
+    final badgeLabel = (newStatusLabel != null && newStatusLabel.isNotEmpty)
+        ? newStatusLabel
+        : ((actionType != null && actionType.isNotEmpty)
+            ? actionType
+            : 'Updated');
+
+    final colorCode = item['new_status_color_code']?.toString();
+    final parsedColor = parseHexColor(colorCode);
+
+    Color dotColor;
+    Color badgeBg;
+    Color badgeTextColor;
+
+    if (parsedColor != null) {
+      dotColor = parsedColor;
+      badgeBg = parsedColor.withOpacity(0.15);
+      badgeTextColor = parsedColor;
+    } else {
+      final s = (newStatusLabel ?? actionTitle).toLowerCase();
+      if (s.contains('completed')) {
+        dotColor = const Color(0xFF22C55E);
+        badgeBg = const Color(0xFFDCFCE7);
+        badgeTextColor = const Color(0xFF15803D);
+      } else if (s.contains('scheduled')) {
+        dotColor = const Color(0xFFF59E0B);
+        badgeBg = const Color(0xFFFEF3C7);
+        badgeTextColor = const Color(0xFFD97706);
+      } else if (s.contains('cancelled')) {
+        dotColor = const Color(0xFFEF4444);
+        badgeBg = const Color(0xFFFEE2E2);
+        badgeTextColor = const Color(0xFFB91C1C);
+      } else if (s.contains('transfer')) {
+        dotColor = const Color(0xFF0D9488);
+        badgeBg = const Color(0xFFCCFBF1);
+        badgeTextColor = const Color(0xFF0F766E);
+      } else {
+        dotColor = const Color(0xFF3B82F6);
+        badgeBg = const Color(0xFFDBEAFE);
+        badgeTextColor = const Color(0xFF1D4ED8);
+      }
+    }
+
+    final List<TimelineDiffField> diffs = [];
+
+    // 1. Status Diff
+    final oldStatus = item['old_status_label']?.toString() ??
+        item['old_status_code']?.toString();
+    if (newStatusLabel != null && newStatusLabel.isNotEmpty) {
+      if (oldStatus != null &&
+          oldStatus.isNotEmpty &&
+          oldStatus != newStatusLabel) {
+        diffs.add(TimelineDiffField(
+          label: 'STATUS',
+          oldValue: oldStatus,
+          newValue: newStatusLabel,
+        ));
+      } else if (oldStatus == null || oldStatus.isEmpty) {
+        diffs.add(TimelineDiffField(
+          label: 'STATUS',
+          oldValue: '',
+          newValue: newStatusLabel,
+        ));
+      }
+    }
+
+    // 2. Schedule Date Diff
+    final oldSchedule = item['old_schedule_date']?.toString();
+    final newSchedule = item['new_schedule_date']?.toString();
+    if (oldSchedule != null || newSchedule != null) {
+      String fmtDate(String? s) {
+        if (s == null || s.isEmpty) return 'None';
+        final dt = DateTime.tryParse(s);
+        if (dt != null) {
+          final l = dt.toLocal();
+          return '${l.day.toString().padLeft(2, '0')}/${l.month.toString().padLeft(2, '0')}/${l.year}';
+        }
+        return s;
+      }
+
+      diffs.add(TimelineDiffField(
+        label: 'SCHEDULED DATE',
+        oldValue: fmtDate(oldSchedule),
+        newValue: fmtDate(newSchedule),
+      ));
+    }
+
+    // 3. Transfer / Branch / District Diff
+    final fromBranch = item['from_branch_head_name']?.toString() ??
+        item['from_assigned_head_district_name']?.toString();
+    final toBranch = item['to_branch_head_name']?.toString() ??
+        item['to_assigned_head_district_name']?.toString();
+    if (fromBranch != null || toBranch != null) {
+      diffs.add(TimelineDiffField(
+        label: 'BRANCH HEAD / DISTRICT',
+        oldValue: fromBranch ?? 'Unassigned',
+        newValue: toBranch ?? 'Unassigned',
+      ));
+    }
+
+    // 4. Staff Note
+    final staffNote = item['staff_note']?.toString().trim();
+    if (staffNote != null && staffNote.isNotEmpty) {
+      diffs.add(TimelineDiffField(
+        label: 'STAFF NOTE',
+        oldValue: '',
+        newValue: staffNote,
+        multiline: true,
+      ));
+    }
+
+    // 5. Customer Note
+    final custNote = item['customer_note']?.toString().trim();
+    if (custNote != null && custNote.isNotEmpty) {
+      diffs.add(TimelineDiffField(
+        label: 'CUSTOMER NOTE',
+        oldValue: '',
+        newValue: custNote,
+        multiline: true,
+      ));
+    }
+
+    return TimelineHistoryEvent(
+      actionTitle: actionTitle,
+      time: displayTime,
+      date: displayDate,
+      actor: actorName,
+      badgeLabel: badgeLabel,
+      badgeBg: badgeBg,
+      badgeTextColor: badgeTextColor,
+      isCurrent: isCurrent,
+      dotColor: dotColor,
+      diffs: diffs,
+    );
   }
 
   String _getGroupKey(ActivityModel item) {
@@ -246,7 +532,9 @@ class _BookingHistoryPageState extends State<BookingHistoryPage> {
     final List<BookingHistoryGroup> groups = [];
 
     for (final item in uniqueBookings.values) {
-      final events = _buildTimelineEventsForBooking(item);
+      final events = (_apiTimelineEvents != null && _apiTimelineEvents!.isNotEmpty)
+          ? _apiTimelineEvents!
+          : _buildTimelineEventsForBooking(item);
 
       final bId =
           item.bookingId?.toString() ?? (item.id.isNotEmpty ? item.id : '23');
@@ -321,12 +609,19 @@ class _BookingHistoryPageState extends State<BookingHistoryPage> {
                       if (widget.onRefresh != null) {
                         await widget.onRefresh!();
                       }
-                      setState(() {});
+                      await _fetchHistory();
                     },
                   ),
                 ],
               ),
             ),
+
+            if (_isLoading)
+              const LinearProgressIndicator(
+                minHeight: 2.5,
+                color: AppColors.primaryGreen,
+                backgroundColor: Colors.transparent,
+              ),
 
             // 5. Grouped Booking Cards List
             Expanded(

@@ -88,16 +88,18 @@ class ChatListItemTile extends StatelessWidget {
                             ),
                           ),
                         ),
-                        const SizedBox(width: 8),
-                        Text(
-                          date,
-                          style: TextStyle(
-                            fontFamily: 'Helvetica Neue',
-                            fontSize: 12,
-                            fontWeight: FontWeight.w400,
-                            color: subtextColor,
+                        if (date.isNotEmpty) ...[
+                          const SizedBox(width: 8),
+                          Text(
+                            date,
+                            style: TextStyle(
+                              fontFamily: 'Helvetica Neue',
+                              fontSize: 12,
+                              fontWeight: FontWeight.w400,
+                              color: subtextColor,
+                            ),
                           ),
-                        ),
+                        ],
                       ],
                     ),
                     const SizedBox(height: 5),

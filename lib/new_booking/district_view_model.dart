@@ -49,19 +49,13 @@ class DistrictViewModel extends ChangeNotifier {
 
   /// Fetches district listings from ApiConfig.district_listing.
   Future<void> fetchDistricts() async {
-    final token = await TokenStorage().getToken();
-
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
       final uri = Uri.parse(ApiConfig.district_listing);
-      final headers = <String, String>{
-        'Accept': 'application/json',
-        if (token != null && token.isNotEmpty)
-          'authorization': token.startsWith('Bearer ') ? token : 'Bearer $token',
-      };
+      final headers = await TokenStorage().authHeaders();
 
       final response = await _client
           .get(uri, headers: headers)

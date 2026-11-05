@@ -63,7 +63,6 @@ class AreaViewModel extends ChangeNotifier {
     int? page,
     int? limit,
   }) async {
-    final token = await TokenStorage().getToken();
     if (isCoordinator != null) this.isCoordinator = isCoordinator;
     if (districtId != null) this.districtId = districtId;
     final activeType = type ?? _type;
@@ -112,13 +111,7 @@ class AreaViewModel extends ChangeNotifier {
 
       uri = uri.replace(queryParameters: queryParams);
 
-      final headers = <String, String>{
-        'Accept': 'application/json',
-        if (token != null && token.isNotEmpty)
-          'authorization': token.startsWith('Bearer ')
-              ? token
-              : 'Bearer $token',
-      };
+      final headers = await TokenStorage().authHeaders();
 
       final response = await _client
           .get(uri, headers: headers)

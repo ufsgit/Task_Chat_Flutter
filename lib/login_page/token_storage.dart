@@ -28,12 +28,14 @@ class TokenStorage {
 
   Future<void> savetoken(String token) async {
     _memoryCache[_primaryKey] = token;
-    _memoryCache[_legacyKey] = token;
+    _memoryCache.remove(_legacyKey);
     if (useMemoryOnly) return;
     try {
       await _storage.write(key: _primaryKey, value: token);
-      await _storage.write(key: _legacyKey, value: token);
-    } catch (_) {}
+      await _storage.delete(key: _legacyKey);
+    } catch (e) {
+      debugPrint('TokenStorage save error: $e');
+    }
   }
 
   Future<String?> getToken() async {
@@ -47,9 +49,16 @@ class TokenStorage {
       }
       final legacy = await _storage.read(key: _legacyKey);
       if (legacy != null && legacy.isNotEmpty) {
+        // One-time automatic migration from legacy key to primary key
+        await _storage.write(key: _primaryKey, value: legacy);
+        await _storage.delete(key: _legacyKey);
+        _memoryCache[_primaryKey] = legacy;
+        _memoryCache.remove(_legacyKey);
         return legacy;
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('TokenStorage read error: $e');
+    }
     return _memoryCache[_primaryKey] ?? _memoryCache[_legacyKey];
   }
 
@@ -80,6 +89,8 @@ class TokenStorage {
     try {
       await _storage.delete(key: _primaryKey);
       await _storage.delete(key: _legacyKey);
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('TokenStorage delete error: $e');
+    }
   }
 }

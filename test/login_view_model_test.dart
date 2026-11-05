@@ -89,7 +89,7 @@ void main() {
       expect(result.isSuperAdmin, isTrue); // roleId 2 is Coordinator
     });
 
-    test('failed login on 401 sets error message to Invalid login', () async {
+    test('failed login on 401 converts developer message to user-friendly message', () async {
       final mockClient = MockClient((request) async {
         return http.Response(
           jsonEncode({'error': 'Invalid credentials or user is not authorized for mobile login (role 2 or 3).'}),
@@ -102,7 +102,40 @@ void main() {
       final result = await vm.login(username: 'test', password: 'wrong');
 
       expect(result.isSuccess, isFalse);
-      expect(result.errorMessage, 'Invalid login');
+      expect(result.errorMessage, 'Incorrect username or password, or your account is not authorized for mobile access.');
+      expect(vm.errorMessage, 'Incorrect username or password, or your account is not authorized for mobile access.');
+    });
+
+    test('failed login on 500 returns user-friendly server error message', () async {
+      final mockClient = MockClient((request) async {
+        return http.Response(
+          'Internal Server Error: DB connection failed',
+          500,
+          headers: {'content-type': 'text/plain'},
+        );
+      });
+
+      final vm = LoginViewModel(client: mockClient);
+      final result = await vm.login(username: 'test', password: 'wrong');
+
+      expect(result.isSuccess, isFalse);
+      expect(result.errorMessage, 'Our server is temporarily unavailable. Please try again shortly.');
+    });
+
+    test('deactivated account returns user-friendly contact admin message', () async {
+      final mockClient = MockClient((request) async {
+        return http.Response(
+          jsonEncode({'message': 'User account is deactivated'}),
+          403,
+          headers: {'content-type': 'application/json'},
+        );
+      });
+
+      final vm = LoginViewModel(client: mockClient);
+      final result = await vm.login(username: 'test', password: 'wrong');
+
+      expect(result.isSuccess, isFalse);
+      expect(result.errorMessage, 'Your account is deactivated. Please contact your administrator.');
     });
 
     test('network exception returns Connection failed message', () async {

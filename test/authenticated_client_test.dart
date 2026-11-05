@@ -13,6 +13,7 @@ void main() {
     setUp(() {
       TokenStorage.useMemoryOnly = true;
       tokenStorage = TokenStorage();
+      AuthenticatedClient.resetRedirectLock();
     });
 
     test('401 response on protected endpoint triggers onUnauthorized and deletes token', () async {
@@ -95,6 +96,42 @@ void main() {
 
       expect(unauthorizedTriggered, isFalse);
       expect(await tokenStorage.getToken(), equals('valid-token'));
+    });
+
+    test('concurrent 401 responses only trigger onUnauthorized once', () async {
+      await tokenStorage.savetoken('flood-token');
+
+      int unauthorizedCallCount = 0;
+
+      final mockInner = MockClient((request) async {
+        return http.Response('{"error": "Unauthorized"}', 401);
+      });
+
+      final client1 = AuthenticatedClient(
+        inner: mockInner,
+        tokenStorage: tokenStorage,
+        onUnauthorized: () async {
+          unauthorizedCallCount++;
+        },
+      );
+
+      final client2 = AuthenticatedClient(
+        inner: mockInner,
+        tokenStorage: tokenStorage,
+        onUnauthorized: () async {
+          unauthorizedCallCount++;
+        },
+      );
+
+      // Trigger 2 concurrent requests resulting in 401
+      await Future.wait([
+        client1.get(Uri.parse('https://example.com/api/bookings')),
+        client2.get(Uri.parse('https://example.com/api/dashboard')),
+      ]);
+
+      await Future.delayed(const Duration(milliseconds: 50));
+
+      expect(unauthorizedCallCount, equals(1));
     });
   });
 }
