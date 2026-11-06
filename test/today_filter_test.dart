@@ -241,4 +241,67 @@ void main() {
     final AnimatedScale endScale = tester.widget(scrollToTopButtonFinder);
     expect(endScale.scale, 0.0);
   });
+
+  testWidgets(
+      'TodayPage collapses app bar when scrolling up and restores it when scrolling back down',
+      (WidgetTester tester) async {
+    final mockItems = List.generate(
+      25,
+      (i) => '''
+      {
+        "id": ${i + 1},
+        "name": "Customer ${i + 1}",
+        "mobile": "987654321$i",
+        "address": "Address $i",
+        "notes": "",
+        "status": "NEW",
+        "stateName": "Kerala",
+        "districtName": "Ernakulam",
+        "areaName": "Edapally",
+        "documents": [],
+        "scheduleDate": "10/24/2026",
+        "createdAt": "2026-10-21T10:38:24.000Z"
+      }
+      ''',
+    ).join(',');
+
+    final mockClient = MockClient((request) async {
+      return http.Response('{"data": [$mockItems]}', 200,
+          headers: {'content-type': 'application/json'});
+    });
+    final vm = TodayViewModel(client: mockClient);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: TodayPage(viewModel: vm),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final appBarFinder = find.byKey(const Key('today_animated_app_bar'));
+    expect(appBarFinder, findsOneWidget);
+
+    // Initially at top: height is 68.0
+    AnimatedContainer initialBar = tester.widget(appBarFinder);
+    expect(initialBar.constraints?.maxHeight, 68.0);
+
+    // Drag up by 300px (scrolling down into content)
+    final listViewFinder = find.byType(ListView);
+    await tester.drag(listViewFinder, const Offset(0, -300));
+    await tester.pumpAndSettle();
+
+    // App bar collapses to 0.0
+    AnimatedContainer collapsedBar = tester.widget(appBarFinder);
+    expect(collapsedBar.constraints?.maxHeight, 0.0);
+
+    // Drag down by 200px (scrolling back towards top)
+    await tester.drag(listViewFinder, const Offset(0, 200));
+    await tester.pumpAndSettle();
+
+    // App bar expands back to 68.0
+    AnimatedContainer restoredBar = tester.widget(appBarFinder);
+    expect(restoredBar.constraints?.maxHeight, 68.0);
+  });
 }

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/user_circle_avatar.dart';
-import '../activity_data.dart';
+import '../activity/activity_model.dart';
 
 /// Reusable card widget for displaying an activity record.
 class ActivityItemCard extends StatelessWidget {

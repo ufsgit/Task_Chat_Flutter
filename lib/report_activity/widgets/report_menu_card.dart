@@ -1,6 +1,43 @@
 import 'package:flutter/material.dart';
 import '../../core/theme.dart';
-import '../report_data.dart';
+
+/// Data model for menu items on the Report & Activity landing screen.
+class ReportMenuItemData {
+  final String title;
+  final String imageAsset;
+  final IconData fallbackIcon;
+  final Color fallbackBg;
+  final Color fallbackIconColor;
+  final bool hasBorderOnFallback;
+
+  const ReportMenuItemData({
+    required this.title,
+    required this.imageAsset,
+    required this.fallbackIcon,
+    required this.fallbackBg,
+    required this.fallbackIconColor,
+    this.hasBorderOnFallback = false,
+  });
+}
+
+/// Landing page menu items for Report & Activity.
+const List<ReportMenuItemData> defaultReportMenuItems = [
+  ReportMenuItemData(
+    title: 'Task Report',
+    imageAsset: 'assets/images/taskchat_report_logo.png',
+    fallbackIcon: Icons.bar_chart_rounded,
+    fallbackBg: Color(0xFFDCFCE7),
+    fallbackIconColor: AppColors.primaryGreen,
+  ),
+  ReportMenuItemData(
+    title: 'Activity',
+    imageAsset: 'assets/images/taskchat_activity_logo.png',
+    fallbackIcon: Icons.handshake_outlined,
+    fallbackBg: Color(0xFFFEF3C7),
+    fallbackIconColor: Color(0xFF0D9488),
+    hasBorderOnFallback: true,
+  ),
+];
 
 /// Reusable card component for the Report & Activity landing screen.
 class ReportMenuCard extends StatelessWidget {

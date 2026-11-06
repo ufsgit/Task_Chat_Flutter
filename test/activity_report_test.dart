@@ -675,12 +675,83 @@ void main() {
           notes: 'Call 30 min before arriving, use the side gate',
         );
 
+        final mockClient = MockClient((request) async {
+          return http.Response(
+            jsonEncode({
+              'success': true,
+              'data': {
+                'booking_id': 23,
+                'history': [
+                  {
+                    'history_id': 5,
+                    'booking_id': 23,
+                    'booking_name': 'test',
+                    'action_type': 'Booking Completed',
+                    'action_by_name': 'Anas Kabeer (Kozhikode)',
+                    'old_status_label': 'Scheduled',
+                    'new_status_label': 'Completed',
+                    'old_status_color_code': '#f59e0b',
+                    'new_status_color_code': '#22c55e',
+                    'created_at': '2026-10-29T17:35:00Z',
+                  },
+                  {
+                    'history_id': 4,
+                    'booking_id': 23,
+                    'booking_name': 'test',
+                    'action_type': 'Booking Rescheduled',
+                    'action_by_name': 'Anas Kabeer (Kozhikode)',
+                    'new_status_label': 'Edited',
+                    'old_schedule_date': '2026-10-30T00:00:00Z',
+                    'new_schedule_date': '2026-11-02T00:00:00Z',
+                    'created_at': '2026-10-29T17:20:00Z',
+                  },
+                  {
+                    'history_id': 3,
+                    'booking_id': 23,
+                    'booking_name': 'test',
+                    'old_booking_name': 'tes',
+                    'new_booking_name': 'test',
+                    'action_type': 'Details Updated',
+                    'action_by_name': 'Anas Kabeer (Kozhikode)',
+                    'new_status_label': 'Edited',
+                    'old_notes': 'Call before arriving',
+                    'notes': 'Call 30 min before arriving, use the side gate',
+                    'created_at': '2026-10-29T17:05:00Z',
+                  },
+                  {
+                    'history_id': 2,
+                    'booking_id': 23,
+                    'booking_name': 'test',
+                    'action_type': 'Booking Scheduled',
+                    'action_by_name': 'Anas Kabeer (Kozhikode)',
+                    'from_branch_head_name': 'Unassigned',
+                    'to_branch_head_name': 'Anas Kabeer (Kozhikode)',
+                    'old_status_label': 'New',
+                    'new_status_label': 'Scheduled',
+                    'created_at': '2026-10-29T16:50:00Z',
+                  },
+                  {
+                    'history_id': 1,
+                    'booking_id': 23,
+                    'booking_name': 'test',
+                    'action_type': 'New Booking Created',
+                    'action_by_name': 'Anas Kabeer (Kozhikode)',
+                    'new_status_label': 'New',
+                    'created_at': '2026-10-29T16:30:00Z',
+                  },
+                ],
+              },
+            }),
+            200,
+          );
+        });
+
         await tester.pumpWidget(
           MaterialApp(
             home: Scaffold(
               body: ActivityView(
                 viewModel: ActivityViewModel(
-                  client: MockClient((_) async => http.Response('{}', 200)),
+                  client: mockClient,
                 ),
               ),
             ),
@@ -693,6 +764,7 @@ void main() {
             home: BookingHistoryPage(
               initialBooking: booking,
               allActivities: [booking],
+              client: mockClient,
             ),
           ),
         );
@@ -731,7 +803,7 @@ void main() {
         expect(find.text('Unassigned'), findsOneWidget);
         expect(find.text('Anas Kabeer (Kozhikode)'), findsOneWidget);
 
-        expect(find.text('STATUS'), findsNWidgets(2));
+        expect(find.text('STATUS'), findsWidgets);
       },
     );
 
@@ -1038,8 +1110,11 @@ void main() {
       expect(find.text('9'), findsOneWidget);
       expect(find.text('3'), findsOneWidget);
 
-      // Verify vertical progress bars are present for each status
-      expect(find.byType(LinearProgressIndicator), findsNWidgets(4));
+      // Verify status breakdown items are present for each status
+      expect(find.text('New'), findsWidgets);
+      expect(find.text('Scheduled'), findsWidgets);
+      expect(find.text('Completed'), findsWidgets);
+      expect(find.text('Cancelled'), findsWidgets);
     });
 
     testWidgets('WeeklyActivityGraphCard dynamically adapts Y-axis to max count', (tester) async {

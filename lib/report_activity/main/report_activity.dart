@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../core/slide_up_route.dart';
 import '../../core/widgets/fitmate_app_bar_title.dart';
-import '../activity_page.dart';
-import '../report_data.dart';
+import '../activity/activity_view.dart';
+import '../activity/activity_view_model.dart';
 import '../task_report_page.dart';
 import '../widgets/report_menu_card.dart';
 
@@ -48,7 +48,7 @@ class ReportActivity extends StatelessWidget {
                         Navigator.push(
                           context,
                           SlideRightRoute(
-                            page: ActivityPage(
+                            page: ActivityView(
                               viewModel: activityViewModel,
                             ),
                           ),

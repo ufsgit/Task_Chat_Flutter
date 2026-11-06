@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import '../core/connectivity_service.dart';
 import '../login_page/login_view.dart';
 import '../login_page/token_storage.dart';
 import '../main.dart';
@@ -39,14 +40,19 @@ class AuthenticatedClient extends http.BaseClient {
     http.StreamedResponse response;
     try {
       response = await _inner.send(request);
+      ConnectivityService.instance.reportSuccess();
     } on http.ClientException catch (e) {
+      ConnectivityService.instance.reportFailure();
       if (e.message.toLowerCase().contains('closed')) {
         _inner = http.Client();
-        // Re-create request if needed or resend
-        // If request is a streamed request that has already been finalized, it may not be resendable.
-        // But for future requests, _inner is renewed.
         rethrow;
       }
+      rethrow;
+    } on TimeoutException {
+      ConnectivityService.instance.reportFailure();
+      rethrow;
+    } catch (_) {
+      ConnectivityService.instance.reportFailure();
       rethrow;
     }
 

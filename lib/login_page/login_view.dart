@@ -4,6 +4,7 @@ import '../api/authenticated_client.dart';
 import '../bottom_navigator/bottom_navigator.dart';
 import '../core/theme.dart';
 import '../core/widgets/fitmate_logo.dart';
+import '../core/widgets/pulsing_dot_loader.dart';
 import '../settings/settings_model.dart';
 import 'login_view_model.dart';
 
@@ -394,14 +395,10 @@ class _LoginPageState extends State<LoginPage> {
                                             ),
                                           ),
                                           child: _viewModel.isLoading
-                                              ? const SizedBox(
-                                                  width: 22,
-                                                  height: 22,
-                                                  child:
-                                                      CircularProgressIndicator(
-                                                        strokeWidth: 2.2,
-                                                        color: Colors.white,
-                                                      ),
+                                              ? PulsingDotLoader(
+                                                  color: btnTextColor,
+                                                  size: 8.5,
+                                                  spacing: 6.0,
                                                 )
                                               : Row(
                                                   mainAxisAlignment:

@@ -39,6 +39,7 @@ class _TodayPageState extends State<TodayPage> {
 
   late final ScrollController _scrollController;
   bool _showScrollToTop = false;
+  bool _isAppBarVisible = true;
 
   @override
   void initState() {
@@ -59,6 +60,30 @@ class _TodayPageState extends State<TodayPage> {
         _showScrollToTop = shouldShow;
       });
     }
+
+    // Hide app bar when scrolling up (finger drag up / list scrolls down)
+    // and reveal when scrolling down towards top or at top.
+    if (position.pixels <= 0) {
+      if (!_isAppBarVisible) {
+        setState(() {
+          _isAppBarVisible = true;
+        });
+      }
+    } else if (position.userScrollDirection == ScrollDirection.reverse &&
+        position.pixels > 20) {
+      if (_isAppBarVisible) {
+        setState(() {
+          _isAppBarVisible = false;
+        });
+      }
+    } else if (position.userScrollDirection == ScrollDirection.forward) {
+      if (!_isAppBarVisible) {
+        setState(() {
+          _isAppBarVisible = true;
+        });
+      }
+    }
+
     // Only fetch next page when actively scrolling downwards
     if (position.userScrollDirection != ScrollDirection.reverse) return;
     if (position.pixels <= 0) return;
@@ -106,24 +131,25 @@ class _TodayPageState extends State<TodayPage> {
             _scrollController.jumpTo(0.0);
           }
         },
-        onApplyAdvanced: ({
-          required String status,
-          String? districtId,
-          String? dateFrom,
-          String? dateTo,
-          String? filterRole,
-        }) {
-          _viewModel.applyFilters(
-            status: status,
-            districtId: districtId,
-            dateFrom: dateFrom,
-            dateTo: dateTo,
-            filterRole: filterRole,
-          );
-          if (_scrollController.hasClients) {
-            _scrollController.jumpTo(0.0);
-          }
-        },
+        onApplyAdvanced:
+            ({
+              required String status,
+              String? districtId,
+              String? dateFrom,
+              String? dateTo,
+              String? filterRole,
+            }) {
+              _viewModel.applyFilters(
+                status: status,
+                districtId: districtId,
+                dateFrom: dateFrom,
+                dateTo: dateTo,
+                filterRole: filterRole,
+              );
+              if (_scrollController.hasClients) {
+                _scrollController.jumpTo(0.0);
+              }
+            },
         onReset: () {
           _viewModel.resetFilters();
           if (_scrollController.hasClients) {
@@ -173,10 +199,103 @@ class _TodayPageState extends State<TodayPage> {
   void _scrollToTop() {
     if (!_scrollController.hasClients) return;
     HapticFeedback.lightImpact();
+    if (!_isAppBarVisible) {
+      setState(() {
+        _isAppBarVisible = true;
+      });
+    }
     _scrollController.animateTo(
       0.0,
       duration: const Duration(milliseconds: 350),
       curve: Curves.easeOutCubic,
+    );
+  }
+
+  Widget _buildAppBar({
+    required BuildContext context,
+    required bool isDark,
+    required Color scaffoldBg,
+    required Color primaryTextColor,
+    required Color iconBtnBg,
+  }) {
+    return AppBar(
+      backgroundColor: scaffoldBg,
+      elevation: 0,
+      scrolledUnderElevation: 0,
+      titleSpacing: 20,
+      toolbarHeight: 68,
+      title: const FitmateAppBarTitle(),
+      actions: [
+        Padding(
+          padding: const EdgeInsets.only(right: 16.0),
+          child: Row(
+            children: [
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(20),
+                  onTap: () async {
+                    await Navigator.of(context, rootNavigator: true).push(
+                      SlideUpRoute(
+                        page: const add_booking(isCoordinator: false),
+                      ),
+                    );
+                    if (mounted) {
+                      _viewModel.fetchBookings();
+                    }
+                  },
+                  child: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: iconBtnBg,
+                      borderRadius: BorderRadius.circular(20),
+                      border: isDark
+                          ? Border.all(color: AppDarkColors.border, width: 1)
+                          : null,
+                    ),
+                    child: Icon(
+                      Icons.add_rounded,
+                      color: primaryTextColor,
+                      size: 22,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              InkWell(
+                borderRadius: BorderRadius.circular(20),
+                onTap: () async {
+                  await Navigator.of(context).push(
+                    SlideUpRoute(
+                      page: const NotificationPage(showBottomBar: false),
+                    ),
+                  );
+                  if (mounted) {
+                    _viewModel.fetchBookings();
+                  }
+                },
+                child: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: iconBtnBg,
+                    borderRadius: BorderRadius.circular(20),
+                    border: isDark
+                        ? Border.all(color: AppDarkColors.border, width: 1)
+                        : null,
+                  ),
+                  child: Icon(
+                    Icons.notifications_none_rounded,
+                    color: primaryTextColor,
+                    size: 20,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -242,468 +361,480 @@ class _TodayPageState extends State<TodayPage> {
 
     return Scaffold(
       backgroundColor: scaffoldBg,
-      appBar: AppBar(
-        backgroundColor: scaffoldBg,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        titleSpacing: 20,
-        toolbarHeight: 68,
-        title: const FitmateAppBarTitle(),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16.0),
-            child: Row(
-              children: [
-                Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(20),
-                    onTap: () async {
-                      await Navigator.of(context, rootNavigator: true)
-                          .push(SlideUpRoute(page: const add_booking(isCoordinator: false)));
-                      if (mounted) {
-                        _viewModel.fetchBookings();
-                      }
-                    },
-                    child: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: iconBtnBg,
-                        borderRadius: BorderRadius.circular(20),
-                        border: isDark
-                            ? Border.all(color: AppDarkColors.border, width: 1)
-                            : null,
-                      ),
-                      child: Icon(
-                        Icons.add_rounded,
-                        color: primaryTextColor,
-                        size: 22,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                InkWell(
-                  borderRadius: BorderRadius.circular(20),
-                  onTap: () async {
-                    await Navigator.of(context).push(
-                      SlideUpRoute(
-                        page: const NotificationPage(showBottomBar: false),
-                      ),
-                    );
-                    if (mounted) {
-                      _viewModel.fetchBookings();
-                    }
-                  },
-                  child: Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: iconBtnBg,
-                      borderRadius: BorderRadius.circular(20),
-                      border: isDark
-                          ? Border.all(color: AppDarkColors.border, width: 1)
-                          : null,
-                    ),
-                    child: Icon(
-                      Icons.notifications_none_rounded,
-                      color: primaryTextColor,
-                      size: 20,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
       body: SafeArea(
         child: Stack(
           children: [
             Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Search Input Field & Filter Option Row
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 16.0,
-                vertical: 6.0,
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: SearchInputField(
-                      controller: _searchController,
-                      padding: EdgeInsets.zero,
-                      onChanged: (val) {
-                        _viewModel.setSearchQuery(val);
-                        if (_scrollController.hasClients) {
-                          _scrollController.animateTo(
-                            0.0,
-                            duration: const Duration(milliseconds: 200),
-                            curve: Curves.easeOut,
-                          );
-                        }
-                      },
-                      onClear: () {
-                        _viewModel.setSearchQuery('', immediate: true);
-                        if (_scrollController.hasClients) {
-                          _scrollController.animateTo(
-                            0.0,
-                            duration: const Duration(milliseconds: 200),
-                            curve: Curves.easeOut,
-                          );
-                        }
-                      },
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Top App Bar smoothly collapses when scrolling down the feed
+                ClipRect(
+                  child: AnimatedContainer(
+                    key: const Key('today_animated_app_bar'),
+                    duration: const Duration(milliseconds: 220),
+                    curve: Curves.easeInOut,
+                    height: _isAppBarVisible ? 68.0 : 0.0,
+                    child: OverflowBox(
+                      minHeight: 0,
+                      maxHeight: 68.0,
+                      alignment: Alignment.bottomCenter,
+                      child: _buildAppBar(
+                        context: context,
+                        isDark: isDark,
+                        scaffoldBg: scaffoldBg,
+                        primaryTextColor: primaryTextColor,
+                        iconBtnBg: iconBtnBg,
+                      ),
                     ),
                   ),
-                  const SizedBox(width: 10),
-                  ListenableBuilder(
-                    listenable: _viewModel,
-                    builder: (context, _) {
-                      final hasActiveFilters = _viewModel.hasActiveFilters;
-                      return Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(24),
-                          onTap: _openFilterBottomSheet,
-                          child: Container(
-                            width: 48,
-                            height: 48,
-                            alignment: Alignment.center,
-                            decoration: BoxDecoration(
-                              color: hasActiveFilters
-                                  ? (isDark
-                                        ? AppDarkColors.chipPendingBg
-                                        : AppColors.chipPendingBg)
-                                  : iconBtnBg,
+                ),
+                // Search Input Field & Filter Option Row
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16.0,
+                    vertical: 6.0,
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: SearchInputField(
+                          controller: _searchController,
+                          padding: EdgeInsets.zero,
+                          onChanged: (val) {
+                            _viewModel.setSearchQuery(val);
+                            if (_scrollController.hasClients) {
+                              _scrollController.animateTo(
+                                0.0,
+                                duration: const Duration(milliseconds: 200),
+                                curve: Curves.easeOut,
+                              );
+                            }
+                          },
+                          onClear: () {
+                            _viewModel.setSearchQuery('', immediate: true);
+                            if (_scrollController.hasClients) {
+                              _scrollController.animateTo(
+                                0.0,
+                                duration: const Duration(milliseconds: 200),
+                                curve: Curves.easeOut,
+                              );
+                            }
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      ListenableBuilder(
+                        listenable: _viewModel,
+                        builder: (context, _) {
+                          final hasActiveFilters = _viewModel.hasActiveFilters;
+                          return Material(
+                            color: Colors.transparent,
+                            child: InkWell(
                               borderRadius: BorderRadius.circular(24),
-                              border: hasActiveFilters
-                                  ? Border.all(
-                                      color: isDark
-                                          ? AppDarkColors.primaryGreen
-                                          : AppColors.brandGreen,
-                                      width: 1.5,
-                                    )
-                                  : (isDark
-                                        ? Border.all(
-                                            color: AppDarkColors.border,
-                                            width: 1,
-                                          )
-                                        : null),
-                            ),
-                            child: Stack(
-                              clipBehavior: Clip.none,
-                              alignment: Alignment.center,
-                              children: [
-                                Icon(
-                                  Icons.tune_rounded,
-                                  size: 22,
+                              onTap: _openFilterBottomSheet,
+                              child: Container(
+                                width: 48,
+                                height: 48,
+                                alignment: Alignment.center,
+                                decoration: BoxDecoration(
                                   color: hasActiveFilters
                                       ? (isDark
-                                            ? AppDarkColors.primaryGreen
-                                            : AppColors.brandGreen)
+                                            ? AppDarkColors.chipPendingBg
+                                            : AppColors.chipPendingBg)
+                                      : iconBtnBg,
+                                  borderRadius: BorderRadius.circular(24),
+                                  border: hasActiveFilters
+                                      ? Border.all(
+                                          color: isDark
+                                              ? AppDarkColors.primaryGreen
+                                              : AppColors.brandGreen,
+                                          width: 1.5,
+                                        )
                                       : (isDark
-                                            ? AppDarkColors.textSubtitle
-                                            : AppColors.textSecondary),
+                                            ? Border.all(
+                                                color: AppDarkColors.border,
+                                                width: 1,
+                                              )
+                                            : null),
                                 ),
-                                if (hasActiveFilters)
-                                  Positioned(
-                                    top: 2,
-                                    right: 2,
-                                    child: Container(
-                                      width: 7,
-                                      height: 7,
-                                      decoration: const BoxDecoration(
-                                        color: AppColors.brandGreen,
-                                        shape: BoxShape.circle,
-                                      ),
+                                child: Stack(
+                                  clipBehavior: Clip.none,
+                                  alignment: Alignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.tune_rounded,
+                                      size: 22,
+                                      color: hasActiveFilters
+                                          ? (isDark
+                                                ? AppDarkColors.primaryGreen
+                                                : AppColors.brandGreen)
+                                          : (isDark
+                                                ? AppDarkColors.textSubtitle
+                                                : AppColors.textSecondary),
                                     ),
-                                  ),
-                              ],
+                                    if (hasActiveFilters)
+                                      Positioned(
+                                        top: 2,
+                                        right: 2,
+                                        child: Container(
+                                          width: 7,
+                                          height: 7,
+                                          decoration: const BoxDecoration(
+                                            color: AppColors.brandGreen,
+                                            shape: BoxShape.circle,
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Content Area (Active Filters, Chips Bar, and List) scoped with ListenableBuilder
+                Expanded(
+                  child: ListenableBuilder(
+                    listenable: _viewModel,
+                    builder: (context, _) {
+                      final filtered = _viewModel.filteredChatItems;
+                      final hasActiveFilters = _viewModel.hasActiveFilters;
+
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (hasActiveFilters)
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(
+                                16.0,
+                                4.0,
+                                16.0,
+                                6.0,
+                              ),
+                              child: SingleChildScrollView(
+                                scrollDirection: Axis.horizontal,
+                                child: Row(
+                                  children: [
+                                    if (_viewModel.selectedStatusFilter !=
+                                        'All') ...[
+                                      _buildActiveFilterChip(
+                                        label:
+                                            'Status: ${_viewModel.selectedStatusFilter}',
+                                        isDark: isDark,
+                                        onDeleted: () {
+                                          _viewModel.setStatusFilter('All');
+                                        },
+                                      ),
+                                      const SizedBox(width: 8),
+                                    ],
+                                    if ((_viewModel.dateFrom != null &&
+                                            _viewModel.dateFrom!.isNotEmpty) ||
+                                        (_viewModel.dateTo != null &&
+                                            _viewModel.dateTo!.isNotEmpty)) ...[
+                                      _buildActiveFilterChip(
+                                        label:
+                                            'Date: ${formatDateToDayMonthYear(_viewModel.dateFrom)} - ${formatDateToDayMonthYear(_viewModel.dateTo)}',
+                                        isDark: isDark,
+                                        onDeleted: () {
+                                          _viewModel.setDateRange(
+                                            from: null,
+                                            to: null,
+                                          );
+                                        },
+                                      ),
+                                      const SizedBox(width: 8),
+                                    ],
+                                    _buildActiveFilterChip(
+                                      label: 'Clear All',
+                                      isDark: isDark,
+                                      onDeleted: () {
+                                        _viewModel.resetFilters();
+                                      },
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+
+                          const SizedBox(height: 8),
+
+                          // Leads / Task List with Pull-to-refresh
+                          Expanded(
+                            child: RefreshIndicator(
+                              onRefresh: _viewModel.refreshBookings,
+                              color: AppColors.primaryGreen,
+                              child: _viewModel.isLoading && filtered.isEmpty
+                                  ? const TodaySkeletonLoading()
+                                  : filtered.isEmpty
+                                  ? ListView(
+                                      physics:
+                                          const AlwaysScrollableScrollPhysics(),
+                                      children: const [
+                                        SizedBox(height: 120),
+                                        Center(
+                                          child: Text(
+                                            'No tasks or leads found',
+                                            style: TextStyle(
+                                              color: AppColors.textSubtitle,
+                                              fontSize: 14,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    )
+                                  : ListView.separated(
+                                      controller: _scrollController,
+                                      scrollCacheExtent:
+                                          const ScrollCacheExtent.pixels(600),
+                                      physics: const BouncingScrollPhysics(
+                                        parent: AlwaysScrollableScrollPhysics(),
+                                      ),
+                                      padding: const EdgeInsets.only(
+                                        bottom: 100,
+                                      ),
+                                      itemCount:
+                                          filtered.length +
+                                          (_viewModel.isLoadingMore ? 1 : 0),
+                                      separatorBuilder: (context, index) {
+                                        if (index >= filtered.length - 1 &&
+                                            _viewModel.isLoadingMore) {
+                                          return const SizedBox.shrink();
+                                        }
+                                        return Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 16.0,
+                                          ),
+                                          child: Container(
+                                            height: 1.0,
+                                            color: isDark
+                                                ? AppDarkColors.divider
+                                                : const Color(0xFFE2E8F0),
+                                          ),
+                                        );
+                                      },
+                                      itemBuilder: (context, index) {
+                                        if (index >= filtered.length) {
+                                          return const Padding(
+                                            padding: EdgeInsets.symmetric(
+                                              vertical: 20,
+                                            ),
+                                            child: Center(
+                                              child: SizedBox(
+                                                width: 22,
+                                                height: 22,
+                                                child:
+                                                    CircularProgressIndicator(
+                                                      strokeWidth: 2,
+                                                      color: AppColors
+                                                          .primaryGreen,
+                                                    ),
+                                              ),
+                                            ),
+                                          );
+                                        }
+
+                                        if (index >= 14 &&
+                                            index >= filtered.length - 2 &&
+                                            !_viewModel.isLoading &&
+                                            !_viewModel.isLoadingMore &&
+                                            _viewModel.hasMore) {
+                                          WidgetsBinding.instance
+                                              .addPostFrameCallback((_) {
+                                                if (mounted &&
+                                                    !_viewModel.isLoading &&
+                                                    !_viewModel.isLoadingMore &&
+                                                    _viewModel.hasMore) {
+                                                  _viewModel.loadNextPage();
+                                                }
+                                              });
+                                        }
+
+                                        final item = filtered[index];
+                                        return ChatListItemTile(
+                                          title: item['title'] ?? '',
+                                          avatarLetter:
+                                              item['avatarLetter'] ?? '',
+                                          avatarBgColor:
+                                              item['avatarBgColor'] ??
+                                              AppColors.surfaceGrey,
+                                          avatarTextColor:
+                                              item['avatarTextColor'] ??
+                                              AppColors.textSecondary,
+                                          avatarBorderColor:
+                                              item['avatarBorderColor'],
+                                          hasVerifiedBadge:
+                                              item['hasVerifiedBadge'] ?? false,
+                                          date: formatDateToDayMonthYear(
+                                            item['date']?.toString() ?? '',
+                                          ),
+                                          tagText: item['tagText'] ?? '',
+                                          tagBgColor:
+                                              item['tagBgColor'] ??
+                                              AppColors.completedBg,
+                                          tagTextColor:
+                                              item['tagTextColor'] ??
+                                              AppColors.completedText,
+                                          location: item['location'] ?? '',
+                                          onTap: () async {
+                                            final booking =
+                                                item['booking']
+                                                    as BookingModel?;
+                                            final customer = booking != null
+                                                ? CustomerDetailsData(
+                                                    id: booking.id.toString(),
+                                                    name: booking.name,
+                                                    inquiry:
+                                                        booking.notes.isNotEmpty
+                                                        ? booking.notes
+                                                        : 'Steel door enquiry',
+                                                    status:
+                                                        booking
+                                                            .status
+                                                            .isNotEmpty
+                                                        ? '${booking.status[0].toUpperCase()}${booking.status.substring(1).toLowerCase()}'
+                                                        : 'New',
+                                                    phoneNumber: booking.mobile,
+                                                    addressLine1:
+                                                        booking.address,
+                                                    addressLine2:
+                                                        [
+                                                              booking.areaName,
+                                                              booking
+                                                                  .districtName,
+                                                              booking.stateName,
+                                                            ]
+                                                            .where(
+                                                              (s) =>
+                                                                  s.isNotEmpty,
+                                                            )
+                                                            .join(', '),
+                                                    notes: booking.notes,
+                                                    staffNotes:
+                                                        booking.staffNotes,
+                                                    documents:
+                                                        booking.documents,
+                                                    hasBeenScheduled:
+                                                        booking.status
+                                                                .toLowerCase() ==
+                                                            'scheduled' ||
+                                                        booking.status
+                                                                .toLowerCase() ==
+                                                            'completed',
+                                                    branchHeadId:
+                                                        booking.branchHeadId,
+                                                    branchHeadName:
+                                                        booking
+                                                            .branchHeadName ??
+                                                        item['branchManager']
+                                                            ?.toString(),
+                                                    scheduleDate:
+                                                        booking.scheduleDate,
+                                                    statusColorCode:
+                                                        booking.statusColorCode,
+                                                  )
+                                                : CustomerDetailsData.fromChatInfo(
+                                                    name:
+                                                        item['title']
+                                                            ?.toString() ??
+                                                        'Customer',
+                                                    location: item['location']
+                                                        ?.toString(),
+                                                    tagText: item['tagText']
+                                                        ?.toString(),
+                                                    id: item['id']?.toString(),
+                                                    scheduleDate:
+                                                        item['scheduleDate']
+                                                            ?.toString() ??
+                                                        item['date']
+                                                            ?.toString(),
+                                                    phoneNumber:
+                                                        item['mobile']
+                                                            ?.toString() ??
+                                                        item['phoneNumber']
+                                                            ?.toString(),
+                                                    notes: item['notes']
+                                                        ?.toString(),
+                                                    documents:
+                                                        item['documents']
+                                                            is List
+                                                        ? (item['documents']
+                                                                  as List)
+                                                              .map(
+                                                                (e) => e
+                                                                    .toString(),
+                                                              )
+                                                              .toList()
+                                                        : null,
+                                                    branchHeadId:
+                                                        item['branchHeadId']
+                                                            is int
+                                                        ? item['branchHeadId']
+                                                              as int
+                                                        : null,
+                                                    branchHeadName:
+                                                        item['branchManager']
+                                                            ?.toString() ??
+                                                        item['branchHeadName']
+                                                            ?.toString(),
+                                                  );
+
+                                            final updatedStatus =
+                                                await Navigator.of(
+                                                  context,
+                                                ).push(
+                                                  SlideRightRoute(
+                                                    page: CustomerDetailsPage(
+                                                      customer: customer,
+                                                    ),
+                                                  ),
+                                                );
+
+                                            if (mounted) {
+                                              if (updatedStatus
+                                                  is StatusUpdateResult) {
+                                                _viewModel.updateStatus(
+                                                  item['title'] ?? '',
+                                                  updatedStatus.status,
+                                                  newDate: updatedStatus
+                                                      .scheduleDate,
+                                                );
+                                              } else if (updatedStatus
+                                                  is String) {
+                                                _viewModel.updateStatus(
+                                                  item['title'] ?? '',
+                                                  updatedStatus,
+                                                );
+                                              }
+                                              _viewModel.fetchBookings();
+                                            }
+                                          },
+                                        );
+                                      },
+                                    ),
                             ),
                           ),
-                        ),
+                        ],
                       );
                     },
                   ),
-                ],
-              ),
-            ),
-
-            // Content Area (Active Filters, Chips Bar, and List) scoped with ListenableBuilder
-            Expanded(
-              child: ListenableBuilder(
-                listenable: _viewModel,
-                builder: (context, _) {
-                  final filtered = _viewModel.filteredChatItems;
-                  final hasActiveFilters = _viewModel.hasActiveFilters;
-
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (hasActiveFilters)
-                        Padding(
-                          padding:
-                              const EdgeInsets.fromLTRB(16.0, 4.0, 16.0, 6.0),
-                          child: SingleChildScrollView(
-                            scrollDirection: Axis.horizontal,
-                            child: Row(
-                              children: [
-                                if (_viewModel.selectedStatusFilter != 'All') ...[
-                                  _buildActiveFilterChip(
-                                    label:
-                                        'Status: ${_viewModel.selectedStatusFilter}',
-                                    isDark: isDark,
-                                    onDeleted: () {
-                                      _viewModel.setStatusFilter('All');
-                                    },
-                                  ),
-                                  const SizedBox(width: 8),
-                                ],
-                                if ((_viewModel.dateFrom != null &&
-                                        _viewModel.dateFrom!.isNotEmpty) ||
-                                    (_viewModel.dateTo != null &&
-                                        _viewModel.dateTo!.isNotEmpty)) ...[
-                                  _buildActiveFilterChip(
-                                    label:
-                                        'Date: ${formatDateToDayMonthYear(_viewModel.dateFrom)} - ${formatDateToDayMonthYear(_viewModel.dateTo)}',
-                                    isDark: isDark,
-                                    onDeleted: () {
-                                      _viewModel.setDateRange(
-                                          from: null, to: null);
-                                    },
-                                  ),
-                                  const SizedBox(width: 8),
-                                ],
-                                _buildActiveFilterChip(
-                                  label: 'Clear All',
-                                  isDark: isDark,
-                                  onDeleted: () {
-                                    _viewModel.resetFilters();
-                                  },
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-
-                      const SizedBox(height: 8),
-
-                      // Leads / Task List with Pull-to-refresh
-                      Expanded(
-                        child: RefreshIndicator(
-                    onRefresh: _viewModel.refreshBookings,
-                    color: AppColors.primaryGreen,
-                    child: _viewModel.isLoading && filtered.isEmpty
-                        ? const TodaySkeletonLoading()
-                        : filtered.isEmpty
-                            ? ListView(
-                                physics: const AlwaysScrollableScrollPhysics(),
-                                children: const [
-                                  SizedBox(height: 120),
-                                  Center(
-                                    child: Text(
-                                      'No tasks or leads found',
-                                      style: TextStyle(
-                                        color: AppColors.textSubtitle,
-                                        fontSize: 14,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              )
-                            : ListView.separated(
-                                controller: _scrollController,
-                                scrollCacheExtent: const ScrollCacheExtent.pixels(600),
-                                physics: const BouncingScrollPhysics(
-                                  parent: AlwaysScrollableScrollPhysics(),
-                                ),
-                                padding: const EdgeInsets.only(bottom: 100),
-                                itemCount: filtered.length +
-                                    (_viewModel.isLoadingMore ? 1 : 0),
-                                separatorBuilder: (context, index) {
-                                  if (index >= filtered.length - 1 &&
-                                      _viewModel.isLoadingMore) {
-                                    return const SizedBox.shrink();
-                                  }
-                                  return Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 16.0,
-                                    ),
-                                    child: Container(
-                                      height: 1.0,
-                                      color: isDark
-                                          ? AppDarkColors.divider
-                                          : const Color(0xFFE2E8F0),
-                                    ),
-                                  );
-                                },
-                                itemBuilder: (context, index) {
-                                  if (index >= filtered.length) {
-                                    return const Padding(
-                                      padding: EdgeInsets.symmetric(
-                                        vertical: 20,
-                                      ),
-                                      child: Center(
-                                        child: SizedBox(
-                                          width: 22,
-                                          height: 22,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                            color: AppColors.primaryGreen,
-                                          ),
-                                        ),
-                                      ),
-                                    );
-                                  }
-
-                                  if (index >= 14 &&
-                                      index >= filtered.length - 2 &&
-                                      !_viewModel.isLoading &&
-                                      !_viewModel.isLoadingMore &&
-                                      _viewModel.hasMore) {
-                                    WidgetsBinding.instance
-                                        .addPostFrameCallback((_) {
-                                      if (mounted &&
-                                          !_viewModel.isLoading &&
-                                          !_viewModel.isLoadingMore &&
-                                          _viewModel.hasMore) {
-                                        _viewModel.loadNextPage();
-                                      }
-                                    });
-                                  }
-
-                                  final item = filtered[index];
-                                  return ChatListItemTile(
-                                    title: item['title'] ?? '',
-                                    avatarLetter: item['avatarLetter'] ?? '',
-                                    avatarBgColor: item['avatarBgColor'] ??
-                                        AppColors.surfaceGrey,
-                                    avatarTextColor: item['avatarTextColor'] ??
-                                        AppColors.textSecondary,
-                                    avatarBorderColor:
-                                        item['avatarBorderColor'],
-                                    hasVerifiedBadge:
-                                        item['hasVerifiedBadge'] ?? false,
-                                    date: formatDateToDayMonthYear(
-                                        item['date']?.toString() ?? ''),
-                                    tagText: item['tagText'] ?? '',
-                                    tagBgColor: item['tagBgColor'] ??
-                                        AppColors.completedBg,
-                                    tagTextColor: item['tagTextColor'] ??
-                                        AppColors.completedText,
-                                    location: item['location'] ?? '',
-                                    onTap: () async {
-                                      final booking = item['booking'] as BookingModel?;
-                                      final customer = booking != null
-                                          ? CustomerDetailsData(
-                                              id: booking.id.toString(),
-                                              name: booking.name,
-                                              inquiry: booking.notes.isNotEmpty
-                                                  ? booking.notes
-                                                  : 'Steel door enquiry',
-                                              status: booking.status.isNotEmpty
-                                                  ? '${booking.status[0].toUpperCase()}${booking.status.substring(1).toLowerCase()}'
-                                                  : 'New',
-                                              phoneNumber: booking.mobile,
-                                              addressLine1: booking.address,
-                                              addressLine2: [
-                                                booking.areaName,
-                                                booking.districtName,
-                                                booking.stateName,
-                                              ]
-                                                  .where((s) => s.isNotEmpty)
-                                                  .join(', '),
-                                              notes: booking.notes,
-                                              staffNotes: booking.staffNotes,
-                                              documents: booking.documents,
-                                              hasBeenScheduled: booking.status
-                                                          .toLowerCase() ==
-                                                      'scheduled' ||
-                                                  booking.status
-                                                          .toLowerCase() ==
-                                                      'completed',
-                                              branchHeadId: booking.branchHeadId,
-                                              branchHeadName: booking.branchHeadName ??
-                                                  item['branchManager']?.toString(),
-                                              scheduleDate: booking.scheduleDate,
-                                               statusColorCode: booking.statusColorCode,
-                                            )
-                                          : CustomerDetailsData.fromChatInfo(
-                                              name: item['title']?.toString() ??
-                                                  'Customer',
-                                              location: item['location']
-                                                  ?.toString(),
-                                              tagText: item['tagText']
-                                                  ?.toString(),
-                                              id: item['id']?.toString(),
-                                              scheduleDate: item['scheduleDate']?.toString() ??
-                                                  item['date']?.toString(),
-                                              phoneNumber: item['mobile']?.toString() ??
-                                                  item['phoneNumber']?.toString(),
-                                              notes: item['notes']?.toString(),
-                                              documents: item['documents'] is List
-                                                  ? (item['documents'] as List)
-                                                      .map((e) => e.toString())
-                                                      .toList()
-                                                  : null,
-                                              branchHeadId: item['branchHeadId'] is int
-                                                  ? item['branchHeadId'] as int
-                                                  : null,
-                                              branchHeadName: item['branchManager']?.toString() ??
-                                                  item['branchHeadName']?.toString(),
-                                            );
-
-                                      final updatedStatus =
-                                          await Navigator.of(context).push(
-                                        SlideRightRoute(
-                                          page: CustomerDetailsPage(
-                                            customer: customer,
-                                          ),
-                                        ),
-                                      );
-
-                                      if (mounted) {
-                                        if (updatedStatus is StatusUpdateResult) {
-                                          _viewModel.updateStatus(
-                                            item['title'] ?? '',
-                                            updatedStatus.status,
-                                            newDate: updatedStatus.scheduleDate,
-                                          );
-                                        } else if (updatedStatus is String) {
-                                          _viewModel.updateStatus(
-                                            item['title'] ?? '',
-                                            updatedStatus,
-                                          );
-                                        }
-                                        _viewModel.fetchBookings();
-                                      }
-                                    },
-                                  );
-                                },
-                              ),
-                  ),
                 ),
               ],
-            );
-          },
+            ),
+            // Floating pop-up scroll to top button
+            Positioned(
+              right: 18,
+              bottom: 96,
+              child: _buildScrollToTopButton(isDark),
+            ),
+          ],
         ),
       ),
-    ],
-  ),
-  // Floating pop-up scroll to top button
-  Positioned(
-    right: 18,
-    bottom: 96,
-    child: _buildScrollToTopButton(isDark),
-  ),
-],
-),
-),
-);
-}
+    );
+  }
 }
 
 /// Backward compatibility / MVVM alias for TodayPage.

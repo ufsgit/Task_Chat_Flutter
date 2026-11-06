@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:task_chat/report_activity/activity/activity_model.dart';
 import 'package:task_chat/report_activity/activity/booking_history_page.dart';
+import 'package:task_chat/report_activity/widgets/history_skeleton_loading.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -175,7 +176,7 @@ void main() {
   );
 
   testWidgets(
-    'BookingHistoryPage preserves full activities from allActivities when API returns only 1 creation item',
+    'BookingHistoryPage shows loading indicator while API is in-flight and renders authoritative API response',
     (WidgetTester tester) async {
       final act1 = ActivityModel(
         id: '2001',
@@ -204,7 +205,6 @@ void main() {
         actionByName: 'Dealer Bob',
       );
 
-      // The API only returns 1 item ("New Booking Created")
       final mockClient = MockClient((request) async {
         final body = jsonEncode({
           'success': true,
@@ -236,20 +236,59 @@ void main() {
         ),
       );
 
-      // Frame 1: Before API returns
+      // Frame 1: Before API returns, shows skeleton loading indicator without premature/flickering cards
       await tester.pump();
-      expect(find.text('2 updates'), findsOneWidget);
-      expect(find.text('Status Updated'), findsOneWidget);
-      expect(find.text('New Booking Created'), findsOneWidget);
+      expect(find.byType(HistorySkeletonLoading), findsOneWidget);
+      expect(find.text('Status Updated'), findsNothing);
 
-      // Frame 2: After API returns with only 1 item
+      // Frame 2: After API returns with authoritative timeline
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(find.byType(HistorySkeletonLoading), findsNothing);
+      expect(find.text('New Booking Created'), findsOneWidget);
+      expect(find.textContaining('Dealer Bob'), findsOneWidget);
+      expect(find.text('Latest not available due to poor internet connection'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'BookingHistoryPage falls back to allActivities when API fails and shows poor internet connection notice',
+    (WidgetTester tester) async {
+      final act1 = ActivityModel(
+        id: '2001',
+        bookingId: 1001,
+        title: 'Test Client',
+        avatarLetter: 'T',
+        avatarBgColor: const Color(0xFFDCFCE7),
+        avatarTextColor: const Color(0xFF16A34A),
+        date: '06/11/2026',
+        statusTag: 'Completed',
+        actionType: 'Status Updated',
+        actionByName: 'Manager Alex',
+        noteText: 'Work finished properly',
+      );
+
+      final mockClient = MockClient((request) async {
+        return http.Response('Server Error', 500);
+      });
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: BookingHistoryPage(
+            initialBooking: act1,
+            allActivities: [act1],
+            client: mockClient,
+          ),
+        ),
+      );
+
+      // After API error finishes
+      await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 
-      // Must STILL show 2 updates, and NOT collapse to a default value of 1 item!
-      expect(find.text('2 updates'), findsOneWidget);
+      expect(find.text('Latest not available due to poor internet connection'), findsOneWidget);
+      expect(find.byIcon(Icons.wifi_off_rounded), findsOneWidget);
       expect(find.text('Status Updated'), findsOneWidget);
-      expect(find.text('New Booking Created'), findsOneWidget);
-      expect(find.text('Work finished properly'), findsOneWidget);
+      expect(find.textContaining('Manager Alex'), findsOneWidget);
     },
   );
 }

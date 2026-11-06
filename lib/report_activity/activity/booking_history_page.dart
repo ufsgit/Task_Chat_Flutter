@@ -1,12 +1,10 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:http/http.dart' as http;
-import '../../api/api.dart';
-import '../../api/authenticated_client.dart';
 import '../../core/status_color_service.dart';
 import '../../core/theme.dart';
 import '../../login_page/token_storage.dart';
+import '../widgets/history_skeleton_loading.dart';
 import 'activity_model.dart';
 import 'activity_view_model.dart';
 
@@ -127,106 +125,14 @@ class _BookingHistoryPageState extends State<BookingHistoryPage> {
     });
 
     try {
-      List<Map<String, dynamic>>? rawList;
-      int? totalCount;
-      int? limit;
+      final vm = widget.viewModel ??
+          ActivityViewModel(
+            client: widget.client,
+            tokenStorage: widget.tokenStorage,
+          );
+      final rawList = await vm.fetchHistoryByBookingId(bookingId);
 
-      if (widget.viewModel != null) {
-        rawList = await widget.viewModel!.fetchHistoryByBookingId(bookingId);
-      } else {
-        final url = ApiConfig.reportGraphByBookingId(bookingId);
-        debugPrint('>>> [BookingHistoryPage] Fetching history from: $url');
-
-        String? token;
-        try {
-          final isTest = TokenStorage.isTestEnvironment;
-          token = await (widget.tokenStorage ?? TokenStorage())
-              .getToken()
-              .timeout(
-                isTest
-                    ? const Duration(milliseconds: 50)
-                    : const Duration(seconds: 2),
-                onTimeout: () => null,
-              );
-        } catch (_) {}
-
-        final headers = <String, String>{
-          'Accept': 'application/json',
-          if (token != null && token.isNotEmpty)
-            'authorization': token.startsWith('Bearer ')
-                ? token
-                : 'Bearer $token',
-        };
-
-        final isLocalClient = widget.client == null;
-        final client = widget.client ?? AuthenticatedClient();
-        try {
-          final response = TokenStorage.isTestEnvironment
-              ? await client.get(Uri.parse(url), headers: headers)
-              : await client
-                    .get(Uri.parse(url), headers: headers)
-                    .timeout(const Duration(seconds: 10));
-
-          if (response.statusCode >= 200 && response.statusCode < 300) {
-            final decoded = json.decode(response.body);
-            rawList = ActivityViewModel.extractHistoryList(decoded);
-            if (decoded is Map<String, dynamic>) {
-              final data = decoded['data'];
-              if (data is Map<String, dynamic>) {
-                totalCount = int.tryParse(
-                  data['count']?.toString() ?? data['total']?.toString() ?? '',
-                );
-                limit = int.tryParse(data['limit']?.toString() ?? '');
-              } else {
-                totalCount = int.tryParse(
-                  decoded['count']?.toString() ??
-                      decoded['total']?.toString() ??
-                      '',
-                );
-                limit = int.tryParse(decoded['limit']?.toString() ?? '');
-              }
-            }
-
-            // Auto-paginate remaining pages if total count exceeds the first page
-            int page = 1;
-            while (rawList != null &&
-                totalCount != null &&
-                rawList.length < totalCount &&
-                !TokenStorage.isTestEnvironment) {
-              page++;
-              final nextUri = Uri.parse(url).replace(
-                queryParameters: {
-                  'page': page.toString(),
-                  'limit': (limit ?? 20).toString(),
-                },
-              );
-              final nextResponse = await client
-                  .get(nextUri, headers: headers)
-                  .timeout(const Duration(seconds: 10));
-              if (nextResponse.statusCode >= 200 &&
-                  nextResponse.statusCode < 300) {
-                final nextDecoded = json.decode(nextResponse.body);
-                final nextItems = ActivityViewModel.extractHistoryList(
-                  nextDecoded,
-                );
-                if (nextItems != null && nextItems.isNotEmpty) {
-                  rawList.addAll(nextItems);
-                } else {
-                  break;
-                }
-              } else {
-                break;
-              }
-            }
-          }
-        } finally {
-          if (isLocalClient) {
-            client.close();
-          }
-        }
-      }
-
-      if (rawList != null && rawList.isNotEmpty && mounted) {
+      if (rawList != null && mounted) {
         final parsed = <TimelineHistoryEvent>[];
         for (int i = 0; i < rawList.length; i++) {
           parsed.add(
@@ -418,9 +324,14 @@ class _BookingHistoryPageState extends State<BookingHistoryPage> {
         item['to_branch']?.toString() ??
         item['to_district']?.toString();
     if (fromBranch != null || toBranch != null) {
+      final isBranchHeadOnly =
+          (item['from_branch_head_name'] != null ||
+              item['to_branch_head_name'] != null) &&
+          item['from_assigned_head_district_name'] == null &&
+          item['to_assigned_head_district_name'] == null;
       diffs.add(
         TimelineDiffField(
-          label: 'BRANCH HEAD / DISTRICT',
+          label: isBranchHeadOnly ? 'BRANCH HEAD' : 'BRANCH HEAD / DISTRICT',
           oldValue: fromBranch ?? 'Unassigned',
           newValue: toBranch ?? 'Unassigned',
         ),
@@ -587,138 +498,7 @@ class _BookingHistoryPageState extends State<BookingHistoryPage> {
     return 'group_${item.title}';
   }
 
-  /// Builds timeline events demonstrating lifecycle changes
-  /// in status, notes, branch head, and schedule date.
-  List<TimelineHistoryEvent> _buildTimelineEventsForBooking(
-    ActivityModel booking,
-  ) {
-    final actor =
-        (booking.actionByName != null &&
-            booking.actionByName!.trim().isNotEmpty)
-        ? booking.actionByName!.trim()
-        : (booking.subtitleHighlight ?? 'SteelGuard Executive Board');
-
-    final displayDate = booking.date.isNotEmpty ? booking.date : '29/10/2026';
-    final notesText =
-        (booking.notes != null && booking.notes!.trim().isNotEmpty)
-        ? booking.notes!.trim()
-        : 'Call 30 min before arriving, use the side gate';
-
-    final branchHeadText =
-        (booking.subtitleHighlight != null &&
-            booking.subtitleHighlight!.isNotEmpty)
-        ? booking.subtitleHighlight!
-        : (booking.location != null
-              ? 'Anas Kabeer (${booking.location})'
-              : 'Anas Kabeer (Kozhikode)');
-
-    return [
-      // 1. Completed (Current)
-      TimelineHistoryEvent(
-        actionTitle: 'Booking Completed',
-        time: '5:35 PM',
-        date: displayDate,
-        actor: actor,
-        badgeLabel: 'Completed',
-        badgeBg: const Color(0xFFDCFCE7),
-        badgeTextColor: const Color(0xFF15803D),
-        isCurrent: true,
-        dotColor: const Color(0xFF22C55E),
-        diffs: const [
-          TimelineDiffField(
-            label: 'STATUS',
-            oldValue: 'Scheduled',
-            newValue: 'Completed',
-          ),
-        ],
-      ),
-
-      // 2. Rescheduled (Demonstrates Schedule Date change)
-      TimelineHistoryEvent(
-        actionTitle: 'Booking Rescheduled',
-        time: '5:20 PM',
-        date: displayDate,
-        actor: actor,
-        badgeLabel: 'Edited',
-        badgeBg: const Color(0xFFF1F5F9),
-        badgeTextColor: const Color(0xFF475569),
-        dotColor: const Color(0xFF64748B),
-        diffs: const [
-          TimelineDiffField(
-            label: 'SCHEDULED DATE',
-            oldValue: '30/10/2026',
-            newValue: '02/11/2026',
-          ),
-        ],
-      ),
-
-      // 3. Details Updated (Demonstrates Name & Notes changes)
-      TimelineHistoryEvent(
-        actionTitle: 'Details Updated',
-        time: '5:05 PM',
-        date: displayDate,
-        actor: actor,
-        badgeLabel: 'Edited',
-        badgeBg: const Color(0xFFF1F5F9),
-        badgeTextColor: const Color(0xFF475569),
-        dotColor: const Color(0xFF64748B),
-        diffs: [
-          TimelineDiffField(
-            label: 'NAME',
-            oldValue: booking.title.length > 3
-                ? booking.title.substring(0, booking.title.length - 1)
-                : 'tes',
-            newValue: booking.title,
-          ),
-          TimelineDiffField(
-            label: 'NOTES',
-            oldValue: 'Call before arriving',
-            newValue: notesText,
-            multiline: true,
-          ),
-        ],
-      ),
-
-      // 4. Scheduled (Demonstrates Status & Branch Head changes)
-      TimelineHistoryEvent(
-        actionTitle: 'Booking Scheduled',
-        time: '4:50 PM',
-        date: displayDate,
-        actor: actor,
-        badgeLabel: 'Scheduled',
-        badgeBg: const Color(0xFFFEF3C7),
-        badgeTextColor: const Color(0xFFD97706),
-        dotColor: const Color(0xFFF59E0B),
-        diffs: [
-          TimelineDiffField(
-            label: 'BRANCH HEAD',
-            oldValue: 'Unassigned',
-            newValue: branchHeadText,
-          ),
-          const TimelineDiffField(
-            label: 'STATUS',
-            oldValue: 'New',
-            newValue: 'Scheduled',
-          ),
-        ],
-      ),
-
-      // 5. New Booking Created
-      TimelineHistoryEvent(
-        actionTitle: 'New Booking Created',
-        time: '4:30 PM',
-        date: displayDate,
-        actor: actor,
-        badgeLabel: 'New',
-        badgeBg: const Color(0xFFDBEAFE),
-        badgeTextColor: const Color(0xFF1D4ED8),
-        dotColor: const Color(0xFF3B82F6),
-        diffs: const [],
-      ),
-    ];
-  }
-
-  /// Generates timeline events from ActivityModel items when API history is unavailable or to merge.
+  /// Generates timeline events from ActivityModel items when API history is unavailable.
   List<TimelineHistoryEvent> _buildTimelineEventsFromActivities(
     List<ActivityModel> activities,
   ) {
@@ -799,83 +579,6 @@ class _BookingHistoryPageState extends State<BookingHistoryPage> {
     }).toList();
   }
 
-  /// Merges API events with activity events so that no timeline events are lost
-  /// when the API returns fewer items than previously loaded from the activity list.
-  List<TimelineHistoryEvent> _mergeTimelineEvents(
-    List<TimelineHistoryEvent> apiEvents,
-    List<TimelineHistoryEvent> activityEvents,
-  ) {
-    if (apiEvents.isEmpty) return activityEvents;
-    if (activityEvents.isEmpty) return apiEvents;
-
-    final List<TimelineHistoryEvent> merged = List.of(apiEvents);
-
-    String norm(String s) =>
-        s.trim().toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
-
-    for (final actEvent in activityEvents) {
-      final actTitleNorm = norm(actEvent.actionTitle);
-      final actBadgeNorm = norm(actEvent.badgeLabel);
-      final actDateNorm = norm(actEvent.date);
-
-      final exists = merged.any((apiEvent) {
-        final apiTitleNorm = norm(apiEvent.actionTitle);
-        final apiBadgeNorm = norm(apiEvent.badgeLabel);
-        final apiDateNorm = norm(apiEvent.date);
-
-        final titleMatches =
-            apiTitleNorm == actTitleNorm ||
-            (actTitleNorm.contains(apiTitleNorm) && apiTitleNorm.isNotEmpty) ||
-            (apiTitleNorm.contains(actTitleNorm) && actTitleNorm.isNotEmpty) ||
-            (apiBadgeNorm == actBadgeNorm && actBadgeNorm.isNotEmpty);
-
-        final dateMatches =
-            apiDateNorm == actDateNorm ||
-            apiDateNorm.isEmpty ||
-            actDateNorm.isEmpty ||
-            actDateNorm == 'today';
-
-        return titleMatches && dateMatches;
-      });
-
-      if (!exists) {
-        merged.add(actEvent);
-      }
-    }
-
-    return [
-      for (int i = 0; i < merged.length; i++)
-        if (i == 0 && !merged[i].isCurrent)
-          TimelineHistoryEvent(
-            actionTitle: merged[i].actionTitle,
-            time: merged[i].time,
-            date: merged[i].date,
-            actor: merged[i].actor,
-            badgeLabel: merged[i].badgeLabel,
-            badgeBg: merged[i].badgeBg,
-            badgeTextColor: merged[i].badgeTextColor,
-            isCurrent: true,
-            dotColor: merged[i].dotColor,
-            diffs: merged[i].diffs,
-          )
-        else if (i > 0 && merged[i].isCurrent)
-          TimelineHistoryEvent(
-            actionTitle: merged[i].actionTitle,
-            time: merged[i].time,
-            date: merged[i].date,
-            actor: merged[i].actor,
-            badgeLabel: merged[i].badgeLabel,
-            badgeBg: merged[i].badgeBg,
-            badgeTextColor: merged[i].badgeTextColor,
-            isCurrent: false,
-            dotColor: merged[i].dotColor,
-            diffs: merged[i].diffs,
-          )
-        else
-          merged[i],
-    ];
-  }
-
   /// Groups items by booking id or title for the clicked user
   List<BookingHistoryGroup> _buildGroupedBookings() {
     final Map<String, ActivityModel> uniqueBookings = {};
@@ -906,32 +609,34 @@ class _BookingHistoryPageState extends State<BookingHistoryPage> {
           : const [];
 
       final List<TimelineHistoryEvent> events;
-      if (_apiTimelineEvents != null && _apiTimelineEvents!.isNotEmpty) {
-        if (activityEvents.isEmpty) {
-          events = _apiTimelineEvents!;
-        } else {
-          events = _mergeTimelineEvents(_apiTimelineEvents!, activityEvents);
-        }
+      if (_apiTimelineEvents != null) {
+        events = _apiTimelineEvents!;
       } else if (activityEvents.isNotEmpty) {
         events = activityEvents;
       } else {
-        events = _buildTimelineEventsForBooking(item);
+        events = const [];
       }
 
       final bId =
           item.bookingId?.toString() ?? (item.id.isNotEmpty ? item.id : '23');
 
       final latestEvent = events.isNotEmpty ? events.first : null;
-      final status = item.statusTag ?? latestEvent?.badgeLabel ?? 'Completed';
+      final status = (item.statusTag != null && item.statusTag!.isNotEmpty)
+          ? item.statusTag!
+          : (latestEvent?.badgeLabel ?? 'New');
+      final badgeColors = StatusColorService.getBadgeColors(
+        status,
+        customColor: item.statusTagTextColor ?? latestEvent?.badgeTextColor,
+      );
       final statusBg =
-          item.statusTagBg ?? latestEvent?.badgeBg ?? const Color(0xFFDCFCE7);
+          item.statusTagBg ?? latestEvent?.badgeBg ?? badgeColors.bg;
       final statusTextColor =
           item.statusTagTextColor ??
           latestEvent?.badgeTextColor ??
-          const Color(0xFF15803D);
-      final date =
-          latestEvent?.date ??
-          (item.date.isNotEmpty ? item.date : '29/10/2026');
+          badgeColors.text;
+      final date = item.date.isNotEmpty
+          ? item.date
+          : (latestEvent?.date ?? 'Today');
 
       groups.add(
         BookingHistoryGroup(
@@ -1017,31 +722,81 @@ class _BookingHistoryPageState extends State<BookingHistoryPage> {
                 backgroundColor: Colors.transparent,
               ),
 
+            // Offline notice when showing cached activityEvents
+            if (!_isLoading &&
+                _apiTimelineEvents == null &&
+                groups.any((g) => g.events.isNotEmpty))
+              Container(
+                margin: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? const Color(0xFF2C1E14)
+                      : const Color(0xFFFFF7ED),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isDark
+                        ? const Color(0xFF78350F)
+                        : const Color(0xFFFDBA74),
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.wifi_off_rounded,
+                      size: 18,
+                      color: isDark
+                          ? const Color(0xFFFDBA74)
+                          : const Color(0xFFC2410C),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Latest not available due to poor internet connection',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: isDark
+                              ? const Color(0xFFFED7AA)
+                              : const Color(0xFF9A3412),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
             // 5. Grouped Booking Cards List
             Expanded(
-              child: groups.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.history_toggle_off_rounded,
-                            size: 48,
-                            color: textSubtitle,
+              child: (_isLoading && _apiTimelineEvents == null)
+                  ? const HistorySkeletonLoading()
+                  : (groups.isEmpty || groups.every((g) => g.events.isEmpty))
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.history_toggle_off_rounded,
+                                size: 48,
+                                color: textSubtitle,
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                'No history records found',
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600,
+                                  color: textSubtitle,
+                                ),
+                              ),
+                            ],
                           ),
-                          const SizedBox(height: 12),
-                          Text(
-                            'No history records found',
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w600,
-                              color: textSubtitle,
-                            ),
-                          ),
-                        ],
-                      ),
-                    )
-                  : ListView.builder(
+                        )
+                      : ListView.builder(
                       physics: const BouncingScrollPhysics(),
                       scrollCacheExtent: const ScrollCacheExtent.pixels(600),
                       padding: const EdgeInsets.only(bottom: 24),

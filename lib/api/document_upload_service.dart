@@ -12,11 +12,7 @@ class UploadFileData {
   final List<int>? bytes;
   final String? filePath;
 
-  const UploadFileData({
-    required this.fileName,
-    this.bytes,
-    this.filePath,
-  });
+  const UploadFileData({required this.fileName, this.bytes, this.filePath});
 }
 
 /// Service for uploading files (single or multiple) to POST /api/uploads/multiple.
@@ -25,11 +21,9 @@ class DocumentUploadService {
   final bool _isInternalClient;
   final TokenStorage? tokenStorage;
 
-  DocumentUploadService({
-    http.Client? client,
-    this.tokenStorage,
-  }) : client = client ?? AuthenticatedClient(),
-       _isInternalClient = client == null;
+  DocumentUploadService({http.Client? client, this.tokenStorage})
+    : client = client ?? AuthenticatedClient(),
+      _isInternalClient = client == null;
 
   /// Closes the underlying HTTP client if it was created internally.
   void close() {
@@ -65,8 +59,9 @@ class DocumentUploadService {
       } catch (_) {}
 
       if (token != null && token.isNotEmpty) {
-        request.headers['authorization'] =
-            token.startsWith('Bearer ') ? token : 'Bearer $token';
+        request.headers['authorization'] = token.startsWith('Bearer ')
+            ? token
+            : 'Bearer $token';
       }
 
       // Add bookingId if provided
@@ -106,8 +101,9 @@ class DocumentUploadService {
         return [];
       }
 
-      final streamedResponse =
-          await client.send(request).timeout(const Duration(seconds: 45));
+      final streamedResponse = await client
+          .send(request)
+          .timeout(const Duration(seconds: 30));
 
       final response = await http.Response.fromStream(streamedResponse);
       if (response.statusCode >= 200 && response.statusCode < 300) {
@@ -116,7 +112,8 @@ class DocumentUploadService {
         return urls;
       } else {
         debugPrint(
-            'Upload failed with status code ${response.statusCode}: ${response.body}');
+          'Upload failed with status code ${response.statusCode}: ${response.body}',
+        );
       }
     } catch (e) {
       debugPrint('Document upload exception: $e');
@@ -138,11 +135,7 @@ class DocumentUploadService {
   }) async {
     final urls = await uploadMultipleFiles(
       files: [
-        UploadFileData(
-          fileName: fileName,
-          bytes: bytes,
-          filePath: filePath,
-        ),
+        UploadFileData(fileName: fileName, bytes: bytes, filePath: filePath),
       ],
       bookingId: bookingId,
       fieldName: fieldName,
@@ -162,9 +155,11 @@ class DocumentUploadService {
           final u = item['url'] ?? item['path'] ?? item['filename'];
           if (u != null && u.toString().isNotEmpty) {
             final urlStr = u.toString();
-            urls.add(urlStr.startsWith('/') || urlStr.startsWith('http')
-                ? urlStr
-                : '/uploads/$urlStr');
+            urls.add(
+              urlStr.startsWith('/') || urlStr.startsWith('http')
+                  ? urlStr
+                  : '/uploads/$urlStr',
+            );
           }
         }
       }

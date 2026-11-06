@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../api/api.dart';
 import '../api/authenticated_client.dart';
-import '../core/status_color_service.dart';
 import '../login_page/token_storage.dart';
 
 // -----------------------------------------------------------------------------
@@ -171,7 +170,7 @@ const MetricCardData defaultNewBookingMetric = MetricCardData(
   title: 'New Booking',
   value: '48',
   subtitle: 'New bookings per month',
-  titleColor: Color(0xFF84CC16),
+  titleColor: Color(0xFFA3E635),
   leadingIcon: Icons.person_add_alt_1_rounded,
   iconBgColor: Color(0xFF1D61E7),
   iconColor: Color(0xFFA3E635),
@@ -183,7 +182,7 @@ const MetricCardData defaultPendingMetric = MetricCardData(
   title: 'Pending',
   value: '19',
   subtitle: 'Pending follow-ups per month',
-  titleColor: Color(0xFFF97316),
+  titleColor: Colors.purple,
   leadingIcon: Icons.hourglass_empty_rounded,
   iconBgColor: Color.fromARGB(255, 109, 19, 211),
   iconColor: Colors.purple,
@@ -196,8 +195,8 @@ const MetricCardData defaultCompletedMetric = MetricCardData(
   value: '31',
   subtitle: 'Completed orders per month',
   percentageText: '64.5%',
-  percentageColor: Color(0xFF34D399),
-  titleColor: Color(0xFF34D399),
+  percentageColor: Colors.green,
+  titleColor: Colors.green,
   leadingIcon: Icons.check_circle_outline_rounded,
   iconBgColor: Color(0xFF15803D),
   iconColor: Colors.green,
@@ -209,7 +208,7 @@ const MetricCardData defaultScheduledMetric = MetricCardData(
   title: 'Scheduled',
   value: '35',
   subtitle: 'Scheduled visits per month',
-  titleColor: Color(0xFFFBBF24),
+  titleColor: Colors.orange,
   leadingIcon: Icons.calendar_today_rounded,
   iconBgColor: Color(0xFFB45309),
   iconColor: Colors.orange,
@@ -354,60 +353,56 @@ class DashboardModel {
   /// Converts metric numbers into fully styled [MetricCardData] objects matching
   /// the design aesthetic and selected time period.
   MetricCardData toNewBookingCard({required DashboardPeriod period}) {
-    final statusCol = StatusColorService.getColor('New');
     return MetricCardData(
       title: 'New Booking',
       value: '$newBooking',
       subtitle: 'New bookings ${period.subtitleSuffix}',
-      titleColor: const Color(0xFF84CC16),
+      titleColor: const Color(0xFFA3E635),
       leadingIcon: Icons.person_add_alt_1_rounded,
       iconBgColor: const Color(0xFF1D61E7),
-      iconColor: statusCol,
+      iconColor: const Color(0xFFA3E635),
       cardBgColor: const Color(0xFFF2F7FE),
       darkCardBgColor: const Color.fromARGB(255, 36, 36, 41),
     );
   }
 
   MetricCardData toPendingCard({required DashboardPeriod period}) {
-    final statusCol = StatusColorService.getColor('Pending');
     return MetricCardData(
       title: 'Pending',
       value: '$pending',
       subtitle: 'Pending follow-ups ${period.subtitleSuffix}',
-      titleColor: const Color(0xFFF97316),
+      titleColor: Colors.purple,
       leadingIcon: Icons.hourglass_empty_rounded,
       iconBgColor: const Color.fromARGB(255, 109, 19, 211),
-      iconColor: statusCol,
+      iconColor: Colors.purple,
       cardBgColor: const Color.fromARGB(255, 235, 225, 243),
       darkCardBgColor: const Color.fromARGB(255, 36, 36, 41),
     );
   }
 
   MetricCardData toCompletedCard({required DashboardPeriod period}) {
-    final statusCol = StatusColorService.getColor('Completed');
     return MetricCardData(
       title: 'Completed',
       value: '$completed',
       subtitle: 'Completed orders ${period.subtitleSuffix}',
-      titleColor: const Color(0xFF34D399),
+      titleColor: Colors.green,
       leadingIcon: Icons.check_circle_outline_rounded,
       iconBgColor: const Color(0xFF15803D),
-      iconColor: statusCol,
+      iconColor: Colors.green,
       cardBgColor: const Color(0xFFEFFBF3),
       darkCardBgColor: const Color.fromARGB(255, 36, 36, 41),
     );
   }
 
   MetricCardData toScheduledCard({required DashboardPeriod period}) {
-    final statusCol = StatusColorService.getColor('Scheduled');
     return MetricCardData(
       title: 'Scheduled',
       value: '$scheduled',
       subtitle: 'Scheduled visits ${period.subtitleSuffix}',
-      titleColor: const Color(0xFFFBBF24),
+      titleColor: Colors.orange,
       leadingIcon: Icons.calendar_today_rounded,
       iconBgColor: const Color(0xFFB45309),
-      iconColor: statusCol,
+      iconColor: Colors.orange,
       cardBgColor: const Color(0xFFFFF9EC),
       darkCardBgColor: const Color.fromARGB(255, 36, 36, 41),
     );

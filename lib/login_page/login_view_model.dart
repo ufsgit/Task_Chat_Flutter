@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:task_chat/login_page/token_storage.dart';
 import '../api/api.dart';
+import '../core/connectivity_service.dart';
 import '../services/notification_service.dart';
 import 'login_model.dart';
 
@@ -92,6 +93,7 @@ class LoginViewModel extends ChangeNotifier {
 
         _isLoading = false;
         notifyListeners();
+        ConnectivityService.instance.reportSuccess();
         return LoginResult.success(
           token: token,
           user: user,
@@ -105,24 +107,28 @@ class LoginViewModel extends ChangeNotifier {
         return LoginResult.failure(friendlyMsg);
       }
     } on SocketException {
+      ConnectivityService.instance.reportFailure();
       const errorMsg = 'Connection failed. Please check your network.';
       _errorMessage = errorMsg;
       _isLoading = false;
       notifyListeners();
       return LoginResult.failure(errorMsg);
     } on TimeoutException {
+      ConnectivityService.instance.reportFailure();
       const errorMsg = 'Connection failed. Please check your network.';
       _errorMessage = errorMsg;
       _isLoading = false;
       notifyListeners();
       return LoginResult.failure(errorMsg);
     } on http.ClientException {
+      ConnectivityService.instance.reportFailure();
       const errorMsg = 'Connection failed. Please check your network.';
       _errorMessage = errorMsg;
       _isLoading = false;
       notifyListeners();
       return LoginResult.failure(errorMsg);
     } catch (_) {
+      ConnectivityService.instance.reportFailure();
       const errorMsg = 'Connection failed. Please check your network.';
       _errorMessage = errorMsg;
       _isLoading = false;

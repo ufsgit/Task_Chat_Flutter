@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'core/connectivity_service.dart';
 import 'core/display_mode_service.dart';
 import 'core/theme.dart';
+import 'core/widgets/global_connectivity_banner.dart';
 import 'services/firebase_options.dart';
 import 'services/notification_service.dart';
 import 'splash/splash_screen.dart';
@@ -51,6 +53,13 @@ Future<void> _initServices() async {
   } catch (e) {
     debugPrint('>>> [DisplayMode Init Note] $e');
   }
+
+  // Initialize global internet connectivity listener
+  try {
+    await ConnectivityService.instance.initialize();
+  } catch (e) {
+    debugPrint('>>> [ConnectivityService Init Error] $e');
+  }
 }
 
 class FitmateApp extends StatelessWidget {
@@ -72,6 +81,11 @@ class FitmateApp extends StatelessWidget {
           darkTheme: AppTheme.darkTheme,
           themeMode: currentMode,
           scrollBehavior: const AppScrollBehavior(),
+          builder: (context, child) {
+            return GlobalConnectivityBanner(
+              child: child ?? const SizedBox.shrink(),
+            );
+          },
           home: const SplashScreen(),
         );
       },
