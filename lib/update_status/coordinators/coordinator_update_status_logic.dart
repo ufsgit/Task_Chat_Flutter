@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../../api/api.dart';
 import '../../api/authenticated_client.dart';
@@ -7,9 +6,9 @@ import '../../customer_details/customer_details_model.dart';
 import '../../login_page/login_model.dart';
 import '../../login_page/token_storage.dart';
 import '../../settings/settings_model.dart';
-import '../../today/today_view_model.dart';
 import '../models/status_chip_model.dart';
 import '../services/status_chips_service.dart';
+import '../services/status_update_helper.dart';
 import '../branch_manager/branch_manager_update_status_logic.dart';
 
 /// Available status options for Coordinator.
@@ -22,8 +21,6 @@ const List<String> availableCoordinatorStatusOptions = [
 /// Backward compatibility alias
 const List<String> availableSuperAdminStatusOptions =
     availableCoordinatorStatusOptions;
-
-/// Available branch managers for assignment by Coordinator (fallback).
 
 /// Data model representing a Branch Head user returned by GET /api/users?role=branch_head.
 class BranchHeadUser {
@@ -201,32 +198,15 @@ class CoordinatorUpdateStatusLogic {
     );
 
     final headers = await tokenStorage.authHeaders(includeContentType: true);
-    final response = await client.post(
-      Uri.parse(ApiConfig.statusUpdate),
+    return executeStatusUpdateSubmit(
+      client: client,
       headers: headers,
-      body: jsonEncode(requestPayload.toJson()),
-    ).timeout(const Duration(seconds: 10));
-
-    if (response.statusCode >= 200 && response.statusCode < 300) {
-      if (documents != null && !listEquals(documents, customer.documents)) {
-        try {
-          final bookingUri = Uri.parse('${ApiConfig.bookings}/${customer.id}');
-          await client.put(
-            bookingUri,
-            headers: headers,
-            body: jsonEncode({'documents': documents}),
-          ).timeout(const Duration(seconds: 10));
-        } catch (_) {}
-      }
-
-      updateChatItemStatus(
-        customerName: customer.name,
-        newStatus: status,
-        newDate: effectiveDate,
-        newStaffNotes: notes.trim(),
-      );
-      return true;
-    }
-    return false;
+      requestPayload: requestPayload,
+      customer: customer,
+      status: status,
+      effectiveDate: effectiveDate,
+      notes: notes,
+      documents: documents,
+    );
   }
 }

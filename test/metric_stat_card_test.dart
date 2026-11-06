@@ -20,9 +20,12 @@ void main() {
 
     // Verify titles and numbers are present
     expect(find.text('New Booking'), findsOneWidget);
-    expect(find.text('48'), findsOneWidget);
+    final newBookingNumberText = tester.widget<Text>(find.text('48'));
+    expect(newBookingNumberText.style?.color, equals(defaultNewBookingMetric.iconColor));
+
     expect(find.text('Completed'), findsOneWidget);
-    expect(find.text('31'), findsOneWidget);
+    final completedNumberText = tester.widget<Text>(find.text('31'));
+    expect(completedNumberText.style?.color, equals(defaultCompletedMetric.iconColor));
     expect(find.text('64.5%'), findsOneWidget);
 
     // Verify progress bar is not present

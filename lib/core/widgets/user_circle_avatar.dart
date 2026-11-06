@@ -9,7 +9,7 @@ class AvatarColorPair {
   const AvatarColorPair({required this.background, required this.icon});
 }
 
-/// Resolves avatar color pair based on status:
+/// Resolves avatar color pair based on status or dynamic backend [customColor]:
 /// - Scheduled / In-Progress: warm amber (AppColors.scheduledBg, AppColors.scheduledText)
 /// - Completed: soft emerald green (AppColors.completedBg, AppColors.completedText)
 /// - New: soft blue (AppColors.newBg, AppColors.newText)
@@ -18,7 +18,15 @@ class AvatarColorPair {
 AvatarColorPair getAvatarColorsForStatus(
   String? status, {
   bool isDark = false,
+  Color? customColor,
 }) {
+  if (customColor != null) {
+    return AvatarColorPair(
+      background: customColor.withValues(alpha: isDark ? 0.22 : 0.15),
+      icon: customColor,
+    );
+  }
+
   final normalized = status?.toLowerCase().trim() ?? '';
 
   if (normalized.contains('schedul') ||

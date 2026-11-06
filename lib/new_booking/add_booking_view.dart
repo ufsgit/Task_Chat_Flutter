@@ -234,7 +234,7 @@ class _add_bookingState extends State<add_booking> {
       );
 
       if (files.isNotEmpty && mounted) {
-        final uploadService = DocumentUploadService();
+        final uploadService = DocumentUploadService(client: _viewModel.client);
 
         for (final file in files) {
           if (!mounted) break;

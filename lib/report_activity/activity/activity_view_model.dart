@@ -35,7 +35,7 @@ class ActivityViewModel extends ChangeNotifier {
   String? _errorMessage;
   List<ActivityModel> _activities = [];
 
-  int _selectedFilterIndex = 0; // 0: 'Today', 1: 'This Week', 2: 'This Month'
+  int _selectedFilterIndex = 0; // 0: 'All', 1: 'Today', 2: 'This Week', 3: 'This Month'
   final List<String> _filters = activityTimeFilters;
 
   String _selectedStatusFilter = 'All';
@@ -83,8 +83,10 @@ class ActivityViewModel extends ChangeNotifier {
         }
       }
 
-      // 2. Horizontal Time Filter Chips ('Today', 'This Week', 'This Month')
-      if (selectedTimeFilter == 'Today' && item.timeFilter != 'Today') {
+      // 2. Horizontal Time Filter Chips ('All', 'Today', 'This Week', 'This Month')
+      if (selectedTimeFilter == 'All') {
+        // Show all activities regardless of date
+      } else if (selectedTimeFilter == 'Today' && item.timeFilter != 'Today') {
         return false;
       } else if (selectedTimeFilter == 'This Week' &&
           item.timeFilter != 'Today' &&
@@ -443,22 +445,84 @@ class ActivityViewModel extends ChangeNotifier {
 
       if (response.statusCode >= 200 && response.statusCode < 300) {
         final decoded = json.decode(response.body);
-        if (decoded is Map<String, dynamic>) {
+        final list = extractHistoryList(decoded);
+        if (list != null && decoded is Map<String, dynamic>) {
           final data = decoded['data'];
-          if (data is Map<String, dynamic> && data['history'] is List) {
-            return (data['history'] as List)
-                .map((e) => e as Map<String, dynamic>)
-                .toList();
-          } else if (decoded['history'] is List) {
-            return (decoded['history'] as List)
-                .map((e) => e as Map<String, dynamic>)
-                .toList();
+          final totalCount = int.tryParse(
+              (data is Map ? data['count'] ?? data['total'] : decoded['count'] ?? decoded['total'])
+                      ?.toString() ??
+                  '');
+          final limit = int.tryParse(
+              (data is Map ? data['limit'] : decoded['limit'])?.toString() ?? '');
+          int page = 1;
+          while (totalCount != null &&
+              list.length < totalCount &&
+              !TokenStorage.isTestEnvironment) {
+            page++;
+            final nextUri = uri.replace(queryParameters: {
+              'page': page.toString(),
+              'limit': (limit ?? 20).toString(),
+            });
+            final nextResp = await _client
+                .get(nextUri, headers: headers)
+                .timeout(const Duration(seconds: 10));
+            if (nextResp.statusCode >= 200 && nextResp.statusCode < 300) {
+              final nextDecoded = json.decode(nextResp.body);
+              final nextItems = extractHistoryList(nextDecoded);
+              if (nextItems != null && nextItems.isNotEmpty) {
+                list.addAll(nextItems);
+              } else {
+                break;
+              }
+            } else {
+              break;
+            }
           }
         }
+        return list;
       }
     } catch (e, stack) {
       debugPrint('<<< [ActivityViewModel] fetchHistoryByBookingId error: $e');
       debugPrint('$stack');
+    }
+    return null;
+  }
+
+  /// Robust extractor for history lists across diverse backend response structures.
+  static List<Map<String, dynamic>>? extractHistoryList(dynamic decoded) {
+    if (decoded == null) return null;
+    dynamic rawList;
+    if (decoded is Map<String, dynamic>) {
+      final data = decoded['data'];
+      if (data is Map<String, dynamic>) {
+        rawList = data['history'] ??
+            data['items'] ??
+            data['timeline'] ??
+            data['activity'] ??
+            data['logs'] ??
+            data['rows'] ??
+            data['bookings'] ??
+            data['data'];
+      } else if (data is List) {
+        rawList = data;
+      } else {
+        rawList = decoded['history'] ??
+            decoded['items'] ??
+            decoded['timeline'] ??
+            decoded['activity'] ??
+            decoded['logs'] ??
+            decoded['rows'] ??
+            decoded['bookings'] ??
+            decoded['data'];
+      }
+    } else if (decoded is List) {
+      rawList = decoded;
+    }
+
+    if (rawList is List) {
+      return rawList
+          .whereType<Map<String, dynamic>>()
+          .toList();
     }
     return null;
   }

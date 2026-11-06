@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import '../bottom_navigator/bottom_navigator.dart';
 import '../core/widgets/circular_back_button.dart';
 import '../core/theme.dart';
@@ -111,6 +112,7 @@ class _NotificationPageState extends State<NotificationPage> {
                     )
                   : ListView.builder(
                       physics: const BouncingScrollPhysics(),
+                      scrollCacheExtent: const ScrollCacheExtent.pixels(500),
                       itemCount: filteredSections.length,
                       itemBuilder: (context, sectionIndex) {
                         final section = filteredSections[sectionIndex];

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/status_color_service.dart';
 import '../../core/theme.dart';
 import '../models/status_chip_model.dart';
 import 'status_chips_skeleton.dart';
@@ -21,20 +22,6 @@ class StatusSelectorChips extends StatelessWidget {
     this.options,
     this.isLoading = false,
   });
-
-  Color? _parseHexColor(String? hexString) {
-    if (hexString == null || hexString.isEmpty) return null;
-    final buffer = StringBuffer();
-    if (hexString.startsWith('#')) {
-      if (hexString.length == 7) buffer.write('ff');
-      buffer.write(hexString.replaceFirst('#', ''));
-    } else {
-      if (hexString.length == 6) buffer.write('ff');
-      buffer.write(hexString);
-    }
-    final int? value = int.tryParse(buffer.toString(), radix: 16);
-    return value != null ? Color(value) : null;
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -78,46 +65,15 @@ class StatusSelectorChips extends StatelessWidget {
         Color textColor = isDark ? Colors.white70 : const Color(0xFF64748B);
         Color borderColor = unselectedBorder;
 
-        final apiColor = _parseHexColor(item.colorHex);
+        final apiColor = StatusColorService.parseHexColor(item.colorHex) ??
+            StatusColorService.getColor(item.label);
 
-        if (apiColor != null) {
-          bgColor = isSelected ? apiColor : unselectedBg;
-          final isBright = apiColor.computeLuminance() > 0.65;
-          textColor = isSelected
-              ? (isBright ? const Color(0xFF0F172A) : Colors.white)
-              : apiColor;
-          borderColor = isSelected ? apiColor : unselectedBorder;
-        } else {
-          final normalized = item.label.toLowerCase();
-          if (normalized == 'completed') {
-            bgColor = isSelected ? AppColors.whatsappGreen : unselectedBg;
-            textColor = isSelected
-                ? (isDark ? const Color(0xFF0B141B) : Colors.white)
-                : (isDark
-                      ? AppDarkColors.whatsappGreen
-                      : const Color(0xFF15803D));
-            borderColor = isSelected ? AppColors.whatsappGreen : unselectedBorder;
-          } else if (normalized == 'scheduled') {
-            bgColor = isSelected ? const Color(0xFFD97706) : unselectedBg;
-            textColor = isSelected
-                ? Colors.white
-                : (isDark ? const Color(0xFFF59E0B) : const Color(0xFFB45309));
-            borderColor = isSelected ? const Color(0xFFD97706) : unselectedBorder;
-          } else if (normalized == 'cancelled') {
-            bgColor = isSelected ? const Color(0xFFEF4444) : unselectedBg;
-            textColor = isSelected ? Colors.white : const Color(0xFFEF4444);
-            borderColor = isSelected ? const Color(0xFFEF4444) : unselectedBorder;
-          } else if (normalized == 'new') {
-            bgColor = isSelected ? const Color(0xFF4497EF) : unselectedBg;
-            textColor = isSelected ? Colors.white : const Color(0xFF34AEEB);
-            borderColor = isSelected ? const Color(0xFF4472EF) : unselectedBorder;
-          } else {
-            final fallbackColor = Theme.of(context).primaryColor;
-            bgColor = isSelected ? fallbackColor : unselectedBg;
-            textColor = isSelected ? Colors.white : fallbackColor;
-            borderColor = isSelected ? fallbackColor : unselectedBorder;
-          }
-        }
+        bgColor = isSelected ? apiColor : unselectedBg;
+        final isBright = apiColor.computeLuminance() > 0.65;
+        textColor = isSelected
+            ? (isBright ? const Color(0xFF0F172A) : Colors.white)
+            : apiColor;
+        borderColor = isSelected ? apiColor : unselectedBorder;
 
         return Expanded(
           child: Padding(

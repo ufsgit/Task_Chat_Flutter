@@ -1,19 +1,9 @@
 import 'package:flutter/material.dart';
-import '../../core/theme.dart';
+import '../../core/status_color_service.dart';
 
 /// Helper to parse hex colors like "#3b82f6" or "3b82f6" safely.
-Color? parseHexColor(String? hexString) {
-  if (hexString == null || hexString.trim().isEmpty) return null;
-  var hex = hexString.replaceAll('#', '').trim();
-  if (hex.length == 6) {
-    hex = 'FF$hex';
-  }
-  if (hex.length == 8) {
-    final val = int.tryParse(hex, radix: 16);
-    if (val != null) return Color(val);
-  }
-  return null;
-}
+Color? parseHexColor(String? hexString) =>
+    StatusColorService.parseHexColor(hexString);
 
 /// Resolves user-friendly role name based on action_by_role_id.
 /// role 3 -> Branch Manager, role 2 -> Coordinator, role 1 -> Company, etc.
@@ -197,7 +187,7 @@ class ActivityModel {
       formattedDate = rawDate.toString();
     }
 
-    // Determine timeFilter: Today, This Week, This Month
+    // Determine timeFilter: Today, This Week, This Month, Older
     String timeFilter = 'Today';
     if (dt != null) {
       final now = DateTime.now();
@@ -208,8 +198,10 @@ class ActivityModel {
         timeFilter = 'Today';
       } else if (diff.inDays <= 7 && diff.inDays >= 0) {
         timeFilter = 'This Week';
-      } else {
+      } else if (diff.inDays <= 30 && diff.inDays >= 0) {
         timeFilter = 'This Month';
+      } else {
+        timeFilter = 'Older';
       }
     }
 
@@ -221,67 +213,27 @@ class ActivityModel {
     );
 
     final statusLower = status.toLowerCase();
-    Color avatarBg;
-    Color avatarFg;
-    Color tagBg;
-    Color tagFg;
+    final resolvedColor =
+        StatusColorService.getColor(status, customColor: customColor);
+    final avatarBg = resolvedColor.withValues(alpha: 0.15);
+    final avatarFg = resolvedColor;
+    final tagBg = resolvedColor.withValues(alpha: 0.12);
+    final tagFg = resolvedColor;
     IconData? tagIcon;
     bool isPending = false;
 
-    if (customColor != null) {
-      avatarBg = customColor.withValues(alpha: 0.15);
-      avatarFg = customColor;
-      tagBg = customColor.withValues(alpha: 0.12);
-      tagFg = customColor;
-      if (statusLower.contains('complete') || statusLower.contains('done')) {
-        tagIcon = Icons.check_circle_rounded;
-        isPending = false;
-      } else if (statusLower.contains('cancel')) {
-        tagIcon = Icons.cancel_rounded;
-        isPending = false;
-      } else if (statusLower.contains('schedul')) {
-        tagIcon = Icons.calendar_today_rounded;
-        isPending = true;
-      } else {
-        tagIcon = Icons.fiber_new_rounded;
-        isPending = true;
-      }
+    if (statusLower.contains('complete') || statusLower.contains('done')) {
+      tagIcon = Icons.check_circle_rounded;
+      isPending = false;
+    } else if (statusLower.contains('cancel')) {
+      tagIcon = Icons.cancel_rounded;
+      isPending = false;
+    } else if (statusLower.contains('schedul')) {
+      tagIcon = Icons.calendar_today_rounded;
+      isPending = true;
     } else {
-      switch (statusLower) {
-        case 'completed':
-          avatarBg = const Color(0xFF4ADE80);
-          avatarFg = const Color(0xFF065F46);
-          tagBg = AppColors.completedBg;
-          tagFg = AppColors.completedText;
-          tagIcon = Icons.check_circle_rounded;
-          isPending = false;
-          break;
-        case 'cancelled':
-          avatarBg = const Color(0xFFFFEBEB);
-          avatarFg = const Color(0xFFE53935);
-          tagBg = const Color(0xFFFFEBEB);
-          tagFg = const Color(0xFFE53935);
-          tagIcon = Icons.cancel_rounded;
-          isPending = false;
-          break;
-        case 'scheduled':
-          avatarBg = const Color(0xFFFEF3C7);
-          avatarFg = const Color(0xFFD97706);
-          tagBg = const Color(0xFFFEF3C7);
-          tagFg = const Color(0xFFD97706);
-          tagIcon = Icons.calendar_today_rounded;
-          isPending = true;
-          break;
-        case 'new':
-        default:
-          avatarBg = const Color(0xFFE0F2FE);
-          avatarFg = const Color(0xFF0284C7);
-          tagBg = const Color(0xFFDBEAFE);
-          tagFg = const Color(0xFF2563EB);
-          tagIcon = Icons.fiber_new_rounded;
-          isPending = true;
-          break;
-      }
+      tagIcon = Icons.fiber_new_rounded;
+      isPending = true;
     }
 
     final rawDocs = json['documents'];
@@ -351,4 +303,9 @@ class ActivityModel {
 typedef ActivityItemData = ActivityModel;
 
 /// Available time filter tabs for activity history.
-const List<String> activityTimeFilters = ['Today', 'This Week', 'This Month'];
+const List<String> activityTimeFilters = [
+  'All',
+  'Today',
+  'This Week',
+  'This Month',
+];

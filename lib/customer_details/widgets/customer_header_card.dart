@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../core/status_color_service.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/user_circle_avatar.dart';
 import '../customer_details_model.dart';
@@ -26,33 +27,11 @@ class CustomerHeaderCard extends StatelessWidget {
     String status,
     bool isDark,
   ) {
-    return switch (status.toLowerCase().trim()) {
-      'completed' => (
-        bg: isDark ? AppDarkColors.completedBg : AppColors.completedBg,
-        text: isDark ? AppDarkColors.completedText : AppColors.completedText,
-        dot: isDark ? AppDarkColors.primaryGreen : AppColors.primaryGreen,
-      ),
-      'cancelled' => (
-        bg: isDark ? AppDarkColors.cancelledBg : AppColors.cancelledBg,
-        text: isDark ? AppDarkColors.cancelledText : AppColors.cancelledText,
-        dot: isDark ? AppDarkColors.cancelledText : AppColors.cancelledText,
-      ),
-      'new' => (
-        bg: isDark ? AppDarkColors.newBg : AppColors.newBg,
-        text: isDark ? AppDarkColors.newText : AppColors.newText,
-        dot: isDark ? AppDarkColors.newText : AppColors.newText,
-      ),
-      'scheduled' || 'in-progress' || 'in progress' => (
-        bg: isDark ? AppDarkColors.scheduledBg : AppColors.scheduledBg,
-        text: isDark ? AppDarkColors.scheduledText : AppColors.scheduledText,
-        dot: isDark ? AppDarkColors.scheduledText : AppColors.scheduledText,
-      ),
-      _ => (
-        bg: isDark ? const Color(0xFF1F2C34) : const Color(0xFFF0F9FF),
-        text: isDark ? AppDarkColors.primaryGreen : const Color(0xFF0369A1),
-        dot: isDark ? AppDarkColors.primaryGreen : AppColors.primaryGreen,
-      ),
-    };
+    return StatusColorService.getBadgeColors(
+      status,
+      isDark: isDark,
+      customColor: StatusColorService.parseHexColor(customer.statusColorCode),
+    );
   }
 
   @override

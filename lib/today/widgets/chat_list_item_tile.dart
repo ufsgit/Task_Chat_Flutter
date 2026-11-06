@@ -46,8 +46,9 @@ class ChatListItemTile extends StatelessWidget {
     final primaryTextColor = isDark ? AppDarkColors.textPrimary : AppColors.textPrimary;
     final subtextColor = isDark ? AppDarkColors.textSubtitle : AppColors.textSubtitle;
 
-    return Material(
-      color: Colors.transparent,
+    return RepaintBoundary(
+      child: Material(
+        color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
         hoverColor: Colors.transparent,
@@ -203,8 +204,9 @@ class ChatListItemTile extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildAvatar(bool isDark) {
     final colors = getAvatarColorsForStatus(

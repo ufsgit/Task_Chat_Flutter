@@ -1,12 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import '../../api/api.dart';
 import '../../core/slide_up_route.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/circular_back_button.dart';
-import '../../today/widgets/filter_chips_bar.dart';
 import '../../today/widgets/search_input_field.dart';
-import '../../today/widgets/today_filter_bottom_sheet.dart';
 import '../widgets/activity_item_card.dart';
 import '../widgets/activity_skeleton_loading.dart';
 import 'activity_model.dart';
@@ -69,17 +66,15 @@ class _ActivityViewState extends State<ActivityView> {
       });
     }
 
-    if (position.userScrollDirection != ScrollDirection.reverse) return;
     if (position.pixels <= 0) return;
 
     final maxScroll = position.maxScrollExtent;
     final currentScroll = position.pixels;
 
-    if (maxScroll - currentScroll <= 200 &&
+    if (maxScroll - currentScroll <= 250 &&
         !_viewModel.isLoading &&
         !_viewModel.isLoadingMore &&
-        _viewModel.hasMore &&
-        _viewModel.filteredActivities.length >= 10) {
+        _viewModel.hasMore) {
       _viewModel.loadNextPage();
     }
   }
@@ -122,7 +117,9 @@ class _ActivityViewState extends State<ActivityView> {
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(isDark ? 0.4 : 0.18),
+                        color: Colors.black.withValues(
+                          alpha: isDark ? 0.4 : 0.18,
+                        ),
                         blurRadius: 10,
                         offset: const Offset(0, 4),
                       ),
@@ -155,215 +152,44 @@ class _ActivityViewState extends State<ActivityView> {
     super.dispose();
   }
 
-  void _openFilterBottomSheet() {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: isDark ? AppDarkColors.surfaceCard : Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (context) => TodayFilterBottomSheet(
-        selectedStatus: _viewModel.selectedStatusFilter,
-        statusOptions: _viewModel.statusOptions,
-        onApply: (status) {
-          _viewModel.setStatusFilter(status);
-          if (_scrollController.hasClients) {
-            _scrollController.jumpTo(0.0);
-          }
-        },
-        onReset: () {
-          _viewModel.setStatusFilter('All');
-          if (_scrollController.hasClients) {
-            _scrollController.jumpTo(0.0);
-          }
-        },
-      ),
-    );
-  }
-
-  Widget _buildActiveFilterChip({
-    required String label,
-    required VoidCallback onDeleted,
-    required bool isDark,
-  }) {
-    final bg = isDark ? AppColors.whatsappGreen : AppColors.chipPendingBg;
-    final fg = isDark ? Colors.white : AppColors.chipPendingText;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontFamily: 'Helvetica Neue',
-              color: fg,
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(width: 4),
-          GestureDetector(
-            onTap: onDeleted,
-            child: Icon(Icons.close_rounded, size: 14, color: fg),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildBody(BuildContext context, bool isDark) {
     return AnimatedBuilder(
       animation: _viewModel,
       builder: (context, _) {
         final items = _viewModel.filteredActivities;
-        final hasActiveFilters = _viewModel.hasActiveFilters;
-        final iconBtnBg = isDark
-            ? AppDarkColors.surfaceCard
-            : AppColors.surfaceGrey;
 
         return Stack(
           children: [
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // 1. Search Input Field & Filter Option Row
+                // 1. Search Input Field (Full Width)
                 Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 16.0,
-                    vertical: 6.0,
+                    vertical: 8.0,
                   ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: SearchInputField(
-                          controller: _searchController,
-                          padding: EdgeInsets.zero,
-                          onChanged: (val) {
-                            _viewModel.setSearchQuery(val);
-                            if (_scrollController.hasClients) {
-                              _scrollController.jumpTo(0.0);
-                            }
-                          },
-                          onClear: () {
-                            _viewModel.setSearchQuery('');
-                            if (_scrollController.hasClients) {
-                              _scrollController.jumpTo(0.0);
-                            }
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(24),
-                          onTap: _openFilterBottomSheet,
-                          child: Container(
-                            width: 48,
-                            height: 48,
-                            alignment: Alignment.center,
-                            decoration: BoxDecoration(
-                              color: hasActiveFilters
-                                  ? (isDark
-                                        ? AppDarkColors.chipPendingBg
-                                        : AppColors.chipPendingBg)
-                                  : iconBtnBg,
-                              borderRadius: BorderRadius.circular(24),
-                              border: hasActiveFilters
-                                  ? Border.all(
-                                      color: isDark
-                                          ? AppDarkColors.primaryGreen
-                                          : AppColors.brandGreen,
-                                      width: 1.5,
-                                    )
-                                  : (isDark
-                                        ? Border.all(
-                                            color: AppDarkColors.border,
-                                            width: 1,
-                                          )
-                                        : null),
-                            ),
-                            child: Stack(
-                              clipBehavior: Clip.none,
-                              alignment: Alignment.center,
-                              children: [
-                                Icon(
-                                  Icons.tune_rounded,
-                                  size: 22,
-                                  color: hasActiveFilters
-                                      ? (isDark
-                                            ? AppDarkColors.primaryGreen
-                                            : AppColors.brandGreen)
-                                      : (isDark
-                                            ? AppDarkColors.textSubtitle
-                                            : AppColors.textSecondary),
-                                ),
-                                if (hasActiveFilters)
-                                  Positioned(
-                                    top: 2,
-                                    right: 2,
-                                    child: Container(
-                                      width: 7,
-                                      height: 7,
-                                      decoration: const BoxDecoration(
-                                        color: AppColors.brandGreen,
-                                        shape: BoxShape.circle,
-                                      ),
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
+                  child: SearchInputField(
+                    controller: _searchController,
+                    padding: EdgeInsets.zero,
+                    onChanged: (val) {
+                      _viewModel.setSearchQuery(val);
+                      if (_scrollController.hasClients) {
+                        _scrollController.jumpTo(0.0);
+                      }
+                    },
+                    onClear: () {
+                      _viewModel.setSearchQuery('');
+                      if (_scrollController.hasClients) {
+                        _scrollController.jumpTo(0.0);
+                      }
+                    },
                   ),
                 ),
 
-                // Active Filter Chip Row
-                if (hasActiveFilters)
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16.0, 4.0, 16.0, 6.0),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.start,
-                      children: [
-                        _buildActiveFilterChip(
-                          label: 'Status: ${_viewModel.selectedStatusFilter}',
-                          isDark: isDark,
-                          onDeleted: () {
-                            _viewModel.setStatusFilter('All');
-                            if (_scrollController.hasClients) {
-                              _scrollController.jumpTo(0.0);
-                            }
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
+                const SizedBox(height: 4),
 
-                // 2. Horizontal Filter Chips Bar ('Today', 'This Week', 'This Month')
-                FilterChipsBar(
-                  filters: _viewModel.filters,
-                  selectedIndex: _viewModel.selectedFilterIndex,
-                  onSelected: (index) {
-                    _viewModel.setFilterIndex(index);
-                    if (_scrollController.hasClients) {
-                      _scrollController.jumpTo(0.0);
-                    }
-                  },
-                ),
-
-                const SizedBox(height: 6),
-
-                // 3. Activity List / Loading / Error / Empty states
+                // 2. Activity List / Loading / Error / Empty states
                 Expanded(
                   child: RefreshIndicator(
                     color: AppColors.primaryGreen,
@@ -515,8 +341,7 @@ class _ActivityViewState extends State<ActivityView> {
           );
         }
 
-        if (index >= 10 &&
-            index >= items.length - 2 &&
+        if (index >= items.length - 2 &&
             !_viewModel.isLoading &&
             !_viewModel.isLoadingMore &&
             _viewModel.hasMore) {

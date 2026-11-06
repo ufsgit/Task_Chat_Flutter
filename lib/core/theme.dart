@@ -1,3 +1,4 @@
+import 'dart:ui' show PointerDeviceKind;
 import 'package:flutter/material.dart';
 import 'widgets/circular_back_button.dart';
 
@@ -460,6 +461,24 @@ class TopToBottomPageTransitionsBuilder extends PageTransitionsBuilder {
 /// Global scroll behavior applying bouncing scroll physics with always-scrollable parent across all scrollables.
 class AppScrollBehavior extends MaterialScrollBehavior {
   const AppScrollBehavior();
+
+  @override
+  Set<PointerDeviceKind> get dragDevices => {
+        PointerDeviceKind.touch,
+        PointerDeviceKind.mouse,
+        PointerDeviceKind.stylus,
+        PointerDeviceKind.trackpad,
+      };
+
+  @override
+  Widget buildOverscrollIndicator(
+    BuildContext context,
+    Widget child,
+    ScrollableDetails details,
+  ) {
+    // Return child directly to avoid unnecessary stretching/glow overscroll shader calculations at 120Hz
+    return child;
+  }
 
   @override
   ScrollPhysics getScrollPhysics(BuildContext context) {

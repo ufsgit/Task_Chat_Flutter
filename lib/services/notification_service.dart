@@ -8,7 +8,10 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../api/api.dart';
 import '../core/widgets/app_pill_notification.dart';
+import '../customer_details/customer_details_model.dart';
+import '../customer_details/customer_details_view.dart';
 import '../login_page/token_storage.dart';
+import '../today/today_view_model.dart';
 
 /// Top-level background message handler for Firebase Cloud Messaging.
 /// Must be outside of any class and annotated with @pragma('vm:entry-point').
@@ -29,8 +32,11 @@ class NotificationService {
   /// Cached device FCM token.
   static String? fcmToken;
 
-  /// Optional navigator key for displaying foreground in-app toasts/alerts.
+  /// Optional navigator key for displaying foreground in-app toasts/alerts and routing.
   static GlobalKey<NavigatorState>? navigatorKey;
+
+  /// Pending customer model waiting to be navigated to when root UI is ready.
+  static CustomerDetailsModel? pendingCustomer;
 
   /// Checks if the current target platform supports Firebase Cloud Messaging.
   /// (Supported: Android, iOS, macOS, Web. Unsupported: Windows Desktop, Linux).
@@ -184,6 +190,9 @@ class NotificationService {
             displayText,
             icon: Icons.notifications_active_rounded,
             duration: const Duration(milliseconds: 3500),
+            onTap: () {
+              unawaited(handleNotificationClick(message, isInitial: false));
+            },
           );
         }
       });
@@ -195,6 +204,7 @@ class NotificationService {
         debugPrint(
           '>>> [FCM] App opened from terminated state via notification: ${initialMessage.messageId}',
         );
+        unawaited(handleNotificationClick(initialMessage, isInitial: true));
       }
 
       // 8. Handle notification click when app opened from background state
@@ -202,6 +212,7 @@ class NotificationService {
         debugPrint(
           '>>> [FCM] App opened from background state via notification: ${message.messageId}',
         );
+        unawaited(handleNotificationClick(message, isInitial: false));
       });
     } on MissingPluginException catch (e) {
       debugPrint(
@@ -213,6 +224,148 @@ class NotificationService {
     } catch (e, stackTrace) {
       debugPrint('>>> [FCM Error] Failed to initialize notifications: $e');
       debugPrint('$stackTrace');
+    }
+  }
+
+  /// Parses or builds a [CustomerDetailsModel] from a [RemoteMessage].
+  static CustomerDetailsModel? parseCustomerFromMessage(RemoteMessage message) {
+    return parseCustomerFromData(
+      message.data,
+      notification: message.notification,
+    );
+  }
+
+  /// Parses or builds a [CustomerDetailsModel] from raw notification data and optional [RemoteNotification].
+  static CustomerDetailsModel? parseCustomerFromData(
+    Map<String, dynamic> data, {
+    RemoteNotification? notification,
+  }) {
+    // 1. Check for booking ID
+    String? bookingId = (data['bookingId'] ??
+            data['booking_id'] ??
+            data['bookingID'] ??
+            data['id'] ??
+            data['booking'])
+        ?.toString();
+
+    // If bookingId is not in data, try extracting "#1234" from title, body or message
+    if (bookingId == null || bookingId.isEmpty) {
+      final textToScan =
+          '${notification?.title ?? ''} ${notification?.body ?? ''} ${data['message'] ?? ''}';
+      final match = RegExp(r'#(\d+)').firstMatch(textToScan);
+      if (match != null) {
+        bookingId = match.group(1);
+      }
+    }
+
+    // 2. Try matching an existing booking cached in TodayViewModel
+    if (bookingId != null && bookingId.isNotEmpty) {
+      final todayBookings = TodayViewModel.currentSession?.bookings;
+      if (todayBookings != null) {
+        for (final b in todayBookings) {
+          if (b.id.toString() == bookingId) {
+            return CustomerDetailsModel.fromBooking(b);
+          }
+        }
+      }
+    }
+
+    // 3. Check for customer name
+    final name = (data['customerName'] ??
+            data['customer_name'] ??
+            data['clientName'] ??
+            data['client_name'] ??
+            data['booking_name'] ??
+            data['name'] ??
+            data['title'] ??
+            notification?.title)
+        ?.toString();
+
+    // If both bookingId and name are empty, we cannot identify the booking
+    if ((bookingId == null || bookingId.isEmpty) &&
+        (name == null || name.isEmpty)) {
+      return null;
+    }
+
+    final payload = Map<String, dynamic>.from(data);
+    if (bookingId != null) payload['bookingId'] = bookingId;
+    if (name != null) payload['name'] = name;
+    if (notification?.body != null && !data.containsKey('notes')) {
+      payload['notes'] = notification!.body;
+    }
+
+    return CustomerDetailsModel.fromNotificationData(payload);
+  }
+
+  /// Navigates to the booking details page for the given [CustomerDetailsModel].
+  static Future<void> navigateToBooking(
+    CustomerDetailsModel customer, {
+    BuildContext? context,
+  }) async {
+    final nav = context != null
+        ? Navigator.of(context)
+        : navigatorKey?.currentState;
+
+    if (nav == null) {
+      debugPrint(
+        '>>> [FCM Navigation] Navigator is not ready yet. Queuing booking #${customer.id}.',
+      );
+      pendingCustomer = customer;
+      return;
+    }
+
+    debugPrint(
+      '>>> [FCM Navigation] Navigating to CustomerDetailsPage for booking #${customer.id} (${customer.name}).',
+    );
+    pendingCustomer = null;
+
+    try {
+      nav.push(
+        MaterialPageRoute(
+          builder: (_) => CustomerDetailsPage(
+            customer: customer,
+          ),
+        ),
+      );
+    } catch (e) {
+      debugPrint('>>> [FCM Navigation Error] $e');
+    }
+  }
+
+  /// Checks if there is a pending customer navigation and executes it if the navigator is available.
+  static Future<void> checkAndNavigatePending([BuildContext? context]) async {
+    final customer = pendingCustomer;
+    if (customer != null) {
+      pendingCustomer = null;
+      await navigateToBooking(customer, context: context);
+    }
+  }
+
+  /// Handles when a user taps a push notification outside the app (background or terminated state).
+  static Future<void> handleNotificationClick(
+    RemoteMessage message, {
+    bool isInitial = false,
+  }) async {
+    debugPrint(
+      '>>> [FCM Click] Notification tapped! ID: ${message.messageId}, isInitial: $isInitial',
+    );
+    debugPrint('>>> [FCM Click] Payload data: ${message.data}');
+
+    final customer = parseCustomerFromMessage(message);
+    if (customer == null) {
+      debugPrint(
+        '>>> [FCM Click] No booking details found in notification payload.',
+      );
+      return;
+    }
+
+    if (isInitial) {
+      pendingCustomer = customer;
+      if (navigatorKey?.currentState != null) {
+        await checkAndNavigatePending();
+      }
+    } else {
+      await navigateToBooking(customer);
     }
   }
 

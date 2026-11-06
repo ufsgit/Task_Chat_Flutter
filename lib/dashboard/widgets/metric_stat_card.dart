@@ -23,7 +23,7 @@ class MetricStatCard extends StatelessWidget {
     final iconColor =
         data.iconColor ?? (isDark ? Colors.white : data.titleColor);
     final titleColor = isDark ? Colors.white : const Color(0xFF1E293B);
-    final numberColor = isDark ? Colors.white : data.titleColor;
+    final numberColor = iconColor;
     final subtitleColor = isDark
         ? const Color(0xFFA1A1AA)
         : const Color(0xFF64748B);

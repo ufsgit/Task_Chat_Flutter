@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import '../api/api.dart';
 import '../api/authenticated_client.dart';
 import '../login_page/token_storage.dart';
+import '../today/today_model.dart';
 import '../update_status/status_update_result.dart';
 import 'customer_details_model.dart';
 
@@ -31,6 +32,38 @@ class CustomerDetailsViewModel extends ChangeNotifier {
   String? get deleteError => _deleteError;
   bool get isUpdating => _isUpdating;
   String? get updateError => _updateError;
+
+  /// Fetches latest details for this customer/booking from the backend API.
+  Future<bool> fetchCustomerDetails() async {
+    if (customer.id.isEmpty) return false;
+    try {
+      final headers = await (tokenStorage ?? TokenStorage()).authHeaders();
+      final uri = Uri.parse('${ApiConfig.bookings}/${customer.id}');
+
+      final response = await _client
+          .get(uri, headers: headers)
+          .timeout(const Duration(seconds: 8));
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final decoded = jsonDecode(response.body);
+        final rawData = decoded is Map<String, dynamic>
+            ? (decoded['data'] ??
+                decoded['booking'] ??
+                decoded['item'] ??
+                decoded)
+            : null;
+
+        if (rawData is Map<String, dynamic>) {
+          customer = CustomerDetailsModel.fromBooking(
+            BookingModel.fromJson(rawData),
+          );
+          notifyListeners();
+          return true;
+        }
+      }
+    } catch (_) {}
+    return false;
+  }
 
   /// Deletes customer booking from backend API (`DELETE /api/bookings/:id`).
   Future<bool> deleteCustomer() async {

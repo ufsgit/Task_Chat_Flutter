@@ -44,8 +44,9 @@ class NotificationItemTile extends StatelessWidget {
     final timestampColor =
         item.isTimestampBold ? primaryTextColor : subtextColor;
 
-    return InkWell(
-      onTap: onTap,
+    return RepaintBoundary(
+      child: InkWell(
+        onTap: onTap,
       splashColor: isDark
           ? Colors.white.withValues(alpha: 0.05)
           : Colors.black.withValues(alpha: 0.03),
@@ -204,6 +205,7 @@ class NotificationItemTile extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }

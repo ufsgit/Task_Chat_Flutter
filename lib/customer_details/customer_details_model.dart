@@ -1,4 +1,5 @@
-import '../core/date_utils.dart';
+import 'dart:convert';
+import '../today/today_model.dart';
 
 /// Data model for Customer Details.
 /// Decoupled from hardcoded mock dictionaries for clean API usage.
@@ -18,6 +19,7 @@ class CustomerDetailsModel {
   final String? branchHeadName;
 
   final String? scheduleDate;
+  final String? statusColorCode;
 
   /// Returns the scheduled date formatted as day/month/year (DD/MM/YYYY).
   String get formattedScheduleDate => formatDateToDayMonthYear(scheduleDate);
@@ -38,6 +40,7 @@ class CustomerDetailsModel {
     this.branchHeadId,
     this.branchHeadName,
     this.scheduleDate,
+    this.statusColorCode,
   });
 
   CustomerDetailsModel copyWith({
@@ -55,6 +58,7 @@ class CustomerDetailsModel {
     int? branchHeadId,
     String? branchHeadName,
     String? scheduleDate,
+    String? statusColorCode,
   }) {
     return CustomerDetailsModel(
       id: id ?? this.id,
@@ -71,6 +75,7 @@ class CustomerDetailsModel {
       branchHeadId: branchHeadId ?? this.branchHeadId,
       branchHeadName: branchHeadName ?? this.branchHeadName,
       scheduleDate: scheduleDate ?? this.scheduleDate,
+      statusColorCode: statusColorCode ?? this.statusColorCode,
     );
   }
 
@@ -88,6 +93,7 @@ class CustomerDetailsModel {
     String? notes,
     String? staffNotes,
     String? inquiry,
+    String? statusColorCode,
   }) {
     final resolvedStatus =
         (tagText != null && tagText.isNotEmpty) ? tagText : 'New';
@@ -115,6 +121,164 @@ class CustomerDetailsModel {
       branchHeadId: branchHeadId,
       branchHeadName: branchHeadName,
       scheduleDate: scheduleDate,
+      statusColorCode: statusColorCode,
+    );
+  }
+
+  /// Factory to generate customer details from a BookingModel.
+  factory CustomerDetailsModel.fromBooking(BookingModel booking) {
+    final locationStr = booking.areaName.isNotEmpty
+        ? booking.areaName
+        : (booking.districtName.isNotEmpty
+            ? booking.districtName
+            : booking.address);
+
+    final resolvedStatus =
+        booking.status.isNotEmpty ? booking.status : 'New';
+    final isScheduledOrCompleted =
+        resolvedStatus.toLowerCase() == 'scheduled' ||
+        resolvedStatus.toLowerCase() == 'completed';
+
+    return CustomerDetailsModel(
+      id: booking.id.toString(),
+      name: booking.name.isNotEmpty ? booking.name : 'Booking #${booking.id}',
+      inquiry: '5ft Steel door enquiry',
+      status: resolvedStatus,
+      phoneNumber: booking.mobile.isNotEmpty ? booking.mobile : '7096797345',
+      addressLine1: locationStr.isNotEmpty
+          ? '742 Evergreen Terrace, $locationStr'
+          : '742 Evergreen Terrace',
+      addressLine2: booking.stateName.isNotEmpty
+          ? '${booking.stateName}, India'
+          : 'Springfield, OR 97477',
+      notes: booking.notes,
+      staffNotes: booking.staffNotes,
+      hasBeenScheduled: isScheduledOrCompleted,
+      documents: booking.documents,
+      branchHeadId: booking.branchHeadId,
+      branchHeadName: booking.branchHeadName,
+      scheduleDate: booking.scheduleDate,
+      statusColorCode: booking.statusColorCode,
+    );
+  }
+
+  /// Factory to generate customer details from a push notification payload.
+  factory CustomerDetailsModel.fromNotificationData(Map<String, dynamic> data) {
+    final bookingId = (data['bookingId'] ??
+            data['booking_id'] ??
+            data['bookingID'] ??
+            data['id'] ??
+            data['booking'])
+        ?.toString();
+
+    final name = (data['customerName'] ??
+            data['customer_name'] ??
+            data['clientName'] ??
+            data['client_name'] ??
+            data['booking_name'] ??
+            data['name'] ??
+            data['title'])
+        ?.toString();
+
+    final status = (data['status'] ??
+            data['new_status_label'] ??
+            data['new_status_code'] ??
+            data['tag'] ??
+            data['tagText'])
+        ?.toString();
+
+    final phone = (data['mobile'] ??
+            data['phone'] ??
+            data['phoneNumber'] ??
+            data['phone_number'])
+        ?.toString();
+
+    final location = (data['location'] ??
+            data['area'] ??
+            data['areaName'] ??
+            data['area_name'] ??
+            data['district'] ??
+            data['districtName'] ??
+            data['district_name'] ??
+            data['address'])
+        ?.toString();
+
+    final notes = (data['notes'] ??
+            data['customer_note'] ??
+            data['customerNotes'] ??
+            data['note'] ??
+            data['body'])
+        ?.toString();
+
+    final staffNotes = (data['staffNotes'] ??
+            data['staff_note'] ??
+            data['staffNote'])
+        ?.toString();
+
+    final scheduleDate = (data['scheduleDate'] ??
+            data['schedule_date'] ??
+            data['date'])
+        ?.toString();
+
+    final colorCode = (data['statusColorCode'] ??
+            data['status_color_code'] ??
+            data['new_status_color_code'] ??
+            data['colorCode'] ??
+            data['color_code'])
+        ?.toString();
+
+    final branchHeadId = data['branchHeadId'] is int
+        ? data['branchHeadId'] as int
+        : int.tryParse(data['branch_head_id']?.toString() ??
+            data['branchHeadId']?.toString() ??
+            '');
+
+    final branchHeadName = (data['branchHeadName'] ??
+            data['branch_head_name'] ??
+            data['branchManager'] ??
+            data['branch_manager'])
+        ?.toString();
+
+    List<String> documents = [];
+    final rawDocs = data['documents'];
+    if (rawDocs is List) {
+      documents = rawDocs.map((e) => e.toString()).toList();
+    } else if (rawDocs is String && rawDocs.isNotEmpty) {
+      if (rawDocs.startsWith('[') && rawDocs.endsWith(']')) {
+        try {
+          final parsed = jsonDecode(rawDocs);
+          if (parsed is List) {
+            documents = parsed.map((e) => e.toString()).toList();
+          }
+        } catch (_) {
+          documents = [rawDocs];
+        }
+      } else {
+        documents = rawDocs.split(',').map((e) => e.trim()).toList();
+      }
+    }
+
+    final id = (bookingId != null && bookingId.isNotEmpty)
+        ? bookingId
+        : 'booking_${DateTime.now().millisecondsSinceEpoch}';
+
+    final displayName = (name != null && name.isNotEmpty)
+        ? name
+        : (bookingId != null ? 'Booking #$bookingId' : 'Customer Booking');
+
+    return CustomerDetailsModel.fromChatInfo(
+      id: id,
+      name: displayName,
+      location: location,
+      tagText: (status != null && status.isNotEmpty) ? status : 'New',
+      phoneNumber: phone,
+      notes: notes,
+      staffNotes: staffNotes,
+      scheduleDate: scheduleDate,
+      statusColorCode: colorCode,
+      documents: documents,
+      branchHeadId: branchHeadId,
+      branchHeadName: branchHeadName,
     );
   }
 }

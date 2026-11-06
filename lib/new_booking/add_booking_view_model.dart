@@ -49,6 +49,7 @@ class AddBookingViewModel extends ChangeNotifier {
 
   bool get isSubmitting => _isSubmitting;
   String? get errorMessage => _errorMessage;
+  http.Client get client => _client;
 
   /// Checks whether a mobile number is a valid 10-digit number
   /// (optionally prefixed with country code 91 or leading 0).

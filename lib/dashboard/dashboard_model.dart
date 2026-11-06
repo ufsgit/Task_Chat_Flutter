@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../api/api.dart';
 import '../api/authenticated_client.dart';
+import '../core/status_color_service.dart';
 import '../login_page/token_storage.dart';
 
 // -----------------------------------------------------------------------------
@@ -353,6 +354,7 @@ class DashboardModel {
   /// Converts metric numbers into fully styled [MetricCardData] objects matching
   /// the design aesthetic and selected time period.
   MetricCardData toNewBookingCard({required DashboardPeriod period}) {
+    final statusCol = StatusColorService.getColor('New');
     return MetricCardData(
       title: 'New Booking',
       value: '$newBooking',
@@ -360,13 +362,14 @@ class DashboardModel {
       titleColor: const Color(0xFF84CC16),
       leadingIcon: Icons.person_add_alt_1_rounded,
       iconBgColor: const Color(0xFF1D61E7),
-      iconColor: const Color(0xFFA3E635),
+      iconColor: statusCol,
       cardBgColor: const Color(0xFFF2F7FE),
       darkCardBgColor: const Color.fromARGB(255, 36, 36, 41),
     );
   }
 
   MetricCardData toPendingCard({required DashboardPeriod period}) {
+    final statusCol = StatusColorService.getColor('Pending');
     return MetricCardData(
       title: 'Pending',
       value: '$pending',
@@ -374,13 +377,14 @@ class DashboardModel {
       titleColor: const Color(0xFFF97316),
       leadingIcon: Icons.hourglass_empty_rounded,
       iconBgColor: const Color.fromARGB(255, 109, 19, 211),
-      iconColor: Colors.purple,
+      iconColor: statusCol,
       cardBgColor: const Color.fromARGB(255, 235, 225, 243),
       darkCardBgColor: const Color.fromARGB(255, 36, 36, 41),
     );
   }
 
   MetricCardData toCompletedCard({required DashboardPeriod period}) {
+    final statusCol = StatusColorService.getColor('Completed');
     return MetricCardData(
       title: 'Completed',
       value: '$completed',
@@ -388,13 +392,14 @@ class DashboardModel {
       titleColor: const Color(0xFF34D399),
       leadingIcon: Icons.check_circle_outline_rounded,
       iconBgColor: const Color(0xFF15803D),
-      iconColor: Colors.green,
+      iconColor: statusCol,
       cardBgColor: const Color(0xFFEFFBF3),
       darkCardBgColor: const Color.fromARGB(255, 36, 36, 41),
     );
   }
 
   MetricCardData toScheduledCard({required DashboardPeriod period}) {
+    final statusCol = StatusColorService.getColor('Scheduled');
     return MetricCardData(
       title: 'Scheduled',
       value: '$scheduled',
@@ -402,7 +407,7 @@ class DashboardModel {
       titleColor: const Color(0xFFFBBF24),
       leadingIcon: Icons.calendar_today_rounded,
       iconBgColor: const Color(0xFFB45309),
-      iconColor: Colors.orange,
+      iconColor: statusCol,
       cardBgColor: const Color(0xFFFFF9EC),
       darkCardBgColor: const Color.fromARGB(255, 36, 36, 41),
     );

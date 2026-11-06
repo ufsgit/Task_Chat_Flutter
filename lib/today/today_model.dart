@@ -1,6 +1,4 @@
-import 'package:flutter/material.dart';
-import '../core/theme.dart';
-import '../core/widgets/user_circle_avatar.dart';
+import '../core/status_color_service.dart';
 export '../core/date_utils.dart';
 
 /// Data model representing a booking lead from /api/booking.
@@ -27,6 +25,7 @@ class BookingModel {
   final DateTime? createdAt;
   final DateTime? updatedAt;
   final String? scheduleDate;
+  final String? statusColorCode;
 
   BookingModel({
     required this.id,
@@ -51,6 +50,7 @@ class BookingModel {
     this.createdAt,
     this.updatedAt,
     this.scheduleDate,
+    this.statusColorCode,
   });
 
   BookingModel copyWith({
@@ -76,6 +76,7 @@ class BookingModel {
     DateTime? createdAt,
     DateTime? updatedAt,
     String? scheduleDate,
+    String? statusColorCode,
   }) {
     return BookingModel(
       id: id ?? this.id,
@@ -100,6 +101,7 @@ class BookingModel {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       scheduleDate: scheduleDate ?? this.scheduleDate,
+      statusColorCode: statusColorCode ?? this.statusColorCode,
     );
   }
 
@@ -151,6 +153,12 @@ class BookingModel {
           json['scheduledDate']?.toString() ??
           json['scheduled_date']?.toString() ??
           json['date']?.toString(),
+      statusColorCode: (json['statusColorCode'] ??
+              json['status_color_code'] ??
+              json['new_status_color_code'] ??
+              json['colorCode'] ??
+              json['color_code'])
+          ?.toString(),
     );
   }
 
@@ -163,29 +171,15 @@ class BookingModel {
               ? '${createdAt!.day.toString().padLeft(2, '0')}/${createdAt!.month.toString().padLeft(2, '0')}/${createdAt!.year}'
               : '');
 
-    final avatarColors = getAvatarColorsForStatus(status);
-    Color tagBg;
-    Color tagText;
-
-    switch (statusLower) {
-      case 'completed':
-        tagBg = AppColors.completedBg;
-        tagText = AppColors.completedText;
-        break;
-      case 'cancelled':
-        tagBg = AppColors.cancelledBg;
-        tagText = AppColors.cancelledText;
-        break;
-      case 'scheduled':
-        tagBg = const Color(0xFFFEF3C7);
-        tagText = const Color(0xFFD97706);
-        break;
-      case 'new':
-      default:
-        tagBg = AppColors.newBg;
-        tagText = AppColors.newText;
-        break;
-    }
+    final customColor = StatusColorService.parseHexColor(statusColorCode);
+    final badgeColors = StatusColorService.getBadgeColors(
+      status,
+      customColor: customColor,
+    );
+    final avatarColors = StatusColorService.getAvatarColors(
+      status,
+      customColor: customColor,
+    );
 
     final locationStr = areaName.isNotEmpty
         ? areaName
@@ -202,8 +196,9 @@ class BookingModel {
       'tagText': status.isNotEmpty
           ? '${status[0].toUpperCase()}${status.substring(1).toLowerCase()}'
           : 'New',
-      'tagBgColor': tagBg,
-      'tagTextColor': tagText,
+      'tagBgColor': badgeColors.bg,
+      'tagTextColor': badgeColors.text,
+      'statusColorCode': statusColorCode,
       'location': locationStr,
       'date': formattedDate,
       'scheduleDate': scheduleDate ?? formattedDate,

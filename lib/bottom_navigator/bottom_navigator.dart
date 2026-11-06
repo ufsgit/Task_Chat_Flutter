@@ -8,6 +8,7 @@ import '../report_activity/main/report_activity.dart';
 import '../login_page/login_model.dart';
 import '../settings/settings_model.dart';
 import '../settings/settings_view.dart';
+import '../services/notification_service.dart';
 import '../Coordinator/coordinator_view.dart';
 import '../Coordinator/coordinator_view_model.dart';
 import '../today/today_view.dart';
@@ -95,6 +96,12 @@ class _BottomNavigatorState extends State<BottomNavigator> {
       const ReportActivity(),
       SettingsPage(profile: profile),
     ];
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        NotificationService.checkAndNavigatePending(context);
+      }
+    });
   }
 
   @override

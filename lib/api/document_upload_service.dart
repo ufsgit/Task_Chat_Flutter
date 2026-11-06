@@ -22,12 +22,21 @@ class UploadFileData {
 /// Service for uploading files (single or multiple) to POST /api/uploads/multiple.
 class DocumentUploadService {
   final http.Client client;
+  final bool _isInternalClient;
   final TokenStorage? tokenStorage;
 
   DocumentUploadService({
     http.Client? client,
     this.tokenStorage,
-  }) : client = client ?? AuthenticatedClient();
+  }) : client = client ?? AuthenticatedClient(),
+       _isInternalClient = client == null;
+
+  /// Closes the underlying HTTP client if it was created internally.
+  void close() {
+    if (_isInternalClient) {
+      client.close();
+    }
+  }
 
   /// Uploads up to 10 files in a single multipart request to POST /api/uploads/multiple.
   /// If [bookingId] is provided, the backend will automatically append the uploaded files

@@ -11,6 +11,7 @@ class AppPillNotification extends StatelessWidget {
   final IconData? icon;
   final Color? iconColor;
   final TextStyle? textStyle;
+  final VoidCallback? onTap;
 
   const AppPillNotification({
     super.key,
@@ -18,13 +19,14 @@ class AppPillNotification extends StatelessWidget {
     this.icon,
     this.iconColor,
     this.textStyle,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Center(
+    final content = Center(
       child: Material(
         color: Colors.transparent,
         child: Container(
@@ -81,6 +83,16 @@ class AppPillNotification extends StatelessWidget {
         ),
       ),
     );
+
+    if (onTap != null) {
+      return GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: content,
+      );
+    }
+
+    return content;
   }
 }
 
@@ -95,6 +107,7 @@ class AppNotification {
     IconData? icon,
     Color? iconColor,
     Duration duration = const Duration(milliseconds: 2200),
+    VoidCallback? onTap,
   }) {
     final messenger = ScaffoldMessenger.maybeOf(context);
     if (messenger == null) return;
@@ -112,6 +125,12 @@ class AppNotification {
           message: message,
           icon: icon,
           iconColor: iconColor,
+          onTap: onTap != null
+              ? () {
+                  messenger.hideCurrentSnackBar();
+                  onTap();
+                }
+              : null,
         ),
       ),
     );

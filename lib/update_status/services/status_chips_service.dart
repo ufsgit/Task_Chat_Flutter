@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../../api/api.dart';
 import '../../api/authenticated_client.dart';
+import '../../core/status_color_service.dart';
 import '../../login_page/token_storage.dart';
 import '../models/status_chip_model.dart';
 
@@ -49,6 +50,7 @@ class StatusChipsService {
               .toList();
 
           chips.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+          StatusColorService.registerChips(chips);
           return chips;
         }
       }

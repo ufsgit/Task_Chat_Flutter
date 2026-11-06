@@ -422,7 +422,10 @@ class _CoordinatorViewState extends State<CoordinatorView> {
                               )
                             : ListView.separated(
                                 controller: _scrollController,
-                                physics: const AlwaysScrollableScrollPhysics(),
+                                scrollCacheExtent: const ScrollCacheExtent.pixels(600),
+                                physics: const BouncingScrollPhysics(
+                                  parent: AlwaysScrollableScrollPhysics(),
+                                ),
                                 padding: const EdgeInsets.only(bottom: 100),
                                 itemCount: filtered.length +
                                     (_viewModel.isLoadingMore ? 1 : 0),
@@ -522,6 +525,7 @@ class _CoordinatorViewState extends State<CoordinatorView> {
                                               branchHeadName: booking.branchHeadName ??
                                                   item['branchManager']?.toString(),
                                               scheduleDate: booking.scheduleDate,
+                                               statusColorCode: booking.statusColorCode,
                                             )
                                           : CustomerDetailsData.fromChatInfo(
                                               name: item['title']?.toString() ??

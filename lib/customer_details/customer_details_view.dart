@@ -15,7 +15,10 @@ import 'customer_details_model.dart';
 import 'customer_details_view_model.dart';
 import 'widgets/customer_documents_card.dart';
 import 'widgets/customer_header_card.dart';
+import 'widgets/edit_customer_view.dart';
 import 'widgets/update_status_button.dart';
+
+export 'widgets/edit_customer_view.dart';
 
 /// Customer Details / Contact Info screen matching the design.
 /// Follows MVVM architecture with CustomerDetailsViewModel.
@@ -221,9 +224,10 @@ class _CustomerDetailsViewState extends State<CustomerDetailsView> {
   }
 
   Future<void> _handleEditContact() async {
-    final result = await showDialog<_EditContactDialogData>(
-      context: context,
-      builder: (ctx) => _EditContactDialog(customer: _viewModel.customer),
+    final result = await Navigator.of(context).push<EditCustomerData>(
+      SlideUpRoute(
+        page: EditCustomerView(customer: _viewModel.customer),
+      ),
     );
 
     if (result != null && mounted) {
@@ -232,6 +236,7 @@ class _CustomerDetailsViewState extends State<CustomerDetailsView> {
         phoneNumber: result.phoneNumber,
         address: result.address,
         notes: result.notes,
+        documents: result.documents,
       );
 
       if (!mounted) return;
@@ -239,8 +244,11 @@ class _CustomerDetailsViewState extends State<CustomerDetailsView> {
       if (success) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Contact updated successfully'),
-            backgroundColor: AppColors.surfaceWhite,
+            content: Text(
+              'Contact updated successfully',
+              style: TextStyle(fontFamily: 'Helvetica Neue'),
+            ),
+            backgroundColor: AppColors.whatsappGreen,
           ),
         );
       } else {
@@ -455,164 +463,3 @@ class _CustomerDetailsViewState extends State<CustomerDetailsView> {
 
 /// Backward compatibility alias for CustomerDetailsView.
 typedef CustomerDetailsPage = CustomerDetailsView;
-
-class _EditContactDialogData {
-  final String name;
-  final String phoneNumber;
-  final String address;
-  final String notes;
-
-  const _EditContactDialogData({
-    required this.name,
-    required this.phoneNumber,
-    required this.address,
-    required this.notes,
-  });
-}
-
-class _EditContactDialog extends StatefulWidget {
-  final CustomerDetailsModel customer;
-
-  const _EditContactDialog({required this.customer});
-
-  @override
-  State<_EditContactDialog> createState() => _EditContactDialogState();
-}
-
-class _EditContactDialogState extends State<_EditContactDialog> {
-  late final TextEditingController _nameController;
-  late final TextEditingController _phoneController;
-  late final TextEditingController _addressController;
-  late final TextEditingController _notesController;
-
-  @override
-  void initState() {
-    super.initState();
-    _nameController = TextEditingController(text: widget.customer.name);
-    _phoneController = TextEditingController(text: widget.customer.phoneNumber);
-    final initialAddress = widget.customer.addressLine2.isNotEmpty
-        ? '${widget.customer.addressLine1}, ${widget.customer.addressLine2}'
-        : widget.customer.addressLine1;
-    _addressController = TextEditingController(text: initialAddress);
-    _notesController = TextEditingController(text: widget.customer.notes);
-  }
-
-  @override
-  void dispose() {
-    _nameController.dispose();
-    _phoneController.dispose();
-    _addressController.dispose();
-    _notesController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final primaryTextColor = isDark
-        ? AppDarkColors.textPrimary
-        : AppColors.textPrimary;
-    final secondaryTextColor = isDark
-        ? AppDarkColors.textSecondary
-        : AppColors.textSecondary;
-    final cardBg = isDark ? AppDarkColors.surfaceCard : Colors.white;
-
-    return AlertDialog(
-      backgroundColor: cardBg,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      title: Text(
-        'Edit Contact',
-        style: TextStyle(
-          fontFamily: 'Helvetica Neue',
-          fontWeight: FontWeight.w700,
-          fontSize: 18,
-          color: primaryTextColor,
-        ),
-      ),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: _nameController,
-              style: TextStyle(color: primaryTextColor),
-              decoration: const InputDecoration(
-                labelText: 'Name',
-                hintText: 'Customer Name',
-              ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _phoneController,
-              keyboardType: TextInputType.phone,
-              style: TextStyle(color: primaryTextColor),
-              decoration: const InputDecoration(
-                labelText: 'Phone',
-                hintText: 'Phone Number',
-              ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _addressController,
-              maxLines: 2,
-              style: TextStyle(color: primaryTextColor),
-              decoration: const InputDecoration(
-                labelText: 'Address',
-                hintText: 'Address',
-              ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _notesController,
-              maxLines: 2,
-              style: TextStyle(color: primaryTextColor),
-              decoration: const InputDecoration(
-                labelText: 'Customer Notes',
-                hintText: 'Notes',
-              ),
-            ),
-          ],
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: Text(
-            'Cancel',
-            style: TextStyle(
-              fontFamily: 'Helvetica Neue',
-              color: secondaryTextColor,
-            ),
-          ),
-        ),
-        ElevatedButton(
-          onPressed: () {
-            Navigator.of(context).pop(
-              _EditContactDialogData(
-                name: _nameController.text.trim(),
-                phoneNumber: _phoneController.text.trim(),
-                address: _addressController.text.trim(),
-                notes: _notesController.text.trim(),
-              ),
-            );
-          },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.whatsappGreen,
-            foregroundColor: Colors.white,
-            elevation: 0,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-          ),
-          child: const Text(
-            'Save',
-            style: TextStyle(
-              fontFamily: 'Helvetica Neue',
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}

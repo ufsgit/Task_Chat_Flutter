@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import '../../core/status_color_service.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/circular_back_button.dart';
 import '../widgets/report_date_range_bar.dart';
+import '../widgets/status_activity_graph_card.dart';
 import '../widgets/weekly_activity_graph_card.dart';
 
 import 'report_view_model.dart';
@@ -82,7 +84,7 @@ class _ReportViewState extends State<ReportView> {
                 ),
                 const SizedBox(height: 14),
 
-                // 2. Weekly Activity Graph from /api/reports/bookings
+                // 2. Weekly Activity Graph from /api/reports/bookings (Overview)
                 WeeklyActivityGraphCard(
                   graphData: _viewModel.graphData,
                   isLoading: _viewModel.isGraphLoading,
@@ -90,6 +92,59 @@ class _ReportViewState extends State<ReportView> {
                   dateFrom: _viewModel.dateFrom,
                   dateTo: _viewModel.dateTo,
                   onRefresh: () => _viewModel.fetchGraphReport(force: true),
+                ),
+                const SizedBox(height: 18),
+
+                // 3. Separate Stacked Graphs for Each Status
+                StatusActivityGraphCard(
+                  statusTitle: 'New Bookings',
+                  statusColor: StatusColorService.getColor('New'),
+                  statusIcon: Icons.fiber_new_rounded,
+                  getCount: (item) => item.newCount,
+                  graphData: _viewModel.graphData,
+                  isLoading: _viewModel.isGraphLoading,
+                  errorMessage: _viewModel.graphErrorMessage,
+                  dateFrom: _viewModel.dateFrom,
+                  dateTo: _viewModel.dateTo,
+                ),
+                const SizedBox(height: 16),
+
+                StatusActivityGraphCard(
+                  statusTitle: 'Scheduled Bookings',
+                  statusColor: StatusColorService.getColor('Scheduled'),
+                  statusIcon: Icons.calendar_today_rounded,
+                  getCount: (item) => item.scheduledCount,
+                  graphData: _viewModel.graphData,
+                  isLoading: _viewModel.isGraphLoading,
+                  errorMessage: _viewModel.graphErrorMessage,
+                  dateFrom: _viewModel.dateFrom,
+                  dateTo: _viewModel.dateTo,
+                ),
+                const SizedBox(height: 16),
+
+                StatusActivityGraphCard(
+                  statusTitle: 'Completed Bookings',
+                  statusColor: StatusColorService.getColor('Completed'),
+                  statusIcon: Icons.check_circle_outline_rounded,
+                  getCount: (item) => item.completedCount,
+                  graphData: _viewModel.graphData,
+                  isLoading: _viewModel.isGraphLoading,
+                  errorMessage: _viewModel.graphErrorMessage,
+                  dateFrom: _viewModel.dateFrom,
+                  dateTo: _viewModel.dateTo,
+                ),
+                const SizedBox(height: 16),
+
+                StatusActivityGraphCard(
+                  statusTitle: 'Cancelled Bookings',
+                  statusColor: StatusColorService.getColor('Cancelled'),
+                  statusIcon: Icons.cancel_outlined,
+                  getCount: (item) => item.cancelledCount,
+                  graphData: _viewModel.graphData,
+                  isLoading: _viewModel.isGraphLoading,
+                  errorMessage: _viewModel.graphErrorMessage,
+                  dateFrom: _viewModel.dateFrom,
+                  dateTo: _viewModel.dateTo,
                 ),
                 const SizedBox(height: 16),
               ],

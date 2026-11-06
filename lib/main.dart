@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'core/display_mode_service.dart';
 import 'core/theme.dart';
 import 'services/firebase_options.dart';
 import 'services/notification_service.dart';
@@ -42,6 +43,13 @@ Future<void> _initServices() async {
     await NotificationService.initialize();
   } catch (e) {
     debugPrint('>>> [Services Init Error] $e');
+  }
+
+  // Optimize for 120Hz high refresh rate display smoothness
+  try {
+    await DisplayModeService.enableHighRefreshRate();
+  } catch (e) {
+    debugPrint('>>> [DisplayMode Init Note] $e');
   }
 }
 

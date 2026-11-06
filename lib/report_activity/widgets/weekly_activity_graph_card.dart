@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import '../../core/status_color_service.dart';
 import '../../core/theme.dart';
 import '../report/report_model.dart';
 import 'graph_skeleton_loading.dart';
@@ -37,10 +38,10 @@ class WeeklyActivityGraphCard extends StatefulWidget {
 class _WeeklyActivityGraphCardState extends State<WeeklyActivityGraphCard> {
   int _selectedDayIndex = 0;
 
-  static const Color colorNew = Color(0xFF2563EB);
-  static const Color colorScheduled = Color(0xFFF59E0B);
-  static const Color colorCompleted = Color(0xFF10B981);
-  static const Color colorCancelled = Color(0xFFEF4444);
+  static Color get colorNew => StatusColorService.getColor('New');
+  static Color get colorScheduled => StatusColorService.getColor('Scheduled');
+  static Color get colorCompleted => StatusColorService.getColor('Completed');
+  static Color get colorCancelled => StatusColorService.getColor('Cancelled');
 
   @override
   void initState() {
@@ -247,13 +248,13 @@ class _WeeklyActivityGraphCardState extends State<WeeklyActivityGraphCard> {
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: Row(
-            children: const [
+            children: [
               _LegendItem(color: colorNew, label: 'New'),
-              SizedBox(width: 16),
+              const SizedBox(width: 16),
               _LegendItem(color: colorScheduled, label: 'Scheduled'),
-              SizedBox(width: 16),
+              const SizedBox(width: 16),
               _LegendItem(color: colorCompleted, label: 'Completed'),
-              SizedBox(width: 16),
+              const SizedBox(width: 16),
               _LegendItem(color: colorCancelled, label: 'Cancelled'),
             ],
           ),
@@ -473,6 +474,14 @@ class _WeeklyActivityGraphCardState extends State<WeeklyActivityGraphCard> {
             item.completedCount +
             item.cancelledCount);
 
+    final maxCount = math.max(
+      item.newCount,
+      math.max(
+        item.scheduledCount,
+        math.max(item.completedCount, item.cancelledCount),
+      ),
+    );
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
@@ -533,37 +542,37 @@ class _WeeklyActivityGraphCardState extends State<WeeklyActivityGraphCard> {
           _buildStatusRow(
             label: 'New',
             count: item.newCount,
-            dotColor: const Color(0xFF2563EB),
-            textColor: const Color(0xFF1E3A8A),
-            bgColor: const Color(0xFFE8F2FD),
-            borderColor: const Color(0xFFD4E6FA),
+            total: total,
+            maxCount: maxCount,
+            dotColor: _WeeklyActivityGraphCardState.colorNew,
+            isDark: isDark,
           ),
           const SizedBox(height: 10),
           _buildStatusRow(
             label: 'Scheduled',
             count: item.scheduledCount,
-            dotColor: const Color(0xFFD97706),
-            textColor: const Color(0xFF78350F),
-            bgColor: const Color(0xFFFEF3C7),
-            borderColor: const Color(0xFFFDE68A),
+            total: total,
+            maxCount: maxCount,
+            dotColor: _WeeklyActivityGraphCardState.colorScheduled,
+            isDark: isDark,
           ),
           const SizedBox(height: 10),
           _buildStatusRow(
             label: 'Completed',
             count: item.completedCount,
-            dotColor: const Color(0xFF10B981),
-            textColor: const Color(0xFF065F46),
-            bgColor: const Color(0xFFE6F7ED),
-            borderColor: const Color(0xFFA7F3D0),
+            total: total,
+            maxCount: maxCount,
+            dotColor: _WeeklyActivityGraphCardState.colorCompleted,
+            isDark: isDark,
           ),
           const SizedBox(height: 10),
           _buildStatusRow(
             label: 'Cancelled',
             count: item.cancelledCount,
-            dotColor: const Color(0xFFEF4444),
-            textColor: const Color(0xFF7F1D1D),
-            bgColor: const Color(0xFFFEECEB),
-            borderColor: const Color(0xFFFECACA),
+            total: total,
+            maxCount: maxCount,
+            dotColor: _WeeklyActivityGraphCardState.colorCancelled,
+            isDark: isDark,
           ),
         ],
       ),
@@ -573,52 +582,106 @@ class _WeeklyActivityGraphCardState extends State<WeeklyActivityGraphCard> {
   Widget _buildStatusRow({
     required String label,
     required int count,
+    required int total,
+    required int maxCount,
     required Color dotColor,
-    required Color textColor,
-    required Color bgColor,
-    required Color borderColor,
+    required bool isDark,
   }) {
+    final rowBg = isDark ? const Color(0xFF1E222A) : Colors.white;
+    final rowBorder =
+        isDark ? const Color(0xFF282C35) : const Color(0xFFE2E8F0);
+    final primaryTextColor = isDark ? Colors.white : AppColors.textPrimary;
+    final subtitleTextColor =
+        isDark ? const Color(0xFFA1A1AA) : const Color(0xFF64748B);
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: bgColor,
+        color: rowBg,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: borderColor, width: 1.0),
+        border: Border.all(color: rowBorder, width: 1.0),
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 9,
-                height: 9,
-                decoration: BoxDecoration(
-                  color: dotColor,
-                  shape: BoxShape.circle,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Text(
-                label,
-                style: TextStyle(
-                  fontFamily: 'Helvetica Neue',
-                  fontSize: 14.5,
-                  fontWeight: FontWeight.w700,
-                  color: textColor,
-                ),
-              ),
-            ],
+          Container(
+            width: 10,
+            height: 10,
+            decoration: BoxDecoration(
+              color: dotColor,
+              shape: BoxShape.circle,
+            ),
           ),
-          Text(
-            count.toString(),
-            style: TextStyle(
-              fontFamily: 'Helvetica Neue',
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
-              color: textColor,
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Line 1: Status Title
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontFamily: 'Helvetica Neue',
+                    fontSize: 14.5,
+                    fontWeight: FontWeight.w700,
+                    color: primaryTextColor,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                // Line 2: Vertically placed progress bar + count (like iOS Screen Time)
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final double availableWidth = constraints.maxWidth;
+                    final double maxBarWidth =
+                        math.max(40.0, availableWidth - 65.0);
+                    final double ratio = maxCount > 0
+                        ? (count / maxCount).clamp(0.0, 1.0)
+                        : 0.0;
+                    final double barWidth =
+                        count > 0 ? math.max(8.0, ratio * maxBarWidth) : 0.0;
+
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        if (count > 0)
+                          Container(
+                            width: barWidth,
+                            height: 6,
+                            decoration: BoxDecoration(
+                              color: dotColor,
+                              borderRadius: BorderRadius.circular(3),
+                            ),
+                          )
+                        else
+                          Container(
+                            width: 5,
+                            height: 5,
+                            decoration: BoxDecoration(
+                              color: isDark
+                                  ? const Color(0xFF333842)
+                                  : const Color(0xFFCBD5E1),
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                        const SizedBox(width: 8),
+                        Text(
+                          count.toString(),
+                          style: TextStyle(
+                            fontFamily: 'Helvetica Neue',
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w600,
+                            color: count > 0
+                                ? primaryTextColor
+                                : subtitleTextColor,
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ],
             ),
           ),
         ],

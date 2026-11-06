@@ -195,13 +195,15 @@ void main() {
       await tester.pumpAndSettle();
 
       // Verify AlertDialog is visible
-      expect(find.byType(AlertDialog), findsOneWidget);
-      expect(find.widgetWithText(ElevatedButton, 'Save'), findsOneWidget);
+      expect(find.byType(EditCustomerView), findsOneWidget);
 
       // Enter updated name
       await tester.enterText(find.widgetWithText(TextField, 'Rahul Krishnan'), 'Rahul Updated');
+      await tester.pumpAndSettle();
 
-      // Tap Save
+      // Scroll to Save button and tap
+      await tester.scrollUntilVisible(find.widgetWithText(ElevatedButton, 'Save'), 200, scrollable: find.byType(Scrollable).last);
+      await tester.pumpAndSettle();
       await tester.tap(find.widgetWithText(ElevatedButton, 'Save'));
       await tester.pumpAndSettle();
 
@@ -354,3 +356,5 @@ void main() {
     });
   });
 }
+
+

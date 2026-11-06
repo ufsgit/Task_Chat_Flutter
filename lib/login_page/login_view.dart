@@ -4,7 +4,6 @@ import '../api/authenticated_client.dart';
 import '../bottom_navigator/bottom_navigator.dart';
 import '../core/theme.dart';
 import '../core/widgets/fitmate_logo.dart';
-import '../services/notification_service.dart';
 import '../settings/settings_model.dart';
 import 'login_view_model.dart';
 

@@ -17,6 +17,7 @@ import 'package:task_chat/report_activity/report/report_model.dart';
 import 'package:task_chat/report_activity/report/report_view.dart';
 import 'package:task_chat/report_activity/report/report_view_model.dart';
 import 'package:task_chat/report_activity/widgets/report_date_range_bar.dart';
+import 'package:task_chat/report_activity/widgets/status_activity_graph_card.dart';
 import 'package:task_chat/report_activity/widgets/weekly_activity_graph_card.dart';
 
 void main() {
@@ -195,6 +196,40 @@ void main() {
       vm.setSearchQuery('Arun', immediate: true);
       expect(vm.filteredActivities.length, equals(1));
       expect(vm.filteredActivities.first.title, equals('Arun'));
+
+      // Time filters: 'All' shows all items, and switching works
+      vm.setSearchQuery('', immediate: true);
+      expect(vm.filters.first, equals('All'));
+      expect(vm.selectedFilterIndex, equals(0));
+      expect(vm.filteredActivities.length, equals(2));
+    });
+
+    test('ActivityViewModel.extractHistoryList parses various payload structures', () {
+      final sampleList = [{'history_id': 1}];
+
+      // 1. { data: [ ... ] }
+      expect(
+        ActivityViewModel.extractHistoryList({'status': true, 'data': sampleList})?.length,
+        equals(1),
+      );
+
+      // 2. { data: { history: [ ... ] } }
+      expect(
+        ActivityViewModel.extractHistoryList({'data': {'history': sampleList}})?.length,
+        equals(1),
+      );
+
+      // 3. { items: [ ... ] }
+      expect(
+        ActivityViewModel.extractHistoryList({'items': sampleList})?.length,
+        equals(1),
+      );
+
+      // 4. Raw list [ ... ]
+      expect(
+        ActivityViewModel.extractHistoryList(sampleList)?.length,
+        equals(1),
+      );
     });
 
     test('fetchHistory handles HTTP error cleanly', () async {
@@ -1002,6 +1037,9 @@ void main() {
       expect(find.text('11'), findsOneWidget);
       expect(find.text('9'), findsOneWidget);
       expect(find.text('3'), findsOneWidget);
+
+      // Verify vertical progress bars are present for each status
+      expect(find.byType(LinearProgressIndicator), findsNWidgets(4));
     });
 
     testWidgets('WeeklyActivityGraphCard dynamically adapts Y-axis to max count', (tester) async {
@@ -1125,8 +1163,90 @@ void main() {
       expect(find.byType(ReportDateRangeBar), findsOneWidget);
       expect(find.byType(WeeklyActivityGraphCard), findsOneWidget);
       expect(find.text('Weekly activity'), findsOneWidget);
+      // Verify separate stacked graph cards for each status are rendered
+      expect(find.byType(StatusActivityGraphCard), findsNWidgets(4));
+      expect(find.text('New Bookings'), findsOneWidget);
+      expect(find.text('Scheduled Bookings'), findsOneWidget);
+      expect(find.text('Completed Bookings'), findsOneWidget);
+      expect(find.text('Cancelled Bookings'), findsOneWidget);
       expect(find.text('From'), findsOneWidget);
       expect(find.text('To'), findsOneWidget);
+    });
+
+    testWidgets('StatusActivityGraphCard renders status title, total, dynamic bars, and details', (tester) async {
+      final items = [
+        const BookingReportGraphItem(
+          periodLabel: 'Mon',
+          periodDate: '2026-11-02',
+          newCount: 20,
+          scheduledCount: 10,
+          completedCount: 5,
+          cancelledCount: 2,
+          totalActivities: 37,
+        ),
+        const BookingReportGraphItem(
+          periodLabel: 'Tue',
+          periodDate: '2026-11-03',
+          newCount: 15,
+          scheduledCount: 12,
+          completedCount: 8,
+          cancelledCount: 1,
+          totalActivities: 36,
+        ),
+      ];
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: StatusActivityGraphCard(
+                statusTitle: 'New Bookings',
+                statusColor: const Color(0xFF2563EB),
+                statusIcon: Icons.fiber_new_rounded,
+                getCount: (item) => item.newCount,
+                graphData: items,
+              ),
+            ),
+          ),
+        ),
+      );
+
+      // Verify header
+      expect(find.text('New Bookings'), findsOneWidget);
+      // Total 20 + 15 = 35
+      expect(find.text('Total: 35'), findsOneWidget);
+      expect(find.text('Mon'), findsOneWidget);
+      expect(find.text('Tue'), findsOneWidget);
+
+      // Verify selected details (defaults to first day: Mon)
+      expect(find.text('Mon (2026-11-02)'), findsOneWidget);
+      expect(find.byType(LinearProgressIndicator), findsOneWidget);
+
+      // Tap on 'Tue' bar to switch selected day
+      await tester.tap(find.text('Tue'));
+      await tester.pumpAndSettle();
+      expect(find.text('Tue (2026-11-03)'), findsOneWidget);
+    });
+
+    testWidgets('StatusActivityGraphCard renders GraphSkeletonLoading when isLoading is true', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: StatusActivityGraphCard(
+                statusTitle: 'Scheduled Bookings',
+                statusColor: const Color(0xFFD97706),
+                statusIcon: Icons.calendar_today_rounded,
+                getCount: (item) => item.scheduledCount,
+                graphData: const [],
+                isLoading: true,
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(find.byType(GraphSkeletonLoading), findsOneWidget);
     });
 
     test('ReportViewModel sends dateFrom and dateTo query parameters', () async {

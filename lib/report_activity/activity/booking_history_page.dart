@@ -1,8 +1,10 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:http/http.dart' as http;
 import '../../api/api.dart';
 import '../../api/authenticated_client.dart';
+import '../../core/status_color_service.dart';
 import '../../core/theme.dart';
 import '../../login_page/token_storage.dart';
 import 'activity_model.dart';
@@ -115,7 +117,8 @@ class _BookingHistoryPageState extends State<BookingHistoryPage> {
   }
 
   Future<void> _fetchHistory() async {
-    final bookingId = widget.initialBooking.bookingId ??
+    final bookingId =
+        widget.initialBooking.bookingId ??
         int.tryParse(widget.initialBooking.id);
     if (bookingId == null) return;
 
@@ -125,6 +128,9 @@ class _BookingHistoryPageState extends State<BookingHistoryPage> {
 
     try {
       List<Map<String, dynamic>>? rawList;
+      int? totalCount;
+      int? limit;
+
       if (widget.viewModel != null) {
         rawList = await widget.viewModel!.fetchHistoryByBookingId(bookingId);
       } else {
@@ -147,8 +153,9 @@ class _BookingHistoryPageState extends State<BookingHistoryPage> {
         final headers = <String, String>{
           'Accept': 'application/json',
           if (token != null && token.isNotEmpty)
-            'authorization':
-                token.startsWith('Bearer ') ? token : 'Bearer $token',
+            'authorization': token.startsWith('Bearer ')
+                ? token
+                : 'Bearer $token',
         };
 
         final isLocalClient = widget.client == null;
@@ -157,21 +164,58 @@ class _BookingHistoryPageState extends State<BookingHistoryPage> {
           final response = TokenStorage.isTestEnvironment
               ? await client.get(Uri.parse(url), headers: headers)
               : await client
-                  .get(Uri.parse(url), headers: headers)
-                  .timeout(const Duration(seconds: 10));
+                    .get(Uri.parse(url), headers: headers)
+                    .timeout(const Duration(seconds: 10));
 
           if (response.statusCode >= 200 && response.statusCode < 300) {
             final decoded = json.decode(response.body);
+            rawList = ActivityViewModel.extractHistoryList(decoded);
             if (decoded is Map<String, dynamic>) {
               final data = decoded['data'];
-              if (data is Map<String, dynamic> && data['history'] is List) {
-                rawList = (data['history'] as List)
-                    .map((e) => e as Map<String, dynamic>)
-                    .toList();
-              } else if (decoded['history'] is List) {
-                rawList = (decoded['history'] as List)
-                    .map((e) => e as Map<String, dynamic>)
-                    .toList();
+              if (data is Map<String, dynamic>) {
+                totalCount = int.tryParse(
+                  data['count']?.toString() ?? data['total']?.toString() ?? '',
+                );
+                limit = int.tryParse(data['limit']?.toString() ?? '');
+              } else {
+                totalCount = int.tryParse(
+                  decoded['count']?.toString() ??
+                      decoded['total']?.toString() ??
+                      '',
+                );
+                limit = int.tryParse(decoded['limit']?.toString() ?? '');
+              }
+            }
+
+            // Auto-paginate remaining pages if total count exceeds the first page
+            int page = 1;
+            while (rawList != null &&
+                totalCount != null &&
+                rawList.length < totalCount &&
+                !TokenStorage.isTestEnvironment) {
+              page++;
+              final nextUri = Uri.parse(url).replace(
+                queryParameters: {
+                  'page': page.toString(),
+                  'limit': (limit ?? 20).toString(),
+                },
+              );
+              final nextResponse = await client
+                  .get(nextUri, headers: headers)
+                  .timeout(const Duration(seconds: 10));
+              if (nextResponse.statusCode >= 200 &&
+                  nextResponse.statusCode < 300) {
+                final nextDecoded = json.decode(nextResponse.body);
+                final nextItems = ActivityViewModel.extractHistoryList(
+                  nextDecoded,
+                );
+                if (nextItems != null && nextItems.isNotEmpty) {
+                  rawList.addAll(nextItems);
+                } else {
+                  break;
+                }
+              } else {
+                break;
               }
             }
           }
@@ -185,11 +229,13 @@ class _BookingHistoryPageState extends State<BookingHistoryPage> {
       if (rawList != null && rawList.isNotEmpty && mounted) {
         final parsed = <TimelineHistoryEvent>[];
         for (int i = 0; i < rawList.length; i++) {
-          parsed.add(_parseApiHistoryItem(
-            rawList[i],
-            isCurrent: i == 0,
-            fallbackBooking: widget.initialBooking,
-          ));
+          parsed.add(
+            _parseApiHistoryItem(
+              rawList[i],
+              isCurrent: i == 0,
+              fallbackBooking: widget.initialBooking,
+            ),
+          );
         }
         setState(() {
           _apiTimelineEvents = parsed;
@@ -212,20 +258,36 @@ class _BookingHistoryPageState extends State<BookingHistoryPage> {
     required bool isCurrent,
     required ActivityModel fallbackBooking,
   }) {
-    final actionType = item['action_type']?.toString().trim();
+    final actionType =
+        item['action_type']?.toString().trim() ??
+        item['actionType']?.toString().trim() ??
+        item['action']?.toString().trim() ??
+        item['title']?.toString().trim() ??
+        item['type']?.toString().trim();
     final actionTitle = (actionType != null && actionType.isNotEmpty)
         ? actionType
         : 'Activity Updated';
 
-    final actor = item['action_by_name']?.toString().trim();
+    final actor =
+        item['action_by_name']?.toString().trim() ??
+        item['actionByName']?.toString().trim() ??
+        item['created_by_name']?.toString().trim() ??
+        item['createdByName']?.toString().trim() ??
+        item['userName']?.toString().trim() ??
+        item['user_name']?.toString().trim() ??
+        item['loginName']?.toString().trim();
     final actorName = (actor != null && actor.isNotEmpty)
         ? actor
         : (fallbackBooking.actionByName ??
-            fallbackBooking.subtitleHighlight ??
-            'Staff');
+              fallbackBooking.subtitleHighlight ??
+              'Staff');
 
     DateTime? createdAt;
-    final rawCreatedAt = item['created_at']?.toString();
+    final rawCreatedAt =
+        item['created_at']?.toString() ??
+        item['createdAt']?.toString() ??
+        item['timestamp']?.toString() ??
+        item['date']?.toString();
     if (rawCreatedAt != null && rawCreatedAt.isNotEmpty) {
       createdAt = DateTime.tryParse(rawCreatedAt);
     }
@@ -240,83 +302,76 @@ class _BookingHistoryPageState extends State<BookingHistoryPage> {
           ? 12
           : (local.hour > 12 ? local.hour - 12 : local.hour);
       final period = local.hour >= 12 ? 'PM' : 'AM';
-      displayTime =
-          '$hour:${local.minute.toString().padLeft(2, '0')} $period';
+      displayTime = '$hour:${local.minute.toString().padLeft(2, '0')} $period';
     } else {
       displayDate = fallbackBooking.date;
       displayTime = '';
     }
 
-    final newStatusLabel = item['new_status_label']?.toString() ??
-        item['new_status_code']?.toString();
+    final newStatusLabel =
+        item['new_status_label']?.toString() ??
+        item['new_status_code']?.toString() ??
+        item['new_status']?.toString() ??
+        item['status']?.toString() ??
+        item['status_label']?.toString();
     final badgeLabel = (newStatusLabel != null && newStatusLabel.isNotEmpty)
         ? newStatusLabel
         : ((actionType != null && actionType.isNotEmpty)
-            ? actionType
-            : 'Updated');
+              ? actionType
+              : 'Updated');
 
-    final colorCode = item['new_status_color_code']?.toString();
-    final parsedColor = parseHexColor(colorCode);
-
-    Color dotColor;
-    Color badgeBg;
-    Color badgeTextColor;
-
-    if (parsedColor != null) {
-      dotColor = parsedColor;
-      badgeBg = parsedColor.withOpacity(0.15);
-      badgeTextColor = parsedColor;
-    } else {
-      final s = (newStatusLabel ?? actionTitle).toLowerCase();
-      if (s.contains('completed')) {
-        dotColor = const Color(0xFF22C55E);
-        badgeBg = const Color(0xFFDCFCE7);
-        badgeTextColor = const Color(0xFF15803D);
-      } else if (s.contains('scheduled')) {
-        dotColor = const Color(0xFFF59E0B);
-        badgeBg = const Color(0xFFFEF3C7);
-        badgeTextColor = const Color(0xFFD97706);
-      } else if (s.contains('cancelled')) {
-        dotColor = const Color(0xFFEF4444);
-        badgeBg = const Color(0xFFFEE2E2);
-        badgeTextColor = const Color(0xFFB91C1C);
-      } else if (s.contains('transfer')) {
-        dotColor = const Color(0xFF0D9488);
-        badgeBg = const Color(0xFFCCFBF1);
-        badgeTextColor = const Color(0xFF0F766E);
-      } else {
-        dotColor = const Color(0xFF3B82F6);
-        badgeBg = const Color(0xFFDBEAFE);
-        badgeTextColor = const Color(0xFF1D4ED8);
-      }
-    }
+    final colorCode =
+        item['new_status_color_code']?.toString() ??
+        item['status_color_code']?.toString() ??
+        item['colorCode']?.toString() ??
+        item['color_code']?.toString();
+    final parsedColor = StatusColorService.parseHexColor(colorCode);
+    final badgeColors = StatusColorService.getBadgeColors(
+      newStatusLabel ?? actionTitle,
+      customColor: parsedColor,
+    );
+    final dotColor = badgeColors.dot;
+    final badgeBg = badgeColors.bg;
+    final badgeTextColor = badgeColors.text;
 
     final List<TimelineDiffField> diffs = [];
 
     // 1. Status Diff
-    final oldStatus = item['old_status_label']?.toString() ??
-        item['old_status_code']?.toString();
+    final oldStatus =
+        item['old_status_label']?.toString() ??
+        item['old_status_code']?.toString() ??
+        item['old_status']?.toString();
     if (newStatusLabel != null && newStatusLabel.isNotEmpty) {
       if (oldStatus != null &&
           oldStatus.isNotEmpty &&
           oldStatus != newStatusLabel) {
-        diffs.add(TimelineDiffField(
-          label: 'STATUS',
-          oldValue: oldStatus,
-          newValue: newStatusLabel,
-        ));
+        diffs.add(
+          TimelineDiffField(
+            label: 'STATUS',
+            oldValue: oldStatus,
+            newValue: newStatusLabel,
+          ),
+        );
       } else if (oldStatus == null || oldStatus.isEmpty) {
-        diffs.add(TimelineDiffField(
-          label: 'STATUS',
-          oldValue: '',
-          newValue: newStatusLabel,
-        ));
+        diffs.add(
+          TimelineDiffField(
+            label: 'STATUS',
+            oldValue: '',
+            newValue: newStatusLabel,
+          ),
+        );
       }
     }
 
     // 2. Schedule Date Diff
-    final oldSchedule = item['old_schedule_date']?.toString();
-    final newSchedule = item['new_schedule_date']?.toString();
+    final oldSchedule =
+        item['old_schedule_date']?.toString() ??
+        item['oldScheduleDate']?.toString();
+    final newSchedule =
+        item['new_schedule_date']?.toString() ??
+        item['newScheduleDate']?.toString() ??
+        item['schedule_date']?.toString() ??
+        item['scheduleDate']?.toString();
     if (oldSchedule != null || newSchedule != null) {
       String fmtDate(String? s) {
         if (s == null || s.isEmpty) return 'None';
@@ -328,46 +383,188 @@ class _BookingHistoryPageState extends State<BookingHistoryPage> {
         return s;
       }
 
-      diffs.add(TimelineDiffField(
-        label: 'SCHEDULED DATE',
-        oldValue: fmtDate(oldSchedule),
-        newValue: fmtDate(newSchedule),
-      ));
+      if (oldSchedule != null &&
+          newSchedule != null &&
+          oldSchedule != newSchedule) {
+        diffs.add(
+          TimelineDiffField(
+            label: 'SCHEDULED DATE',
+            oldValue: fmtDate(oldSchedule),
+            newValue: fmtDate(newSchedule),
+          ),
+        );
+      } else if (newSchedule != null && newSchedule.isNotEmpty) {
+        diffs.add(
+          TimelineDiffField(
+            label: 'SCHEDULED DATE',
+            oldValue: oldSchedule != null && oldSchedule.isNotEmpty
+                ? fmtDate(oldSchedule)
+                : '',
+            newValue: fmtDate(newSchedule),
+          ),
+        );
+      }
     }
 
     // 3. Transfer / Branch / District Diff
-    final fromBranch = item['from_branch_head_name']?.toString() ??
-        item['from_assigned_head_district_name']?.toString();
-    final toBranch = item['to_branch_head_name']?.toString() ??
-        item['to_assigned_head_district_name']?.toString();
+    final fromBranch =
+        item['from_branch_head_name']?.toString() ??
+        item['from_assigned_head_district_name']?.toString() ??
+        item['from_branch']?.toString() ??
+        item['from_district']?.toString();
+    final toBranch =
+        item['to_branch_head_name']?.toString() ??
+        item['to_assigned_head_district_name']?.toString() ??
+        item['to_branch']?.toString() ??
+        item['to_district']?.toString();
     if (fromBranch != null || toBranch != null) {
-      diffs.add(TimelineDiffField(
-        label: 'BRANCH HEAD / DISTRICT',
-        oldValue: fromBranch ?? 'Unassigned',
-        newValue: toBranch ?? 'Unassigned',
-      ));
+      diffs.add(
+        TimelineDiffField(
+          label: 'BRANCH HEAD / DISTRICT',
+          oldValue: fromBranch ?? 'Unassigned',
+          newValue: toBranch ?? 'Unassigned',
+        ),
+      );
     }
 
     // 4. Staff Note
-    final staffNote = item['staff_note']?.toString().trim();
+    final staffNote =
+        item['staff_note']?.toString().trim() ??
+        item['staffNote']?.toString().trim();
     if (staffNote != null && staffNote.isNotEmpty) {
-      diffs.add(TimelineDiffField(
-        label: 'STAFF NOTE',
-        oldValue: '',
-        newValue: staffNote,
-        multiline: true,
-      ));
+      diffs.add(
+        TimelineDiffField(
+          label: 'STAFF NOTE',
+          oldValue: '',
+          newValue: staffNote,
+          multiline: true,
+        ),
+      );
     }
 
     // 5. Customer Note
-    final custNote = item['customer_note']?.toString().trim();
+    final custNote =
+        item['customer_note']?.toString().trim() ??
+        item['customerNote']?.toString().trim();
     if (custNote != null && custNote.isNotEmpty) {
-      diffs.add(TimelineDiffField(
-        label: 'CUSTOMER NOTE',
-        oldValue: '',
-        newValue: custNote,
-        multiline: true,
-      ));
+      diffs.add(
+        TimelineDiffField(
+          label: 'CUSTOMER NOTE',
+          oldValue: '',
+          newValue: custNote,
+          multiline: true,
+        ),
+      );
+    }
+
+    // 6. General Notes / Remarks
+    final generalNote =
+        item['notes']?.toString().trim() ??
+        item['note']?.toString().trim() ??
+        item['comment']?.toString().trim() ??
+        item['comments']?.toString().trim() ??
+        item['remarks']?.toString().trim() ??
+        item['description']?.toString().trim();
+    if (generalNote != null &&
+        generalNote.isNotEmpty &&
+        generalNote != staffNote &&
+        generalNote != custNote) {
+      final oldNote =
+          item['old_notes']?.toString().trim() ??
+          item['old_note']?.toString().trim();
+      diffs.add(
+        TimelineDiffField(
+          label: 'NOTES',
+          oldValue: oldNote ?? '',
+          newValue: generalNote,
+          multiline: true,
+        ),
+      );
+    }
+
+    // 7. Client / Booking Name Diff
+    final oldName =
+        item['old_booking_name']?.toString() ??
+        item['old_client_name']?.toString();
+    final newName =
+        item['new_booking_name']?.toString() ??
+        item['new_client_name']?.toString() ??
+        item['booking_name']?.toString() ??
+        item['clientName']?.toString();
+    if (oldName != null && newName != null && oldName != newName) {
+      diffs.add(
+        TimelineDiffField(label: 'NAME', oldValue: oldName, newValue: newName),
+      );
+    }
+
+    // 8. Contact Number Diff
+    final oldPhone =
+        item['old_mobile']?.toString() ?? item['old_phone']?.toString();
+    final newPhone =
+        item['new_mobile']?.toString() ??
+        item['new_phone']?.toString() ??
+        item['mobile']?.toString() ??
+        item['phone']?.toString();
+    if (oldPhone != null && newPhone != null && oldPhone != newPhone) {
+      diffs.add(
+        TimelineDiffField(
+          label: 'CONTACT NUMBER',
+          oldValue: oldPhone,
+          newValue: newPhone,
+        ),
+      );
+    }
+
+    // 9. Location / Address Diff
+    final oldAddress =
+        item['old_address']?.toString() ?? item['old_location']?.toString();
+    final newAddress =
+        item['new_address']?.toString() ??
+        item['new_location']?.toString() ??
+        item['address']?.toString() ??
+        item['location']?.toString();
+    if (oldAddress != null && newAddress != null && oldAddress != newAddress) {
+      diffs.add(
+        TimelineDiffField(
+          label: 'LOCATION',
+          oldValue: oldAddress,
+          newValue: newAddress,
+        ),
+      );
+    }
+
+    // 10. Fallback for creation / initial events when diffs is otherwise empty
+    if (diffs.isEmpty) {
+      if (newStatusLabel != null && newStatusLabel.isNotEmpty) {
+        diffs.add(
+          TimelineDiffField(
+            label: 'STATUS',
+            oldValue: '',
+            newValue: newStatusLabel,
+          ),
+        );
+      }
+      if (fallbackBooking.noteText != null &&
+          fallbackBooking.noteText!.isNotEmpty) {
+        diffs.add(
+          TimelineDiffField(
+            label: 'NOTES',
+            oldValue: '',
+            newValue: fallbackBooking.noteText!,
+            multiline: true,
+          ),
+        );
+      }
+      if (fallbackBooking.location != null &&
+          fallbackBooking.location!.isNotEmpty) {
+        diffs.add(
+          TimelineDiffField(
+            label: 'LOCATION',
+            oldValue: '',
+            newValue: fallbackBooking.location!,
+          ),
+        );
+      }
     }
 
     return TimelineHistoryEvent(
@@ -521,6 +718,164 @@ class _BookingHistoryPageState extends State<BookingHistoryPage> {
     ];
   }
 
+  /// Generates timeline events from ActivityModel items when API history is unavailable or to merge.
+  List<TimelineHistoryEvent> _buildTimelineEventsFromActivities(
+    List<ActivityModel> activities,
+  ) {
+    return activities.asMap().entries.map((entry) {
+      final index = entry.key;
+      final act = entry.value;
+
+      final diffs = <TimelineDiffField>[];
+      if (act.statusTag != null && act.statusTag!.isNotEmpty) {
+        diffs.add(
+          TimelineDiffField(
+            label: 'STATUS',
+            oldValue: '',
+            newValue: act.statusTag!,
+          ),
+        );
+      }
+      if (act.noteText != null && act.noteText!.isNotEmpty) {
+        diffs.add(
+          TimelineDiffField(
+            label: 'NOTES',
+            oldValue: '',
+            newValue: act.noteText!,
+            multiline: true,
+          ),
+        );
+      }
+      if (act.location != null && act.location!.isNotEmpty) {
+        diffs.add(
+          TimelineDiffField(
+            label: 'LOCATION',
+            oldValue: '',
+            newValue: act.location!,
+          ),
+        );
+      }
+      if (act.subtitleHighlight != null && act.subtitleHighlight!.isNotEmpty) {
+        diffs.add(
+          TimelineDiffField(
+            label: 'ASSIGNED TO',
+            oldValue: '',
+            newValue: act.subtitleHighlight!,
+          ),
+        );
+      }
+
+      String time = '';
+      if (act.dateTime != null) {
+        final local = act.dateTime!.toLocal();
+        final hour = local.hour == 0
+            ? 12
+            : (local.hour > 12 ? local.hour - 12 : local.hour);
+        final period = local.hour >= 12 ? 'PM' : 'AM';
+        time = '$hour:${local.minute.toString().padLeft(2, '0')} $period';
+      }
+
+      final badgeColors = StatusColorService.getBadgeColors(
+        act.statusTag ?? 'Updated',
+        customColor: act.statusTagTextColor,
+      );
+
+      return TimelineHistoryEvent(
+        actionTitle:
+            act.actionType ??
+            (act.statusTag != null
+                ? '${act.statusTag} Status'
+                : 'Booking Updated'),
+        time: time,
+        date: act.date.isNotEmpty ? act.date : 'Today',
+        actor: act.actionByName ?? act.subtitleHighlight ?? 'Staff',
+        badgeLabel: act.statusTag ?? 'Updated',
+        badgeBg: act.statusTagBg ?? badgeColors.bg,
+        badgeTextColor: act.statusTagTextColor ?? badgeColors.text,
+        isCurrent: index == 0,
+        dotColor: act.avatarTextColor,
+        diffs: diffs,
+      );
+    }).toList();
+  }
+
+  /// Merges API events with activity events so that no timeline events are lost
+  /// when the API returns fewer items than previously loaded from the activity list.
+  List<TimelineHistoryEvent> _mergeTimelineEvents(
+    List<TimelineHistoryEvent> apiEvents,
+    List<TimelineHistoryEvent> activityEvents,
+  ) {
+    if (apiEvents.isEmpty) return activityEvents;
+    if (activityEvents.isEmpty) return apiEvents;
+
+    final List<TimelineHistoryEvent> merged = List.of(apiEvents);
+
+    String norm(String s) =>
+        s.trim().toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+
+    for (final actEvent in activityEvents) {
+      final actTitleNorm = norm(actEvent.actionTitle);
+      final actBadgeNorm = norm(actEvent.badgeLabel);
+      final actDateNorm = norm(actEvent.date);
+
+      final exists = merged.any((apiEvent) {
+        final apiTitleNorm = norm(apiEvent.actionTitle);
+        final apiBadgeNorm = norm(apiEvent.badgeLabel);
+        final apiDateNorm = norm(apiEvent.date);
+
+        final titleMatches =
+            apiTitleNorm == actTitleNorm ||
+            (actTitleNorm.contains(apiTitleNorm) && apiTitleNorm.isNotEmpty) ||
+            (apiTitleNorm.contains(actTitleNorm) && actTitleNorm.isNotEmpty) ||
+            (apiBadgeNorm == actBadgeNorm && actBadgeNorm.isNotEmpty);
+
+        final dateMatches =
+            apiDateNorm == actDateNorm ||
+            apiDateNorm.isEmpty ||
+            actDateNorm.isEmpty ||
+            actDateNorm == 'today';
+
+        return titleMatches && dateMatches;
+      });
+
+      if (!exists) {
+        merged.add(actEvent);
+      }
+    }
+
+    return [
+      for (int i = 0; i < merged.length; i++)
+        if (i == 0 && !merged[i].isCurrent)
+          TimelineHistoryEvent(
+            actionTitle: merged[i].actionTitle,
+            time: merged[i].time,
+            date: merged[i].date,
+            actor: merged[i].actor,
+            badgeLabel: merged[i].badgeLabel,
+            badgeBg: merged[i].badgeBg,
+            badgeTextColor: merged[i].badgeTextColor,
+            isCurrent: true,
+            dotColor: merged[i].dotColor,
+            diffs: merged[i].diffs,
+          )
+        else if (i > 0 && merged[i].isCurrent)
+          TimelineHistoryEvent(
+            actionTitle: merged[i].actionTitle,
+            time: merged[i].time,
+            date: merged[i].date,
+            actor: merged[i].actor,
+            badgeLabel: merged[i].badgeLabel,
+            badgeBg: merged[i].badgeBg,
+            badgeTextColor: merged[i].badgeTextColor,
+            isCurrent: false,
+            dotColor: merged[i].dotColor,
+            diffs: merged[i].diffs,
+          )
+        else
+          merged[i],
+    ];
+  }
+
   /// Groups items by booking id or title for the clicked user
   List<BookingHistoryGroup> _buildGroupedBookings() {
     final Map<String, ActivityModel> uniqueBookings = {};
@@ -532,21 +887,60 @@ class _BookingHistoryPageState extends State<BookingHistoryPage> {
     final List<BookingHistoryGroup> groups = [];
 
     for (final item in uniqueBookings.values) {
-      final events = (_apiTimelineEvents != null && _apiTimelineEvents!.isNotEmpty)
-          ? _apiTimelineEvents!
-          : _buildTimelineEventsForBooking(item);
+      final matchingActivities = widget.allActivities
+          .where(
+            (a) =>
+                (item.bookingId != null && a.bookingId == item.bookingId) ||
+                (a.id.isNotEmpty && a.id == item.id) ||
+                (a.title.trim().toLowerCase() ==
+                    item.title.trim().toLowerCase()),
+          )
+          .toList();
+
+      final List<TimelineHistoryEvent> activityEvents =
+          (matchingActivities.length > 1 ||
+              (matchingActivities.isNotEmpty &&
+                  (matchingActivities.first.actionType != null ||
+                      matchingActivities.first.id != '23')))
+          ? _buildTimelineEventsFromActivities(matchingActivities)
+          : const [];
+
+      final List<TimelineHistoryEvent> events;
+      if (_apiTimelineEvents != null && _apiTimelineEvents!.isNotEmpty) {
+        if (activityEvents.isEmpty) {
+          events = _apiTimelineEvents!;
+        } else {
+          events = _mergeTimelineEvents(_apiTimelineEvents!, activityEvents);
+        }
+      } else if (activityEvents.isNotEmpty) {
+        events = activityEvents;
+      } else {
+        events = _buildTimelineEventsForBooking(item);
+      }
 
       final bId =
           item.bookingId?.toString() ?? (item.id.isNotEmpty ? item.id : '23');
+
+      final latestEvent = events.isNotEmpty ? events.first : null;
+      final status = item.statusTag ?? latestEvent?.badgeLabel ?? 'Completed';
+      final statusBg =
+          item.statusTagBg ?? latestEvent?.badgeBg ?? const Color(0xFFDCFCE7);
+      final statusTextColor =
+          item.statusTagTextColor ??
+          latestEvent?.badgeTextColor ??
+          const Color(0xFF15803D);
+      final date =
+          latestEvent?.date ??
+          (item.date.isNotEmpty ? item.date : '29/10/2026');
 
       groups.add(
         BookingHistoryGroup(
           bookingId: bId,
           bookingName: item.title,
-          date: item.date.isNotEmpty ? item.date : '29/10/2026',
-          status: item.statusTag ?? 'Completed',
-          statusBg: item.statusTagBg ?? const Color(0xFFDCFCE7),
-          statusTextColor: item.statusTagTextColor ?? const Color(0xFF15803D),
+          date: date,
+          status: status,
+          statusBg: statusBg,
+          statusTextColor: statusTextColor,
           events: events,
         ),
       );
@@ -649,6 +1043,7 @@ class _BookingHistoryPageState extends State<BookingHistoryPage> {
                     )
                   : ListView.builder(
                       physics: const BouncingScrollPhysics(),
+                      scrollCacheExtent: const ScrollCacheExtent.pixels(600),
                       padding: const EdgeInsets.only(bottom: 24),
                       itemCount: groups.length,
                       itemBuilder: (context, index) {
@@ -656,187 +1051,196 @@ class _BookingHistoryPageState extends State<BookingHistoryPage> {
                         final groupKey = 'group_${group.bookingId}';
                         final isExpanded = _expandedGroups[groupKey] ?? true;
 
-                        return Container(
-                          margin: const EdgeInsets.symmetric(
-                            horizontal: 16.0,
-                            vertical: 6.0,
-                          ),
-                          decoration: BoxDecoration(
-                            color: cardBg,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: borderColor, width: 1.2),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // Group Accordion Header
-                              InkWell(
-                                borderRadius: BorderRadius.circular(16),
-                                onTap: () {
-                                  setState(() {
-                                    _expandedGroups[groupKey] = !isExpanded;
-                                  });
-                                },
-                                child: Padding(
-                                  padding: const EdgeInsets.all(14.0),
-                                  child: Row(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      // Green Circular Clock Icon
-                                      Container(
-                                        width: 40,
-                                        height: 40,
-                                        decoration: BoxDecoration(
-                                          color: isDark
-                                              ? AppDarkColors.chipPendingBg
-                                              : const Color(0xFFDCFCE7),
-                                          shape: BoxShape.circle,
-                                        ),
-                                        child: const Center(
-                                          child: Icon(
-                                            Icons.history_rounded,
-                                            size: 22,
-                                            color: Color(0xFF16A34A),
+                        return RepaintBoundary(
+                          child: Container(
+                            margin: const EdgeInsets.symmetric(
+                              horizontal: 16.0,
+                              vertical: 6.0,
+                            ),
+                            decoration: BoxDecoration(
+                              color: cardBg,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: borderColor,
+                                width: 1.2,
+                              ),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Group Accordion Header
+                                InkWell(
+                                  borderRadius: BorderRadius.circular(16),
+                                  onTap: () {
+                                    setState(() {
+                                      _expandedGroups[groupKey] = !isExpanded;
+                                    });
+                                  },
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(14.0),
+                                    child: Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        // Green Circular Clock Icon
+                                        Container(
+                                          width: 40,
+                                          height: 40,
+                                          decoration: BoxDecoration(
+                                            color: isDark
+                                                ? AppDarkColors.chipPendingBg
+                                                : const Color(0xFFDCFCE7),
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: const Center(
+                                            child: Icon(
+                                              Icons.history_rounded,
+                                              size: 22,
+                                              color: Color(0xFF16A34A),
+                                            ),
                                           ),
                                         ),
-                                      ),
-                                      const SizedBox(width: 12),
+                                        const SizedBox(width: 12),
 
-                                      // Title + Subtitle
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Row(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment
-                                                      .spaceBetween,
-                                              children: [
-                                                Expanded(
-                                                  child: Text(
-                                                    group.bookingName,
-                                                    style: TextStyle(
-                                                      fontSize: 16,
-                                                      fontWeight:
-                                                          FontWeight.w700,
-                                                      color: textPrimary,
-                                                    ),
-                                                    maxLines: 1,
-                                                    overflow:
-                                                        TextOverflow.ellipsis,
-                                                  ),
-                                                ),
-                                                const SizedBox(width: 8),
-                                                Text(
-                                                  group.date,
-                                                  style: TextStyle(
-                                                    fontSize: 12,
-                                                    fontWeight: FontWeight.w500,
-                                                    color: textSubtitle,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                            const SizedBox(height: 5),
-
-                                            // Subtitle Row: Status Pill + #ID + Updates
-                                            Row(
-                                              children: [
-                                                Container(
-                                                  padding:
-                                                      const EdgeInsets.symmetric(
-                                                        horizontal: 8,
-                                                        vertical: 2,
+                                        // Title + Subtitle
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Row(
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment
+                                                        .spaceBetween,
+                                                children: [
+                                                  Expanded(
+                                                    child: Text(
+                                                      group.bookingName,
+                                                      style: TextStyle(
+                                                        fontSize: 16,
+                                                        fontWeight:
+                                                            FontWeight.w700,
+                                                        color: textPrimary,
                                                       ),
-                                                  decoration: BoxDecoration(
-                                                    color: group.statusBg,
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                          12,
-                                                        ),
-                                                  ),
-                                                  child: Text(
-                                                    group.status,
-                                                    style: TextStyle(
-                                                      fontSize: 11,
-                                                      fontWeight:
-                                                          FontWeight.w700,
-                                                      color:
-                                                          group.statusTextColor,
+                                                      maxLines: 1,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
                                                     ),
                                                   ),
-                                                ),
-                                                const SizedBox(width: 8),
-                                                Text(
-                                                  '#${group.bookingId}',
-                                                  style: TextStyle(
-                                                    fontSize: 12,
-                                                    fontWeight: FontWeight.w500,
-                                                    color: textSubtitle,
+                                                  const SizedBox(width: 8),
+                                                  Text(
+                                                    group.date,
+                                                    style: TextStyle(
+                                                      fontSize: 12,
+                                                      fontWeight:
+                                                          FontWeight.w500,
+                                                      color: textSubtitle,
+                                                    ),
                                                   ),
-                                                ),
-                                                const SizedBox(width: 4),
-                                                Text(
-                                                  '·',
-                                                  style: TextStyle(
-                                                    fontSize: 12,
-                                                    color: textSubtitle,
+                                                ],
+                                              ),
+                                              const SizedBox(height: 5),
+
+                                              // Subtitle Row: Status Pill + #ID + Updates
+                                              Row(
+                                                children: [
+                                                  Container(
+                                                    padding:
+                                                        const EdgeInsets.symmetric(
+                                                          horizontal: 8,
+                                                          vertical: 2,
+                                                        ),
+                                                    decoration: BoxDecoration(
+                                                      color: group.statusBg,
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                            12,
+                                                          ),
+                                                    ),
+                                                    child: Text(
+                                                      group.status,
+                                                      style: TextStyle(
+                                                        fontSize: 11,
+                                                        fontWeight:
+                                                            FontWeight.w700,
+                                                        color: group
+                                                            .statusTextColor,
+                                                      ),
+                                                    ),
                                                   ),
-                                                ),
-                                                const SizedBox(width: 4),
-                                                Text(
-                                                  '${group.events.length} updates',
-                                                  style: TextStyle(
-                                                    fontSize: 12,
-                                                    fontWeight: FontWeight.w500,
-                                                    color: textSubtitle,
+                                                  const SizedBox(width: 8),
+                                                  Text(
+                                                    '#${group.bookingId}',
+                                                    style: TextStyle(
+                                                      fontSize: 12,
+                                                      fontWeight:
+                                                          FontWeight.w500,
+                                                      color: textSubtitle,
+                                                    ),
                                                   ),
-                                                ),
-                                              ],
-                                            ),
-                                          ],
+                                                  const SizedBox(width: 4),
+                                                  Text(
+                                                    '·',
+                                                    style: TextStyle(
+                                                      fontSize: 12,
+                                                      color: textSubtitle,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 4),
+                                                  Text(
+                                                    '${group.events.length} updates',
+                                                    style: TextStyle(
+                                                      fontSize: 12,
+                                                      fontWeight:
+                                                          FontWeight.w500,
+                                                      color: textSubtitle,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ],
+                                          ),
                                         ),
-                                      ),
 
-                                      // Accordion Chevron Arrow
-                                      Icon(
-                                        isExpanded
-                                            ? Icons.keyboard_arrow_up_rounded
-                                            : Icons.keyboard_arrow_down_rounded,
-                                        size: 24,
-                                        color: textSubtitle,
-                                      ),
-                                    ],
+                                        // Accordion Chevron Arrow
+                                        Icon(
+                                          isExpanded
+                                              ? Icons.keyboard_arrow_up_rounded
+                                              : Icons
+                                                    .keyboard_arrow_down_rounded,
+                                          size: 24,
+                                          color: textSubtitle,
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ),
-                              ),
 
-                              // Expanded Timeline Area
-                              if (isExpanded) ...[
-                                Divider(
-                                  height: 1,
-                                  thickness: 1,
-                                  color: borderColor,
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.fromLTRB(
-                                    16,
-                                    16,
-                                    16,
-                                    12,
+                                // Expanded Timeline Area
+                                if (isExpanded) ...[
+                                  Divider(
+                                    height: 1,
+                                    thickness: 1,
+                                    color: borderColor,
                                   ),
-                                  child: _buildTimelineList(
-                                    events: group.events,
-                                    isDark: isDark,
-                                    textPrimary: textPrimary,
-                                    textSubtitle: textSubtitle,
-                                    borderColor: borderColor,
+                                  Padding(
+                                    padding: const EdgeInsets.fromLTRB(
+                                      16,
+                                      16,
+                                      16,
+                                      12,
+                                    ),
+                                    child: _buildTimelineList(
+                                      events: group.events,
+                                      isDark: isDark,
+                                      textPrimary: textPrimary,
+                                      textSubtitle: textSubtitle,
+                                      borderColor: borderColor,
+                                    ),
                                   ),
-                                ),
+                                ],
                               ],
-                            ],
+                            ),
                           ),
                         );
                       },
@@ -859,7 +1263,7 @@ class _BookingHistoryPageState extends State<BookingHistoryPage> {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 12.0),
         child: Text(
-          'No timeline events matching filter.',
+          'No timeline events found.',
           style: TextStyle(
             fontSize: 13,
             color: textSubtitle,
@@ -1039,15 +1443,16 @@ class _BookingHistoryPageState extends State<BookingHistoryPage> {
                                       ),
                                       const SizedBox(height: 4),
                                       if (diff.multiline) ...[
-                                        Text(
-                                          '${diff.oldValue}  →',
-                                          style: const TextStyle(
-                                            fontSize: 13,
-                                            decoration:
-                                                TextDecoration.lineThrough,
-                                            color: Color(0xFF94A3B8),
+                                        if (diff.oldValue.isNotEmpty)
+                                          Text(
+                                            '${diff.oldValue}  →',
+                                            style: const TextStyle(
+                                              fontSize: 13,
+                                              decoration:
+                                                  TextDecoration.lineThrough,
+                                              color: Color(0xFF94A3B8),
+                                            ),
                                           ),
-                                        ),
                                         const SizedBox(height: 2),
                                         Text(
                                           diff.newValue,
@@ -1060,25 +1465,27 @@ class _BookingHistoryPageState extends State<BookingHistoryPage> {
                                       ] else ...[
                                         Row(
                                           children: [
-                                            Text(
-                                              diff.oldValue,
-                                              style: const TextStyle(
-                                                fontSize: 13,
-                                                decoration:
-                                                    TextDecoration.lineThrough,
-                                                color: Color(0xFF94A3B8),
+                                            if (diff.oldValue.isNotEmpty) ...[
+                                              Text(
+                                                diff.oldValue,
+                                                style: const TextStyle(
+                                                  fontSize: 13,
+                                                  decoration: TextDecoration
+                                                      .lineThrough,
+                                                  color: Color(0xFF94A3B8),
+                                                ),
                                               ),
-                                            ),
-                                            const Padding(
-                                              padding: EdgeInsets.symmetric(
-                                                horizontal: 8.0,
+                                              const Padding(
+                                                padding: EdgeInsets.symmetric(
+                                                  horizontal: 8.0,
+                                                ),
+                                                child: Icon(
+                                                  Icons.arrow_forward_rounded,
+                                                  size: 13,
+                                                  color: Color(0xFF94A3B8),
+                                                ),
                                               ),
-                                              child: Icon(
-                                                Icons.arrow_forward_rounded,
-                                                size: 13,
-                                                color: Color(0xFF94A3B8),
-                                              ),
-                                            ),
+                                            ],
                                             Flexible(
                                               child: Text(
                                                 diff.newValue,
