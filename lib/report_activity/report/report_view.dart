@@ -4,7 +4,6 @@ import '../../core/theme.dart';
 import '../../core/widgets/circular_back_button.dart';
 import '../widgets/report_date_range_bar.dart';
 import '../widgets/status_activity_graph_card.dart';
-import '../widgets/weekly_activity_graph_card.dart';
 
 import 'report_view_model.dart';
 
@@ -82,20 +81,9 @@ class _ReportViewState extends State<ReportView> {
                     _viewModel.clearDateRange();
                   },
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 16),
 
-                // 2. Weekly Activity Graph from /api/reports/bookings (Overview)
-                WeeklyActivityGraphCard(
-                  graphData: _viewModel.graphData,
-                  isLoading: _viewModel.isGraphLoading,
-                  errorMessage: _viewModel.graphErrorMessage,
-                  dateFrom: _viewModel.dateFrom,
-                  dateTo: _viewModel.dateTo,
-                  onRefresh: () => _viewModel.fetchGraphReport(force: true),
-                ),
-                const SizedBox(height: 18),
-
-                // 3. Separate Stacked Graphs for Each Status
+                // 2. Separate Stacked Graphs for Each Status
                 StatusActivityGraphCard(
                   statusTitle: 'New Bookings',
                   statusColor: StatusColorService.getColor('New'),

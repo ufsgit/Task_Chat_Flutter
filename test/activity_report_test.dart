@@ -527,7 +527,7 @@ void main() {
 
         // Verify TaskReportPage (ReportView) is displayed
         expect(find.byType(ReportView), findsOneWidget);
-        expect(find.text('Weekly activity'), findsOneWidget);
+        expect(find.text('New Bookings'), findsOneWidget);
       },
     );
 
@@ -1202,7 +1202,7 @@ void main() {
       expect(find.byType(GraphSkeletonLoading), findsOneWidget);
     });
 
-    testWidgets('ReportView renders WeeklyActivityGraphCard and fetches report', (tester) async {
+    testWidgets('ReportView renders status activity graph cards and fetches report', (tester) async {
       final mockData = {
         'success': true,
         'data': [
@@ -1236,8 +1236,8 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(ReportDateRangeBar), findsOneWidget);
-      expect(find.byType(WeeklyActivityGraphCard), findsOneWidget);
-      expect(find.text('Weekly activity'), findsOneWidget);
+      expect(find.byType(WeeklyActivityGraphCard), findsNothing);
+      expect(find.text('Weekly activity'), findsNothing);
       // Verify separate stacked graph cards for each status are rendered
       expect(find.byType(StatusActivityGraphCard), findsNWidgets(4));
       expect(find.text('New Bookings'), findsOneWidget);
