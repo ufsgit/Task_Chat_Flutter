@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import '../core/theme.dart';
 import '../core/widgets/fitmate_app_bar_title.dart';
 import '../login_page/login_view.dart';
@@ -143,7 +144,7 @@ class _SettingsViewState extends State<SettingsView> {
                 ? const Color(0xFF103635)
                 : const Color(0xFFCCFBF1),
             title: 'About',
-            subtitle: 'App info, task visibility, status',
+            subtitle: 'Account info, App version',
             trailing: Icon(
               Icons.chevron_right_rounded,
               color: isDark ? const Color(0xFF8696A0) : const Color(0xFF94A3B8),
@@ -184,138 +185,273 @@ class _SettingsViewState extends State<SettingsView> {
     );
   }
 
+  static String? _cachedVersion;
+
+  Future<String> _getAppVersion() async {
+    if (_cachedVersion != null) return _cachedVersion!;
+    try {
+      final info = await PackageInfo.fromPlatform();
+      final version = info.version.trim();
+      final build = info.buildNumber.trim();
+      if (version.isNotEmpty && build.isNotEmpty) {
+        _cachedVersion = '$version+$build';
+      } else if (version.isNotEmpty) {
+        _cachedVersion = version;
+      } else {
+        _cachedVersion = '1.0.0+1';
+      }
+      return _cachedVersion!;
+    } catch (_) {
+      return '1.0.0+1';
+    }
+  }
+
   void _handleAbout(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final sheetBg = isDark ? AppDarkColors.surfaceCard : Colors.white;
-    final itemBg = isDark
+    final dialogBg = isDark ? AppDarkColors.surfaceCard : Colors.white;
+    final cardBg = isDark
         ? AppDarkColors.surfaceSecondary
-        : const Color(0xFFF8FAFC);
+        : const Color(0xFFFFFFFF);
     final borderColor = isDark ? AppDarkColors.border : const Color(0xFFE2E8F0);
     final titleColor = isDark ? Colors.white : const Color(0xFF0F172A);
     final subtextColor = isDark
         ? const Color(0xFF94A3B8)
         : const Color(0xFF64748B);
+    final fitmateGreen = isDark
+        ? AppDarkColors.primaryGreen
+        : AppColors.primaryGreen;
+    final iconBg = isDark ? const Color(0xFF122E23) : const Color(0xFFE8F7EC);
+    final versionCardBg = isDark
+        ? const Color(0xFF122820)
+        : const Color(0xFFEDF8F1);
+    final versionBorderColor = isDark
+        ? const Color(0xFF1E4534)
+        : const Color(0xFFD4EEDC);
+    final versionLabelColor = isDark
+        ? const Color(0xFFCBD5E1)
+        : const Color(0xFF334155);
 
-    showModalBottomSheet(
+    showDialog(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: sheetBg,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
+      barrierDismissible: true,
       builder: (ctx) {
-        return SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: isDark
-                            ? const Color(0xFF103635)
-                            : const Color(0xFFCCFBF1),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Icon(
-                        Icons.info_outline_rounded,
-                        color: Color(0xFF0D9488),
-                        size: 22,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      'About',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                        color: titleColor,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 12,
-                  ),
-                  decoration: BoxDecoration(
-                    color: itemBg,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: borderColor, width: 1),
-                  ),
-                  child: Column(
+        return Dialog(
+          backgroundColor: dialogBg,
+          elevation: 8,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 16,
+          ),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 440),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 18.0,
+                vertical: 16.0,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 1. Header: About Us Title & Subtitle + Close Icon
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildAboutRow(
-                        icon: Icons.email_outlined,
-                        label: 'Email',
-                        value: _activeProfile.email ?? '—',
-                        isDark: isDark,
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'About Us',
+                            style: TextStyle(
+                              fontSize: 21,
+                              fontWeight: FontWeight.w700,
+                              color: titleColor,
+                              letterSpacing: -0.3,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Your application details',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w400,
+                              color: subtextColor,
+                            ),
+                          ),
+                        ],
                       ),
-                      Divider(color: borderColor, height: 16),
-                      _buildAboutRow(
-                        icon: Icons.location_on_outlined,
-                        label: 'District',
-                        value: _activeProfile.districtName ?? '—',
-                        isDark: isDark,
-                      ),
-                      Divider(color: borderColor, height: 16),
-                      _buildAboutRow(
-                        icon: Icons.map_outlined,
-                        label: 'State',
-                        value: _activeProfile.stateName ?? '—',
-                        isDark: isDark,
+                      IconButton(
+                        onPressed: () => Navigator.of(ctx).pop(),
+                        icon: const Icon(Icons.close_rounded, size: 20),
+                        color: subtextColor,
+                        splashRadius: 18,
+                        tooltip: 'Dismiss',
                       ),
                     ],
                   ),
-                ),
-                const SizedBox(height: 14),
-                Text(
-                  'Manage your contacts, customize task visibility, and set your status updates easily in Fitmate.',
-                  style: TextStyle(
-                    fontSize: 13.5,
-                    color: subtextColor,
-                    height: 1.4,
+                  const SizedBox(height: 14),
+
+                  // 2. Individual Cards per Attribute matching Screenshot Design
+                  _buildDetailCard(
+                    icon: Icons.person_outline_rounded,
+                    label: 'Full Name',
+                    value: _activeProfile.name.isNotEmpty
+                        ? _activeProfile.name
+                        : '—',
+                    cardBg: cardBg,
+                    borderColor: borderColor,
+                    labelColor: subtextColor,
+                    valueColor: titleColor,
+                    iconBg: iconBg,
+                    iconFg: fitmateGreen,
                   ),
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  'Version 1.0.0',
-                  style: TextStyle(
-                    fontSize: 12.5,
-                    color: isDark
-                        ? const Color(0xFF64748B)
-                        : const Color(0xFF94A3B8),
-                    fontWeight: FontWeight.w500,
+                  const SizedBox(height: 8),
+
+                  _buildDetailCard(
+                    icon: Icons.phone_outlined,
+                    label: 'Mobile Number',
+                    value: _activeProfile.phone.isNotEmpty
+                        ? _activeProfile.phone
+                        : '—',
+                    cardBg: cardBg,
+                    borderColor: borderColor,
+                    labelColor: subtextColor,
+                    valueColor: titleColor,
+                    iconBg: iconBg,
+                    iconFg: fitmateGreen,
                   ),
-                ),
-                const SizedBox(height: 16),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () => Navigator.of(ctx).pop(),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: isDark
-                          ? AppDarkColors.primaryGreen
-                          : AppColors.whatsappGreen,
-                      foregroundColor: isDark
-                          ? const Color(0xFF06140D)
-                          : Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                  const SizedBox(height: 8),
+
+                  _buildDetailCard(
+                    icon: Icons.mail_outline_rounded,
+                    label: 'Email Address',
+                    value: _activeProfile.email ?? '—',
+                    cardBg: cardBg,
+                    borderColor: borderColor,
+                    labelColor: subtextColor,
+                    valueColor: titleColor,
+                    iconBg: iconBg,
+                    iconFg: fitmateGreen,
+                  ),
+                  const SizedBox(height: 8),
+
+                  if (_activeProfile.role != null &&
+                      _activeProfile.role!.isNotEmpty) ...[
+                    _buildDetailCard(
+                      icon: Icons.badge_outlined,
+                      label: 'Role',
+                      value: _activeProfile.role!,
+                      cardBg: cardBg,
+                      borderColor: borderColor,
+                      labelColor: subtextColor,
+                      valueColor: titleColor,
+                      iconBg: iconBg,
+                      iconFg: fitmateGreen,
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+
+                  _buildDetailCard(
+                    icon: Icons.location_on_outlined,
+                    label: 'District',
+                    value: _activeProfile.districtName ?? '—',
+                    cardBg: cardBg,
+                    borderColor: borderColor,
+                    labelColor: subtextColor,
+                    valueColor: titleColor,
+                    iconBg: iconBg,
+                    iconFg: fitmateGreen,
+                  ),
+                  const SizedBox(height: 8),
+
+                  _buildDetailCard(
+                    icon: Icons.map_outlined,
+                    label: 'State',
+                    value: _activeProfile.stateName ?? '—',
+                    cardBg: cardBg,
+                    borderColor: borderColor,
+                    labelColor: subtextColor,
+                    valueColor: titleColor,
+                    iconBg: iconBg,
+                    iconFg: fitmateGreen,
+                  ),
+                  const SizedBox(height: 10),
+
+                  // 3. Application Version Card (Tinted Card at bottom)
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 11,
+                    ),
+                    decoration: BoxDecoration(
+                      color: versionCardBg,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: versionBorderColor, width: 1.0),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Application Version',
+                            style: TextStyle(
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.w500,
+                              color: versionLabelColor,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        FutureBuilder<String>(
+                          future: _getAppVersion(),
+                          builder: (context, snapshot) {
+                            final versionText =
+                                snapshot.data ?? _cachedVersion ?? '1.0.0+1';
+                            return Text(
+                              versionText,
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                color: fitmateGreen,
+                              ),
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // 4. Close Action Button
+                  SizedBox(
+                    width: double.infinity,
+                    height: 44,
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.of(ctx).pop(),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: fitmateGreen,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text(
+                        'Close',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ),
-                    child: const Text('Close'),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         );
@@ -323,42 +459,68 @@ class _SettingsViewState extends State<SettingsView> {
     );
   }
 
-  Widget _buildAboutRow({
+  Widget _buildDetailCard({
     required IconData icon,
     required String label,
     required String value,
-    required bool isDark,
+    required Color cardBg,
+    required Color borderColor,
+    required Color labelColor,
+    required Color valueColor,
+    required Color iconBg,
+    required Color iconFg,
   }) {
-    return Row(
-      children: [
-        Icon(
-          icon,
-          size: 18,
-          color: isDark ? AppDarkColors.primaryGreen : AppColors.primaryGreen,
-        ),
-        const SizedBox(width: 10),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 13.5,
-            fontWeight: FontWeight.w500,
-            color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
-          ),
-        ),
-        const Spacer(),
-        Flexible(
-          child: Text(
-            value,
-            textAlign: TextAlign.end,
-            style: TextStyle(
-              fontSize: 13.5,
-              fontWeight: FontWeight.w600,
-              color: isDark ? Colors.white : const Color(0xFF0F172A),
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: borderColor, width: 1.0),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: iconBg,
+              borderRadius: BorderRadius.circular(12),
             ),
-            overflow: TextOverflow.ellipsis,
+            child: Icon(icon, size: 22, color: iconFg),
           ),
-        ),
-      ],
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w400,
+                    color: labelColor,
+                    letterSpacing: -0.1,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 15.5,
+                    fontWeight: FontWeight.w700,
+                    color: valueColor,
+                    letterSpacing: -0.2,
+                  ),
+                  softWrap: true,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 

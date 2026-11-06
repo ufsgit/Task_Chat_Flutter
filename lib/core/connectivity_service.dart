@@ -2,12 +2,13 @@ import 'dart:async';
 import 'dart:io';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
+import 'package:internet_connection_checker_plus/internet_connection_checker_plus.dart';
 
 /// Centralized service to monitor and broadcast global internet connectivity state.
 ///
 /// Designed to be passive when online (no periodic polling), and active only
-/// when an API call fails due to no internet—polling DNS every 10 seconds
-/// until connectivity is restored.
+/// when an API call fails due to no internet—polling every 10 seconds
+/// using internet_connection_checker_plus until connectivity is restored.
 class ConnectivityService {
   static final ConnectivityService instance = ConnectivityService._internal();
 
@@ -15,6 +16,7 @@ class ConnectivityService {
   static bool isTestEnvironment = false;
 
   final Connectivity _connectivity = Connectivity();
+  final InternetConnection _internetChecker = InternetConnection();
   final ValueNotifier<bool> isConnected = ValueNotifier<bool>(true);
 
   StreamSubscription<List<ConnectivityResult>>? _subscription;
@@ -44,7 +46,8 @@ class ConnectivityService {
     }
   }
 
-  /// Verifies active internet reachability using DNS lookup.
+  /// Verifies active internet reachability using internet_connection_checker_plus
+  /// for quick multi-endpoint response, with DNS fallback.
   Future<bool> checkConnection() async {
     if (isTestEnvironment) return isConnected.value;
     if (_isChecking) return isConnected.value;
@@ -52,14 +55,13 @@ class ConnectivityService {
     _isChecking = true;
     bool reachable = false;
     try {
-      final lookup = await InternetAddress.lookup('dns.google')
-          .timeout(const Duration(seconds: 3));
-      reachable = lookup.isNotEmpty && lookup.first.rawAddress.isNotEmpty;
-    } catch (_) {
+      reachable = await _internetChecker.hasInternetAccess;
+    } catch (e) {
+      debugPrint('>>> [ConnectivityService] internet_checker error: $e');
       try {
-        final fallback = await InternetAddress.lookup('one.one.one.one')
-            .timeout(const Duration(seconds: 3));
-        reachable = fallback.isNotEmpty && fallback.first.rawAddress.isNotEmpty;
+        final lookup = await InternetAddress.lookup('dns.google')
+            .timeout(const Duration(seconds: 2));
+        reachable = lookup.isNotEmpty && lookup.first.rawAddress.isNotEmpty;
       } catch (_) {
         reachable = false;
       }

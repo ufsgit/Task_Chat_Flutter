@@ -51,13 +51,22 @@ void main() {
     expect(find.text('About'), findsOneWidget);
     expect(find.text('Log out'), findsOneWidget);
 
-    // Tap About to verify About bottom sheet displays API data
+    // Tap About to verify About popup dialog displays all API data in middle of screen
     await tester.tap(find.text('About'));
     await tester.pumpAndSettle();
 
+    expect(find.byType(Dialog), findsOneWidget);
+    expect(find.text('Rajesh Menon'), findsNWidgets(2)); // Header card & Dialog
+    expect(find.text('+91 98470 12345'), findsNWidgets(2)); // Header card & Dialog
     expect(find.text('rajesh.menon@steeldoor.com'), findsOneWidget);
     expect(find.text('Kerala'), findsOneWidget);
     expect(find.text('Ernakulam Hub'), findsOneWidget);
+    expect(find.text('Close'), findsOneWidget);
+
+    // Tap Close and verify dialog is dismissed
+    await tester.tap(find.text('Close'));
+    await tester.pumpAndSettle();
+    expect(find.byType(Dialog), findsNothing);
   });
 
   testWidgets('BottomNavigator switches to Settings tab and renders passed user',

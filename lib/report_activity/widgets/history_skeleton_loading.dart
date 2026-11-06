@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/theme.dart';
 
-/// Shimmering skeleton card placeholder for BookingHistoryPage.
+/// Shimmering skeleton card placeholder matching the current BookingHistoryPage UI.
 class HistorySkeletonLoading extends StatefulWidget {
   const HistorySkeletonLoading({super.key});
 
@@ -71,92 +71,31 @@ class _HistorySkeletonLoadingState extends State<HistorySkeletonLoading>
           physics: const NeverScrollableScrollPhysics(),
           padding: const EdgeInsets.only(bottom: 24),
           children: [
-            Container(
-              margin: const EdgeInsets.symmetric(
-                horizontal: 16.0,
-                vertical: 6.0,
-              ),
-              decoration: BoxDecoration(
-                color: cardBg,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: borderColor, width: 1.2),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // 1. Accordion Header Skeleton
-                  Padding(
-                    padding: const EdgeInsets.all(14.0),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Circular Clock Icon placeholder
-                        _buildBox(
-                          color: animatedColor,
-                          width: 40,
-                          height: 40,
-                          shape: BoxShape.circle,
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  _buildBox(
-                                    color: animatedColor,
-                                    width: 130,
-                                    height: 18,
-                                    borderRadius: 4,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  _buildBox(
-                                    color: animatedColor,
-                                    width: 45,
-                                    height: 14,
-                                    borderRadius: 4,
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 8),
-                              _buildBox(
-                                color: animatedColor,
-                                width: 85,
-                                height: 12,
-                                borderRadius: 4,
-                              ),
-                            ],
-                          ),
-                        ),
-                        _buildBox(
-                          color: animatedColor,
-                          width: 75,
-                          height: 24,
-                          borderRadius: 12,
-                        ),
-                      ],
-                    ),
-                  ),
+            // 1. First Group: Expanded History Card with Timeline Events
+            _buildGroupCard(
+              cardBg: cardBg,
+              borderColor: borderColor,
+              animatedColor: animatedColor,
+              isExpanded: true,
+              eventCount: 3,
+            ),
 
-                  // Divider
-                  Divider(height: 1, thickness: 1, color: borderColor),
+            // 2. Second Group: Collapsed History Card
+            _buildGroupCard(
+              cardBg: cardBg,
+              borderColor: borderColor,
+              animatedColor: animatedColor,
+              isExpanded: false,
+              eventCount: 0,
+            ),
 
-                  // 2. Timeline Event Skeletons (3 events)
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
-                    child: Column(
-                      children: List.generate(3, (index) {
-                        return _buildTimelineEventSkeleton(
-                          animatedColor: animatedColor,
-                          borderColor: borderColor,
-                          isLast: index == 2,
-                        );
-                      }),
-                    ),
-                  ),
-                ],
-              ),
+            // 3. Third Group: Collapsed History Card
+            _buildGroupCard(
+              cardBg: cardBg,
+              borderColor: borderColor,
+              animatedColor: animatedColor,
+              isExpanded: false,
+              eventCount: 0,
             ),
           ],
         );
@@ -164,109 +103,253 @@ class _HistorySkeletonLoadingState extends State<HistorySkeletonLoading>
     );
   }
 
-  Widget _buildTimelineEventSkeleton({
-    required Color animatedColor,
+  Widget _buildGroupCard({
+    required Color cardBg,
     required Color borderColor,
-    required bool isLast,
+    required Color animatedColor,
+    required bool isExpanded,
+    required int eventCount,
   }) {
-    return IntrinsicHeight(
-      child: Row(
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 6.0),
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: borderColor, width: 1.2),
+      ),
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Timeline indicator (Dot + Line)
-          SizedBox(
-            width: 24,
-            child: Column(
+          // Group Accordion Header Skeleton matching current BookingHistoryPage
+          Padding(
+            padding: const EdgeInsets.all(14.0),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Circular Clock / History Icon placeholder (40x40 circle)
                 _buildBox(
                   color: animatedColor,
-                  width: 12,
-                  height: 12,
+                  width: 40,
+                  height: 40,
                   shape: BoxShape.circle,
                 ),
-                if (!isLast)
-                  Expanded(
-                    child: Container(
-                      width: 2,
-                      color: borderColor,
-                      margin: const EdgeInsets.symmetric(vertical: 4),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
+                const SizedBox(width: 12),
 
-          // Event Card Content
-          Expanded(
-            child: Padding(
-              padding: EdgeInsets.only(bottom: isLast ? 0 : 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Action Title + Badge
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                // Title + Subtitle
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildBox(
-                        color: animatedColor,
-                        width: 120,
-                        height: 15,
-                        borderRadius: 4,
+                      // Top Row: Client Name + Date
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          _buildBox(
+                            color: animatedColor,
+                            width: 130,
+                            height: 16,
+                            borderRadius: 4,
+                          ),
+                          _buildBox(
+                            color: animatedColor,
+                            width: 55,
+                            height: 12,
+                            borderRadius: 4,
+                          ),
+                        ],
                       ),
-                      _buildBox(
-                        color: animatedColor,
-                        width: 60,
-                        height: 20,
-                        borderRadius: 10,
+                      const SizedBox(height: 6),
+
+                      // Subtitle Row: Status Pill + #ID + · + Updates count
+                      Row(
+                        children: [
+                          _buildBox(
+                            color: animatedColor,
+                            width: 56,
+                            height: 18,
+                            borderRadius: 12,
+                          ),
+                          const SizedBox(width: 8),
+                          _buildBox(
+                            color: animatedColor,
+                            width: 40,
+                            height: 12,
+                            borderRadius: 4,
+                          ),
+                          const SizedBox(width: 4),
+                          _buildBox(
+                            color: animatedColor,
+                            width: 4,
+                            height: 4,
+                            shape: BoxShape.circle,
+                          ),
+                          const SizedBox(width: 4),
+                          _buildBox(
+                            color: animatedColor,
+                            width: 52,
+                            height: 12,
+                            borderRadius: 4,
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                  const SizedBox(height: 6),
+                ),
+                const SizedBox(width: 8),
 
-                  // Date & Actor Subtitle
-                  _buildBox(
+                // Accordion Chevron Arrow placeholder
+                _buildBox(
+                  color: animatedColor,
+                  width: 18,
+                  height: 18,
+                  borderRadius: 4,
+                ),
+              ],
+            ),
+          ),
+
+          // Expanded Timeline Area
+          if (isExpanded) ...[
+            Divider(height: 1, thickness: 1, color: borderColor),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+              child: Column(
+                children: List.generate(eventCount, (index) {
+                  return _buildTimelineEventSkeleton(
+                    animatedColor: animatedColor,
+                    borderColor: borderColor,
+                    isFirst: index == 0,
+                    isLast: index == eventCount - 1,
+                  );
+                }),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTimelineEventSkeleton({
+    required Color animatedColor,
+    required Color borderColor,
+    required bool isFirst,
+    required bool isLast,
+  }) {
+    return Stack(
+      children: [
+        // Vertical connecting line running behind the dot node
+        Positioned(
+          top: isFirst ? 14 : 0,
+          bottom: isLast ? null : 0,
+          height: isLast ? 14 : null,
+          left: 11, // Centered inside the 24px wide node column: (24 - 2) / 2
+          width: 2,
+          child: Container(color: borderColor),
+        ),
+
+        // Main row containing Dot Node and Event Content
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Milestone Dot Node (rounded square 14x14)
+            SizedBox(
+              width: 24,
+              child: Center(
+                child: Container(
+                  margin: const EdgeInsets.only(top: 6),
+                  width: 14,
+                  height: 14,
+                  decoration: BoxDecoration(
                     color: animatedColor,
-                    width: 140,
-                    height: 11,
-                    borderRadius: 4,
+                    borderRadius: BorderRadius.circular(4),
                   ),
-                  const SizedBox(height: 10),
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
 
-                  // Diff box placeholder
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: borderColor.withValues(alpha: 0.35),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: borderColor, width: 1),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+            // Event Content
+            Expanded(
+              child: Padding(
+                padding: EdgeInsets.only(bottom: isLast ? 0 : 20.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Top Row: Status Badge Pill + Time
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         _buildBox(
                           color: animatedColor,
-                          width: 55,
-                          height: 9,
-                          borderRadius: 3,
+                          width: 68,
+                          height: 20,
+                          borderRadius: 10,
                         ),
-                        const SizedBox(height: 6),
                         _buildBox(
                           color: animatedColor,
-                          width: 150,
-                          height: 13,
+                          width: 48,
+                          height: 12,
                           borderRadius: 4,
                         ),
                       ],
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 6),
+
+                    // Action Title (e.g. "Status Updated")
+                    _buildBox(
+                      color: animatedColor,
+                      width: 110,
+                      height: 15,
+                      borderRadius: 4,
+                    ),
+                    const SizedBox(height: 4),
+
+                    // Subtitle: Date + by Actor
+                    _buildBox(
+                      color: animatedColor,
+                      width: 150,
+                      height: 11,
+                      borderRadius: 4,
+                    ),
+                    const SizedBox(height: 10),
+
+                    // Diff Box placeholder
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: borderColor.withValues(alpha: 0.35),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: borderColor, width: 1),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildBox(
+                            color: animatedColor,
+                            width: 60,
+                            height: 10,
+                            borderRadius: 3,
+                          ),
+                          const SizedBox(height: 6),
+                          _buildBox(
+                            color: animatedColor,
+                            width: 160,
+                            height: 14,
+                            borderRadius: 4,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
-      ),
+          ],
+        ),
+      ],
     );
   }
 }

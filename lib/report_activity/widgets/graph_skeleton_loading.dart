@@ -1,14 +1,14 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
-/// Shimmering skeleton placeholder for the weekly activity graph and status breakdown card.
+/// Shimmering skeleton placeholder for the status activity graph card.
 class GraphSkeletonLoading extends StatefulWidget {
   final double chartPlotHeight;
   final int dayCount;
 
   const GraphSkeletonLoading({
     super.key,
-    this.chartPlotHeight = 260.0,
+    this.chartPlotHeight = 190.0,
     this.dayCount = 7,
   });
 
@@ -21,15 +21,15 @@ class _GraphSkeletonLoadingState extends State<GraphSkeletonLoading>
   late final AnimationController _controller;
   late final Animation<double> _animation;
 
-  // Realistic simulated bar heights for the 7 days
-  static const List<List<double>> _simulatedDayHeights = [
-    [130, 85, 55, 20],
-    [165, 110, 80, 25],
-    [100, 145, 115, 15],
-    [185, 130, 95, 35],
-    [210, 160, 135, 30],
-    [85, 60, 45, 15],
-    [40, 30, 20, 10],
+  // Realistic simulated single bar heights matching the single-status activity trend
+  static const List<double> _simulatedBarHeights = [
+    120,
+    65,
+    145,
+    85,
+    160,
+    50,
+    25,
   ];
 
   @override
@@ -62,7 +62,7 @@ class _GraphSkeletonLoadingState extends State<GraphSkeletonLoading>
         : const Color(0xFFF1F5F9);
 
     const double yLabelWidth = 26.0;
-    final bool isScrollable = widget.dayCount > 3;
+    final bool isScrollable = widget.dayCount > 5;
 
     return AnimatedBuilder(
       animation: _animation,
@@ -74,7 +74,7 @@ class _GraphSkeletonLoadingState extends State<GraphSkeletonLoading>
             final availableWidth =
                 math.max(0.0, constraints.maxWidth - yLabelWidth - 8.0);
             final double itemWidth = isScrollable
-                ? math.max(85.0, availableWidth / 3.2)
+                ? math.max(54.0, availableWidth / 5.2)
                 : (widget.dayCount > 0
                     ? (availableWidth / widget.dayCount)
                     : availableWidth);
@@ -93,7 +93,7 @@ class _GraphSkeletonLoadingState extends State<GraphSkeletonLoading>
                       Positioned.fill(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: List.generate(6, (_) {
+                          children: List.generate(5, (_) {
                             return Container(
                               height: 1.0,
                               color: gridLineColor,
@@ -102,20 +102,46 @@ class _GraphSkeletonLoadingState extends State<GraphSkeletonLoading>
                         ),
                       ),
 
-                      // Bars
+                      // Single vertical bars matching StatusActivityGraphCard
                       Positioned.fill(
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: List.generate(widget.dayCount, (index) {
-                            final heights = _simulatedDayHeights[
-                                index % _simulatedDayHeights.length];
-                            final barWidget = Padding(
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 2.0),
-                              child: _SkeletonDayBars(
-                                heights: heights,
-                                animatedColor: animatedColor,
-                              ),
+                            final rawHeight = _simulatedBarHeights[
+                                index % _simulatedBarHeights.length];
+                            final barHeight = math.min(
+                              rawHeight,
+                              widget.chartPlotHeight - 26,
+                            );
+                            final double barWidth = math.max(
+                              12.0,
+                              math.min(26.0, itemWidth * 0.45),
+                            );
+
+                            final barWidget = Column(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                // Top value label placeholder
+                                Container(
+                                  width: 14,
+                                  height: 9,
+                                  margin: const EdgeInsets.only(bottom: 4.0),
+                                  decoration: BoxDecoration(
+                                    color: animatedColor,
+                                    borderRadius: BorderRadius.circular(3),
+                                  ),
+                                ),
+                                Container(
+                                  width: barWidth,
+                                  height: barHeight,
+                                  decoration: BoxDecoration(
+                                    color: animatedColor,
+                                    borderRadius: const BorderRadius.vertical(
+                                      top: Radius.circular(5.0),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             );
 
                             return isScrollable
@@ -127,7 +153,7 @@ class _GraphSkeletonLoadingState extends State<GraphSkeletonLoading>
                     ],
                   ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 10),
                 SizedBox(
                   width: totalContentWidth,
                   child: Row(
@@ -135,10 +161,10 @@ class _GraphSkeletonLoadingState extends State<GraphSkeletonLoading>
                       final labelWidget = Center(
                         child: Container(
                           width: 26,
-                          height: 12,
+                          height: 11,
                           decoration: BoxDecoration(
                             color: animatedColor,
-                            borderRadius: BorderRadius.circular(4),
+                            borderRadius: BorderRadius.circular(3),
                           ),
                         ),
                       );
@@ -165,18 +191,18 @@ class _GraphSkeletonLoadingState extends State<GraphSkeletonLoading>
                           width: yLabelWidth,
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: List.generate(6, (_) {
+                            children: List.generate(5, (_) {
                               return SizedBox(
                                 height: 1.0,
                                 child: OverflowBox(
                                   maxHeight: 14,
                                   alignment: Alignment.centerRight,
                                   child: Container(
-                                    width: 24,
+                                    width: 20,
                                     height: 10,
                                     decoration: BoxDecoration(
                                       color: animatedColor,
-                                      borderRadius: BorderRadius.circular(4),
+                                      borderRadius: BorderRadius.circular(3),
                                     ),
                                   ),
                                 ),
@@ -184,8 +210,8 @@ class _GraphSkeletonLoadingState extends State<GraphSkeletonLoading>
                             }),
                           ),
                         ),
-                        const SizedBox(height: 12),
-                        const SizedBox(height: 18),
+                        const SizedBox(height: 10),
+                        const SizedBox(height: 14),
                       ],
                     ),
                     const SizedBox(width: 8),
@@ -203,7 +229,9 @@ class _GraphSkeletonLoadingState extends State<GraphSkeletonLoading>
                   ],
                 ),
                 const SizedBox(height: 18),
-                _buildDetailsSkeleton(animatedColor, isDark),
+
+                // Selected Details Card matching StatusActivityGraphCard
+                _buildSelectedDetailsSkeleton(animatedColor, isDark),
               ],
             );
           },
@@ -212,41 +240,40 @@ class _GraphSkeletonLoadingState extends State<GraphSkeletonLoading>
     );
   }
 
-  Widget _buildDetailsSkeleton(Color animatedColor, bool isDark) {
-    final cardBg = isDark ? const Color(0xFF14171D) : const Color(0xFFF8FAFC);
-    final borderColor = isDark
-        ? const Color(0xFF282C35)
-        : const Color(0xFFE2E8F0);
+  Widget _buildSelectedDetailsSkeleton(Color animatedColor, bool isDark) {
+    final rowBg = isDark ? const Color(0xFF1E222A) : Colors.white;
+    final rowBorder =
+        isDark ? const Color(0xFF282C35) : const Color(0xFFE2E8F0);
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
-        color: cardBg,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: borderColor, width: 1.0),
+        color: rowBg,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: rowBorder, width: 1.0),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header: Calendar placeholder + Date pill + Total badge placeholder
+          // Header: Calendar placeholder + Date text + Count
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Row(
                 children: [
                   Container(
-                    width: 18,
-                    height: 18,
+                    width: 15,
+                    height: 15,
                     decoration: BoxDecoration(
                       color: animatedColor,
-                      borderRadius: BorderRadius.circular(5),
+                      borderRadius: BorderRadius.circular(4),
                     ),
                   ),
                   const SizedBox(width: 8),
                   Container(
-                    width: 125,
-                    height: 15,
+                    width: 120,
+                    height: 14,
                     decoration: BoxDecoration(
                       color: animatedColor,
                       borderRadius: BorderRadius.circular(4),
@@ -255,113 +282,52 @@ class _GraphSkeletonLoadingState extends State<GraphSkeletonLoading>
                 ],
               ),
               Container(
-                width: 60,
-                height: 22,
+                width: 28,
+                height: 17,
                 decoration: BoxDecoration(
                   color: animatedColor,
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(4),
                 ),
               ),
             ],
           ),
+          const SizedBox(height: 10),
 
-          const SizedBox(height: 14),
-
-          // 4 Stacked Status Cards Skeleton (New, Scheduled, Completed, Cancelled)
-          ...List.generate(4, (index) {
-            return Padding(
-              padding: EdgeInsets.only(bottom: index == 3 ? 0 : 10),
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
-                decoration: BoxDecoration(
-                  color: animatedColor.withValues(alpha: 0.35),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          width: 9,
-                          height: 9,
-                          decoration: BoxDecoration(
-                            color: animatedColor,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Container(
-                          width: 70,
-                          height: 14,
-                          decoration: BoxDecoration(
-                            color: animatedColor,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                        ),
-                      ],
-                    ),
-                    Container(
-                      width: 20,
-                      height: 16,
-                      decoration: BoxDecoration(
-                        color: animatedColor,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          }),
-        ],
-      ),
-    );
-  }
-}
-
-/// Helper widget rendering 4 vertical skeleton bars for a single day group.
-class _SkeletonDayBars extends StatelessWidget {
-  final List<double> heights;
-  final Color animatedColor;
-
-  const _SkeletonDayBars({required this.heights, required this.animatedColor});
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final availableWidth = constraints.maxWidth;
-        final double barWidth = math.max(
-          3.5,
-          math.min(14.0, (availableWidth - 8) / 4),
-        );
-        const double barSpacing = 2.0;
-
-        return Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: heights.map((h) {
-            return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: barSpacing / 2),
-              child: Container(
-                width: barWidth,
-                height: h,
+          // Linear Progress Bar track placeholder
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                width: 9,
+                height: 9,
                 decoration: BoxDecoration(
                   color: animatedColor,
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(4.0),
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Container(
+                  height: 6,
+                  decoration: BoxDecoration(
+                    color: animatedColor,
+                    borderRadius: BorderRadius.circular(4),
                   ),
                 ),
               ),
-            );
-          }).toList(),
-        );
-      },
+              const SizedBox(width: 10),
+              Container(
+                width: 36,
+                height: 12,
+                decoration: BoxDecoration(
+                  color: animatedColor,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }

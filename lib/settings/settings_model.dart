@@ -10,6 +10,7 @@ class UserProfileData {
   final String initials;
   final String phone;
   final String? email;
+  final String? role;
   final String? stateName;
   final String? districtName;
   final bool isOnline;
@@ -19,6 +20,7 @@ class UserProfileData {
     required this.initials,
     required this.phone,
     this.email,
+    this.role,
     this.stateName,
     this.districtName,
     this.isOnline = true,
@@ -76,6 +78,7 @@ class UserProfileData {
       initials: computeInitials(user.name.isNotEmpty ? user.name : user.username),
       phone: user.phone ?? '',
       email: user.email,
+      role: user.role.isNotEmpty ? user.role : user.userType,
       stateName: user.stateName,
       districtName: user.districtName,
       isOnline: user.isActive == 1,
@@ -99,6 +102,7 @@ class UserProfileData {
     String? initials,
     String? phone,
     String? email,
+    String? role,
     String? stateName,
     String? districtName,
     bool? isOnline,
@@ -108,6 +112,7 @@ class UserProfileData {
       initials: initials ?? this.initials,
       phone: phone ?? this.phone,
       email: email ?? this.email,
+      role: role ?? this.role,
       stateName: stateName ?? this.stateName,
       districtName: districtName ?? this.districtName,
       isOnline: isOnline ?? this.isOnline,
