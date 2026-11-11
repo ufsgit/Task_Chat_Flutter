@@ -127,8 +127,10 @@ class TodayViewModel extends ChangeNotifier {
   bool get isDisposed => _isDisposed;
 
   static final List<VoidCallback> _onResetCallbacks = [];
-  static void registerOnReset(VoidCallback callback) => _onResetCallbacks.add(callback);
-  static void unregisterOnReset(VoidCallback callback) => _onResetCallbacks.remove(callback);
+  static void registerOnReset(VoidCallback callback) =>
+      _onResetCallbacks.add(callback);
+  static void unregisterOnReset(VoidCallback callback) =>
+      _onResetCallbacks.remove(callback);
 
   /// Resets the current session, clearing all in-memory chat items and unauthenticated state.
   static void resetSession() {
@@ -179,15 +181,35 @@ class TodayViewModel extends ChangeNotifier {
   bool _isLoadingMore = false;
   bool _hasMore = true;
   int _currentPage = 1;
+  int? _totalCount;
+  int? _totalPages;
   String? _errorMessage;
   List<BookingModel> _bookings = [];
   final List<Map<String, dynamic>> _chatItems = [];
 
   List<Map<String, dynamic>> get chatItems => _chatItems;
   List<Map<String, dynamic>> get todayChatItems => _chatItems;
+
+  /// Returns chat items to be displayed in the Today view.
+  /// If a specific status filter is active, ensures only items matching that status are displayed.
+  List<Map<String, dynamic>> get displayChatItems {
+    if (_selectedStatusFilter != 'All') {
+      final target = _selectedStatusFilter.toLowerCase().trim();
+      return _chatItems.where((item) {
+        final tag = (item['tagText'] as String?)?.toLowerCase().trim() ?? '';
+        final booking = item['booking'] as BookingModel?;
+        final bookingStatus = booking?.status.toLowerCase().trim() ?? '';
+        return tag == target || bookingStatus == target;
+      }).toList();
+    }
+    return _chatItems;
+  }
+
   bool get isLoadingMore => _isLoadingMore;
   bool get hasMore => _hasMore;
   int get currentPage => _currentPage;
+  int? get totalCount => _totalCount;
+  int? get totalPages => _totalPages;
 
   /// Clears stored chat items and bookings for this scoped ViewModel session.
   void clear() {
@@ -195,6 +217,8 @@ class TodayViewModel extends ChangeNotifier {
     _chatItems.clear();
     _errorMessage = null;
     _currentPage = 1;
+    _totalCount = null;
+    _totalPages = null;
     _hasMore = true;
     _isLoadingMore = false;
     if (!_isDisposed) {
@@ -211,6 +235,13 @@ class TodayViewModel extends ChangeNotifier {
   String? _filterRole;
   String? _page;
   String? _limit;
+
+  static const Map<String, int> statusNameToId = {
+    'new': 1,
+    'scheduled': 2,
+    'completed': 3,
+    'cancelled': 4,
+  };
 
   static const Map<String, String> roleNames = {
     '1': 'Company',
@@ -278,16 +309,20 @@ class TodayViewModel extends ChangeNotifier {
   void setStatusFilter(String status) {
     if (_selectedStatusFilter != status) {
       _selectedStatusFilter = status;
+      _currentPage = 1;
+      _hasMore = true;
       notifyListeners();
-      fetchBookings();
+      fetchBookings(force: true);
     }
   }
 
   void setDistrictId(String? districtId) {
     if (_districtId != districtId) {
       _districtId = districtId;
+      _currentPage = 1;
+      _hasMore = true;
       notifyListeners();
-      fetchBookings();
+      fetchBookings(force: true);
     }
   }
 
@@ -295,16 +330,20 @@ class TodayViewModel extends ChangeNotifier {
     if (_dateFrom != from || _dateTo != to) {
       _dateFrom = from;
       _dateTo = to;
+      _currentPage = 1;
+      _hasMore = true;
       notifyListeners();
-      fetchBookings();
+      fetchBookings(force: true);
     }
   }
 
   void setFilterRole(String? role) {
     if (_filterRole != role) {
       _filterRole = role;
+      _currentPage = 1;
+      _hasMore = true;
       notifyListeners();
-      fetchBookings();
+      fetchBookings(force: true);
     }
   }
 
@@ -460,7 +499,17 @@ class TodayViewModel extends ChangeNotifier {
     try {
       final headers = await (tokenStorage ?? TokenStorage()).authHeaders();
 
-      final params = queryParams ?? buildQueryParameters();
+      final params = Map<String, String>.from(
+        queryParams ?? buildQueryParameters(),
+      );
+      if (params.containsKey('status') && !params.containsKey('statusId')) {
+        final id =
+            statusNameToId[params['status']?.toLowerCase()] ??
+            int.tryParse(params['status'] ?? '');
+        if (id != null) {
+          params['statusId'] = id.toString();
+        }
+      }
       final baseUri = Uri.parse(ApiConfig.bookings);
       final uri = params.isNotEmpty
           ? baseUri.replace(queryParameters: params)
@@ -488,12 +537,24 @@ class TodayViewModel extends ChangeNotifier {
           if (decoded is Map<String, dynamic> &&
               decoded['pagination'] is Map<String, dynamic>) {
             final pagination = decoded['pagination'] as Map<String, dynamic>;
-            final totalPages = pagination['totalPages'];
-            if (totalPages is int) {
-              _hasMore = _currentPage < totalPages;
-            } else if (totalPages is String) {
-              final parsed = int.tryParse(totalPages);
-              if (parsed != null) _hasMore = _currentPage < parsed;
+            final totalVal = pagination['total'];
+            _totalCount = totalVal is int
+                ? totalVal
+                : int.tryParse(totalVal?.toString() ?? '');
+            final totalPagesVal = pagination['totalPages'];
+            _totalPages = totalPagesVal is int
+                ? totalPagesVal
+                : int.tryParse(totalPagesVal?.toString() ?? '');
+            final pageVal = pagination['page'];
+            if (pageVal is int) {
+              _currentPage = pageVal;
+            } else if (pageVal is String) {
+              _currentPage = int.tryParse(pageVal) ?? _currentPage;
+            }
+            if (_totalPages != null) {
+              _hasMore = _currentPage < _totalPages!;
+            } else if (_totalCount != null) {
+              _hasMore = _bookings.length < _totalCount!;
             }
           } else {
             final effectiveLimit = int.tryParse(_limit ?? '15') ?? 15;
@@ -522,10 +583,20 @@ class TodayViewModel extends ChangeNotifier {
 
     try {
       final nextPage = _currentPage + 1;
-      final params = buildQueryParameters();
+      final params = Map<String, String>.from(buildQueryParameters());
       params['page'] = nextPage.toString();
       if (!params.containsKey('limit')) {
-        params['limit'] = (_limit != null && _limit!.isNotEmpty) ? _limit! : '15';
+        params['limit'] = (_limit != null && _limit!.isNotEmpty)
+            ? _limit!
+            : '15';
+      }
+      if (params.containsKey('status') && !params.containsKey('statusId')) {
+        final id =
+            statusNameToId[params['status']?.toLowerCase()] ??
+            int.tryParse(params['status'] ?? '');
+        if (id != null) {
+          params['statusId'] = id.toString();
+        }
       }
 
       final headers = await (tokenStorage ?? TokenStorage()).authHeaders();
@@ -549,19 +620,43 @@ class TodayViewModel extends ChangeNotifier {
               .toList();
 
           _currentPage = nextPage;
-          _bookings.addAll(newBookings);
-          _chatItems.addAll(newBookings.map((b) => b.toChatItem()));
+
+          // Deduplicate by ID to prevent duplicate items when appending
+          final existingIds = _bookings.map((b) => b.id).toSet();
+          final uniqueBookings = newBookings
+              .where((b) => !existingIds.contains(b.id))
+              .toList();
+
+          if (uniqueBookings.isEmpty) {
+            _hasMore = false;
+            return;
+          }
+
+          _bookings.addAll(uniqueBookings);
+          _chatItems.addAll(uniqueBookings.map((b) => b.toChatItem()));
           incrementTodayChatItemsVersion();
 
           if (decoded is Map<String, dynamic> &&
               decoded['pagination'] is Map<String, dynamic>) {
             final pagination = decoded['pagination'] as Map<String, dynamic>;
-            final totalPages = pagination['totalPages'];
-            if (totalPages is int) {
-              _hasMore = _currentPage < totalPages;
-            } else if (totalPages is String) {
-              final parsed = int.tryParse(totalPages);
-              if (parsed != null) _hasMore = _currentPage < parsed;
+            final totalVal = pagination['total'];
+            _totalCount = totalVal is int
+                ? totalVal
+                : int.tryParse(totalVal?.toString() ?? '');
+            final totalPagesVal = pagination['totalPages'];
+            _totalPages = totalPagesVal is int
+                ? totalPagesVal
+                : int.tryParse(totalPagesVal?.toString() ?? '');
+            final pageVal = pagination['page'];
+            if (pageVal is int) {
+              _currentPage = pageVal;
+            } else if (pageVal is String) {
+              _currentPage = int.tryParse(pageVal) ?? _currentPage;
+            }
+            if (_totalPages != null) {
+              _hasMore = _currentPage < _totalPages!;
+            } else if (_totalCount != null) {
+              _hasMore = _bookings.length < _totalCount!;
             }
           } else {
             final effectiveLimit = int.tryParse(params['limit'] ?? '15') ?? 15;

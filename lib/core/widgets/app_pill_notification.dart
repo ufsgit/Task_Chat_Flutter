@@ -100,6 +100,12 @@ class AppPillNotification extends StatelessWidget {
 class AppNotification {
   AppNotification._();
 
+  /// Default bottom margin when positioned above the floating bottom navigation bar.
+  /// The floating bottom bar is 68px tall + 14px bottom padding = 82px.
+  /// 104px provides a clean ~22px floating clearance directly above it.
+  static const double kAboveBottomNavMargin = 104.0;
+  static const double kDefaultBottomMargin = 24.0;
+
   /// Shows the pill notification toast at the bottom of the screen.
   static void show(
     BuildContext context,
@@ -108,9 +114,17 @@ class AppNotification {
     Color? iconColor,
     Duration duration = const Duration(milliseconds: 2200),
     VoidCallback? onTap,
+    bool aboveBottomNav = false,
+    double? bottomMargin,
   }) {
     final messenger = ScaffoldMessenger.maybeOf(context);
     if (messenger == null) return;
+
+    final bottomPadding = MediaQuery.maybePaddingOf(context)?.bottom ?? 0.0;
+    final effectiveBottomMargin = bottomMargin ??
+        (aboveBottomNav
+            ? (kAboveBottomNavMargin + bottomPadding)
+            : kDefaultBottomMargin);
 
     messenger.hideCurrentSnackBar();
     messenger.showSnackBar(
@@ -119,7 +133,11 @@ class AppNotification {
         backgroundColor: Colors.transparent,
         elevation: 0,
         padding: EdgeInsets.zero,
-        margin: const EdgeInsets.only(bottom: 24, left: 16, right: 16),
+        margin: EdgeInsets.only(
+          bottom: effectiveBottomMargin,
+          left: 16,
+          right: 16,
+        ),
         duration: duration,
         content: AppPillNotification(
           message: message,
@@ -142,6 +160,7 @@ class AppNotification {
     required String status,
     required String customerName,
     String? assignment,
+    bool aboveBottomNav = true,
   }) {
     final assignmentSuffix =
         (assignment != null && assignment.trim().isNotEmpty)
@@ -152,6 +171,26 @@ class AppNotification {
       'Status updated to $status for $customerName$assignmentSuffix',
       icon: Icons.check_circle_rounded,
       iconColor: AppColors.primaryGreen,
+      aboveBottomNav: aboveBottomNav,
+    );
+  }
+
+  /// Convenience helper for contact deleted notifications matching status change design.
+  static void showContactDeleted(
+    BuildContext context, {
+    String message = 'Contact deleted successfully',
+    String? customerName,
+    bool aboveBottomNav = true,
+  }) {
+    final displayMessage = customerName != null && customerName.isNotEmpty
+        ? 'Contact "$customerName" deleted successfully'
+        : message;
+    show(
+      context,
+      displayMessage,
+      icon: Icons.check_circle_rounded,
+      iconColor: AppColors.primaryGreen,
+      aboveBottomNav: aboveBottomNav,
     );
   }
 
@@ -160,6 +199,7 @@ class AppNotification {
     BuildContext context,
     String message, {
     Duration duration = const Duration(seconds: 3),
+    bool aboveBottomNav = false,
   }) {
     show(
       context,
@@ -167,6 +207,7 @@ class AppNotification {
       icon: Icons.error_outline_rounded,
       iconColor: const Color(0xFFEF4444),
       duration: duration,
+      aboveBottomNav: aboveBottomNav,
     );
   }
 }

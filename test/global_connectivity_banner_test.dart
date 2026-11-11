@@ -87,9 +87,18 @@ void main() {
     await tester.tap(find.text('Close'));
     await tester.pumpAndSettle();
 
-    // Verify popup is dismissed
-    expect(find.text('No Internet Connection'), findsNothing);
+    // Verify popup is dismissed and red-text top banner is displayed
+    expect(find.text('Close'), findsNothing);
+    expect(find.byKey(const Key('no_internet_top_banner')), findsOneWidget);
     expect(find.text('Main Screen Content'), findsOneWidget);
+
+    final Text bannerText = tester.widget(
+      find.descendant(
+        of: find.byKey(const Key('no_internet_top_banner')),
+        matching: find.text('No Internet Connection'),
+      ),
+    );
+    expect(bannerText.style?.color, const Color(0xFFDC2626));
   });
 
   testWidgets('GlobalConnectivityBanner renders cleanly inside MaterialApp.builder without overlay errors', (tester) async {
@@ -116,7 +125,22 @@ void main() {
     await tester.tap(find.byIcon(Icons.close_rounded));
     await tester.pumpAndSettle();
 
-    expect(find.text('No Internet Connection'), findsNothing);
+    // Verify popup dismissed and top banner shown
+    expect(find.byIcon(Icons.close_rounded), findsNothing);
+    expect(find.byKey(const Key('no_internet_top_banner')), findsOneWidget);
     expect(find.text('App Screen'), findsOneWidget);
+
+    // Now simulate internet restoration
+    ConnectivityService.instance.reportSuccess();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    // Offline banner replaced by "Back Online"
+    expect(find.byKey(const Key('no_internet_top_banner')), findsNothing);
+    expect(find.text('Back Online'), findsOneWidget);
+
+    // After 2.5s timer expires, "Back Online" disappears
+    await tester.pump(const Duration(seconds: 3));
+    expect(find.text('Back Online'), findsNothing);
   });
 }

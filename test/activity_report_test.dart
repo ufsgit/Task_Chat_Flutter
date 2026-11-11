@@ -1354,5 +1354,18 @@ void main() {
       expect(capturedUri!.queryParameters.containsKey('dateFrom'), isFalse);
       expect(capturedUri!.queryParameters.containsKey('dateTo'), isFalse);
     });
+
+    test('ReportViewModel defaultDateFrom and defaultDateTo dynamically default to current month', () {
+      final now = DateTime.now();
+      final expectedFrom = ReportViewModel.formatIsoDate(DateTime(now.year, now.month, 1));
+      final expectedTo = ReportViewModel.formatIsoDate(DateTime(now.year, now.month + 1, 0));
+
+      expect(ReportViewModel.defaultDateFrom, equals(expectedFrom));
+      expect(ReportViewModel.defaultDateTo, equals(expectedTo));
+
+      final vm = ReportViewModel();
+      expect(vm.dateFrom, equals(expectedFrom));
+      expect(vm.dateTo, equals(expectedTo));
+    });
   });
 }

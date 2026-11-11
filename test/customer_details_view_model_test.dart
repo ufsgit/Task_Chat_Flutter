@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:task_chat/core/widgets/app_pill_notification.dart';
 import 'package:task_chat/customer_details/customer_details_model.dart';
 import 'package:task_chat/customer_details/customer_details_view.dart';
 import 'package:task_chat/customer_details/customer_details_view_model.dart';
@@ -101,12 +102,27 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
-          home: CustomerDetailsView(
-            customer: initialCustomer,
-            viewModel: vm,
+          home: Scaffold(
+            body: Builder(
+              builder: (ctx) => ElevatedButton(
+                onPressed: () => Navigator.of(ctx).push(
+                  MaterialPageRoute(
+                    builder: (_) => CustomerDetailsView(
+                      customer: initialCustomer,
+                      viewModel: vm,
+                    ),
+                  ),
+                ),
+                child: const Text('Open Details'),
+              ),
+            ),
           ),
         ),
       );
+
+      // Open CustomerDetailsView
+      await tester.tap(find.text('Open Details'));
+      await tester.pumpAndSettle();
 
       // Open more menu
       await tester.tap(find.byIcon(Icons.more_vert));
@@ -123,9 +139,51 @@ void main() {
 
       // Tap Delete button in dialog
       await tester.tap(find.widgetWithText(TextButton, 'Delete'));
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump(const Duration(milliseconds: 400));
 
       expect(deleteCalls, 1);
+      expect(find.byType(AppPillNotification), findsWidgets);
+      expect(find.text('Contact deleted successfully'), findsWidgets);
+      expect(find.byIcon(Icons.check_circle_rounded), findsWidgets);
+
+      final snackBarFinder = find.byType(SnackBar);
+      expect(snackBarFinder, findsWidgets);
+      final SnackBar snackBar = tester.widget(snackBarFinder.first);
+      expect(snackBar.margin, isNotNull);
+      final margin = snackBar.margin as EdgeInsets;
+      expect(margin.bottom, greaterThanOrEqualTo(104.0));
+    });
+
+    testWidgets('AppNotification.showContactDeleted sets aboveBottomNav margin', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => ElevatedButton(
+                onPressed: () {
+                  AppNotification.showContactDeleted(context);
+                },
+                child: const Text('Delete Contact'),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Delete Contact'));
+      await tester.pump();
+
+      expect(find.byType(AppPillNotification), findsOneWidget);
+      expect(find.text('Contact deleted successfully'), findsOneWidget);
+
+      final snackBarFinder = find.byType(SnackBar);
+      expect(snackBarFinder, findsWidgets);
+      final SnackBar snackBar = tester.widget(snackBarFinder.first);
+      expect(snackBar.margin, isNotNull);
+      final margin = snackBar.margin as EdgeInsets;
+      expect(margin.bottom, greaterThanOrEqualTo(104.0));
     });
 
     test('CustomerDetailsViewModel updateCustomer sends PUT request to /api/bookings/:id', () async {

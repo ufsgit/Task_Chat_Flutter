@@ -469,6 +469,56 @@ void main() {
       vm.setSearchQuery('Customer', immediate: true);
       expect(vm.currentPage, 1);
     });
+
+    test('TodayViewModel handles backend pagination with total=718 and totalPages=48', () async {
+      final List<Uri> requestedUris = [];
+      final page1Items = List.generate(
+        15,
+        (i) => '{"id": $i, "name": "Customer $i", "status": "New", "mobile": "+91 90000000$i"}',
+      ).join(',');
+      final page2Items = List.generate(
+        15,
+        (i) => '{"id": ${i + 15}, "name": "Customer ${i + 15}", "status": "New", "mobile": "+91 90000000${i + 15}"}',
+      ).join(',');
+
+      final mockClient = MockClient((request) async {
+        requestedUris.add(request.url);
+        final requestedPage = request.url.queryParameters['page'] ?? '1';
+        final items = requestedPage == '2' ? page2Items : page1Items;
+        final responseJson = '''
+        {
+          "success": true,
+          "data": [$items],
+          "pagination": {
+            "total": 718,
+            "page": ${int.parse(requestedPage)},
+            "limit": 15,
+            "totalPages": 48
+          }
+        }
+        ''';
+        return http.Response(responseJson, 200,
+            headers: {'content-type': 'application/json'});
+      });
+
+      final vm = TodayViewModel(client: mockClient);
+      await vm.fetchBookings();
+
+      expect(vm.totalCount, 718);
+      expect(vm.totalPages, 48);
+      expect(vm.currentPage, 1);
+      expect(vm.hasMore, isTrue);
+      expect(vm.chatItems.length, 15);
+
+      // Scroll to trigger next page
+      await vm.loadNextPage();
+
+      expect(requestedUris.last.queryParameters['page'], '2');
+      expect(requestedUris.last.queryParameters['limit'], '15');
+      expect(vm.currentPage, 2);
+      expect(vm.hasMore, isTrue);
+      expect(vm.chatItems.length, 30);
+    });
   });
 }
 

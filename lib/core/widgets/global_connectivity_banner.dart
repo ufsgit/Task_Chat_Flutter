@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
 import '../connectivity_service.dart';
 import '../theme.dart';
+import 'new_lead_in_app_banner.dart';
 
 /// Global wrapper widget that displays a Lottie-animated popup
 /// whenever the internet connection is lost, with an option to close or retry.
@@ -81,16 +82,91 @@ class _GlobalConnectivityBannerState extends State<GlobalConnectivityBanner> {
       valueListenable: ConnectivityService.instance.isConnected,
       builder: (context, isOnline, _) {
         final isRestored = isOnline && _showRestored;
-        final showOffline = !isOnline && !_isDismissed;
+        final showOfflinePopup = !isOnline && !_isDismissed;
+        final showOfflineTopBanner = !isOnline && _isDismissed;
 
         return Stack(
           children: [
             widget.child,
             if (isRestored) _buildRestoredBanner(context, isDark),
-            if (showOffline) _buildNoInternetPopup(context, isDark),
+            if (showOfflineTopBanner)
+              _buildNoInternetTopBanner(context, isDark),
+            if (showOfflinePopup)
+              Positioned.fill(
+                child: Overlay(
+                  initialEntries: [
+                    OverlayEntry(
+                      builder: (context) =>
+                          _buildNoInternetPopup(context, isDark),
+                    ),
+                  ],
+                ),
+              ),
+            const NewLeadBannerOverlay(),
           ],
         );
       },
+    );
+  }
+
+  Widget _buildNoInternetTopBanner(BuildContext context, bool isDark) {
+    final redColor =
+        isDark ? const Color(0xFFEF4444) : const Color(0xFFDC2626);
+    final cardBg = isDark ? const Color(0xFF1E2024) : Colors.white;
+    final borderColor =
+        isDark ? const Color(0xFF2C3038) : const Color(0xFFE2E8F0);
+
+    return Positioned(
+      key: const Key('no_internet_top_banner'),
+      top: 10,
+      left: 12,
+      right: 12,
+      child: SafeArea(
+        bottom: false,
+        child: Material(
+          color: Colors.transparent,
+          child: GestureDetector(
+            onTap: () {
+              ConnectivityService.instance.checkConnection();
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              decoration: BoxDecoration(
+                color: cardBg,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: borderColor, width: 1),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.15),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.wifi_off_rounded,
+                    size: 16,
+                    color: redColor,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'No Internet Connection',
+                    style: TextStyle(
+                      color: redColor,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.2,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -151,47 +227,70 @@ class _GlobalConnectivityBannerState extends State<GlobalConnectivityBanner> {
         ? AppDarkColors.primaryGreen
         : AppColors.primaryGreen;
 
-    return Positioned.fill(
-      child: Material(
-        color: Colors.black.withValues(alpha: 0.55),
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 360),
-            child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 20),
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
-              decoration: BoxDecoration(
-                color: cardBg,
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: borderColor, width: 1),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.25),
-                    blurRadius: 24,
-                    offset: const Offset(0, 10),
-                  ),
-                ],
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Top Row: Offline Tag + Close Button
-
-                  // Center: Lottie Animation (No Mobile Internet)
-                  SizedBox(
-                    height: 170,
-                    width: double.infinity,
-                    child: Lottie.asset(
-                      'assets/animations/No Mobile Internet.json',
-                      fit: BoxFit.contain,
-                      errorBuilder: (context, error, stackTrace) => const Icon(
-                        Icons.wifi_off_rounded,
-                        size: 80,
-                        color: Color(0xFFEF4444),
+    return Material(
+      color: Colors.black.withValues(alpha: 0.55),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 360),
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 20),
+            padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
+            decoration: BoxDecoration(
+              color: cardBg,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: borderColor, width: 1),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.25),
+                  blurRadius: 24,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Top Row: Close Button
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    InkResponse(
+                      onTap: _dismiss,
+                      radius: 20,
+                      child: Padding(
+                        padding: const EdgeInsets.all(4.0),
+                        child: Icon(
+                          Icons.close_rounded,
+                          size: 20,
+                          color: subtextColor,
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 12),
+                  ],
+                ),
+
+                // Center: Lottie Animation (No Mobile Internet) or Icon in tests
+                SizedBox(
+                  height: 170,
+                  width: double.infinity,
+                  child: ConnectivityService.isTestEnvironment
+                      ? const Icon(
+                          Icons.wifi_off_rounded,
+                          size: 80,
+                          color: Color(0xFFEF4444),
+                        )
+                      : Lottie.asset(
+                          'assets/animations/No Mobile Internet.json',
+                          fit: BoxFit.contain,
+                          errorBuilder: (context, error, stackTrace) =>
+                              const Icon(
+                            Icons.wifi_off_rounded,
+                            size: 80,
+                            color: Color(0xFFEF4444),
+                          ),
+                        ),
+                ),
+                const SizedBox(height: 12),
 
                   // Title & Subtitle
                   Text(
@@ -275,7 +374,6 @@ class _GlobalConnectivityBannerState extends State<GlobalConnectivityBanner> {
             ),
           ),
         ),
-      ),
-    );
+      );
   }
 }

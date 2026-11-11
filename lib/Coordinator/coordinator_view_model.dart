@@ -11,6 +11,8 @@ import 'coordinator_model.dart';
 
 /// ViewModel managing state, search, API data fetching, and dynamic filtering for Coordinator.
 class CoordinatorViewModel extends ChangeNotifier {
+  static CoordinatorViewModel? currentSession;
+
   final http.Client _client;
   final bool _isInternalClient;
   final TokenStorage? tokenStorage;
@@ -22,7 +24,7 @@ class CoordinatorViewModel extends ChangeNotifier {
   bool _isLoadingMore = false;
   bool _hasMore = true;
   int _currentPage = 1;
-  String _limit = '15';
+  final String _limit = '15';
   String? _errorMessage;
   List<BookingModel> _bookings = [];
   List<Map<String, dynamic>> _items = [];
@@ -60,7 +62,12 @@ class CoordinatorViewModel extends ChangeNotifier {
         _internalController = searchController == null,
         _selectedFilterIndex = initialFilterIndex,
         _selectedStatusFilter = initialStatusFilter,
-        _selectedManagerFilter = initialManagerFilter;
+        _selectedManagerFilter =
+            initialManagerFilter.toLowerCase().trim() == 'rajesh menon'
+                ? 'All'
+                : initialManagerFilter {
+    currentSession = this;
+  }
 
   // Getters
   bool get isLoading => _isLoading;
@@ -78,7 +85,8 @@ class CoordinatorViewModel extends ChangeNotifier {
   List<String> get branchManagerOptions {
     final dynamicManagers = _items
         .map((e) => e['branchManager']?.toString() ?? '')
-        .where((m) => m.isNotEmpty)
+        .where((m) =>
+            m.trim().isNotEmpty && m.toLowerCase().trim() != 'rajesh menon')
         .toSet()
         .toList();
     if (dynamicManagers.isNotEmpty) {
@@ -341,15 +349,18 @@ class CoordinatorViewModel extends ChangeNotifier {
   }
 
   void setManagerFilter(String manager) {
-    if (_selectedManagerFilter != manager) {
-      _selectedManagerFilter = manager;
+    final sanitized =
+        manager.toLowerCase().trim() == 'rajesh menon' ? 'All' : manager;
+    if (_selectedManagerFilter != sanitized) {
+      _selectedManagerFilter = sanitized;
       notifyListeners();
     }
   }
 
   void applyFilters(String status, String manager) {
     _selectedStatusFilter = status;
-    _selectedManagerFilter = manager;
+    _selectedManagerFilter =
+        manager.toLowerCase().trim() == 'rajesh menon' ? 'All' : manager;
     notifyListeners();
   }
 
@@ -383,6 +394,9 @@ class CoordinatorViewModel extends ChangeNotifier {
 
   @override
   void dispose() {
+    if (identical(currentSession, this)) {
+      currentSession = null;
+    }
     _searchDebounceTimer?.cancel();
     if (_internalController) {
       searchController.dispose();

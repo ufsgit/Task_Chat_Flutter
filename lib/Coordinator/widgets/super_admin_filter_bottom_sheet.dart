@@ -35,17 +35,37 @@ class _CoordinatorFilterBottomSheetState
   late String _tempStatus;
   late String _tempBranchManager;
 
+  List<String> get _availableBranchManagers {
+    final list = widget.branchManagerOptions
+        .where((m) =>
+            m.trim().isNotEmpty && m.toLowerCase().trim() != 'rajesh menon')
+        .toSet()
+        .toList();
+    if (!list.contains('All')) {
+      list.insert(0, 'All');
+    }
+    return list;
+  }
+
   @override
   void initState() {
     super.initState();
     _tempStatus = widget.selectedStatus;
-    _tempBranchManager = widget.selectedBranchManager;
+    final initialManager = widget.selectedBranchManager;
+    _tempBranchManager =
+        initialManager.toLowerCase().trim() == 'rajesh menon'
+            ? 'All'
+            : initialManager;
   }
 
   @override
   Widget build(BuildContext context) {
+    final managers = _availableBranchManagers;
+    final currentSelectedManager =
+        managers.contains(_tempBranchManager) ? _tempBranchManager : 'All';
+
     return SafeArea(
-      child: Padding(
+      child: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -125,7 +145,7 @@ class _CoordinatorFilterBottomSheetState
               }).toList(),
             ),
 
-            const SizedBox(height: 18),
+            const SizedBox(height: 20),
 
             // Section 2: Branch Manager
             const Text(
@@ -137,21 +157,50 @@ class _CoordinatorFilterBottomSheetState
               ),
             ),
             const SizedBox(height: 10),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: widget.branchManagerOptions.map((manager) {
-                final isSelected = _tempBranchManager == manager;
-                return AppFilterChip(
-                  label: manager,
-                  isSelected: isSelected,
-                  onTap: () {
-                    setState(() {
-                      _tempBranchManager = manager;
-                    });
+
+            // Branch Manager Dropdown
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.border, width: 1.2),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  key: const Key('branch_manager_dropdown'),
+                  value: currentSelectedManager,
+                  isExpanded: true,
+                  icon: const Icon(
+                    Icons.keyboard_arrow_down_rounded,
+                    color: AppColors.textSecondary,
+                    size: 24,
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                  dropdownColor: Colors.white,
+                  items: managers.map((manager) {
+                    return DropdownMenuItem<String>(
+                      value: manager,
+                      child: Text(
+                        manager,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: AppColors.textPrimary,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    if (value != null) {
+                      setState(() {
+                        _tempBranchManager = value;
+                      });
+                    }
                   },
-                );
-              }).toList(),
+                ),
+              ),
             ),
 
             const SizedBox(height: 24),

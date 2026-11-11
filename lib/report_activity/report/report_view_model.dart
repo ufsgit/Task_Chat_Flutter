@@ -27,11 +27,17 @@ class ReportViewModel extends ChangeNotifier {
     return '${dt.year.toString().padLeft(4, '0')}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}';
   }
 
-  /// Default To date: 04/11/2026 (YYYY-MM-DD)
-  static String get defaultDateTo => '2026-11-04';
+  /// Default To date: End of current month (YYYY-MM-DD)
+  static String get defaultDateTo {
+    final now = DateTime.now();
+    return formatIsoDate(DateTime(now.year, now.month + 1, 0));
+  }
 
-  /// Default From date: 07/10/2026 (YYYY-MM-DD)
-  static String get defaultDateFrom => '2026-10-07';
+  /// Default From date: First day of current month (YYYY-MM-DD)
+  static String get defaultDateFrom {
+    final now = DateTime.now();
+    return formatIsoDate(DateTime(now.year, now.month, 1));
+  }
 
   ReportViewModel({
     TaskReportData? initialData,

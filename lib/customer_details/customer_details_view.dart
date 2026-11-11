@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import '../api/document_upload_service.dart';
+import '../core/widgets/app_pill_notification.dart';
 import '../core/widgets/circular_back_button.dart';
 import '../core/widgets/document_preview_upload_page.dart';
 import '../core/slide_up_route.dart';
@@ -205,19 +206,15 @@ class _CustomerDetailsViewState extends State<CustomerDetailsView> {
       if (!mounted) return;
 
       if (success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Contact deleted successfully'),
-            backgroundColor: AppColors.whatsappGreen,
-          ),
+        AppNotification.showContactDeleted(
+          context,
+          aboveBottomNav: true,
         );
         Navigator.of(context).pop('DELETED');
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(_viewModel.deleteError ?? 'Failed to delete contact'),
-            backgroundColor: const Color(0xFFEF4444),
-          ),
+        AppNotification.showError(
+          context,
+          _viewModel.deleteError ?? 'Failed to delete contact',
         );
       }
     }
@@ -242,21 +239,16 @@ class _CustomerDetailsViewState extends State<CustomerDetailsView> {
       if (!mounted) return;
 
       if (success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Contact updated successfully',
-              style: TextStyle(fontFamily: 'Helvetica Neue'),
-            ),
-            backgroundColor: AppColors.whatsappGreen,
-          ),
+        AppNotification.show(
+          context,
+          'Contact updated successfully',
+          icon: Icons.check_circle_rounded,
+          iconColor: AppColors.primaryGreen,
         );
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(_viewModel.updateError ?? 'Failed to update contact'),
-            backgroundColor: const Color(0xFFEF4444),
-          ),
+        AppNotification.showError(
+          context,
+          _viewModel.updateError ?? 'Failed to update contact',
         );
       }
     }

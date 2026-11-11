@@ -12,6 +12,7 @@ import '../customer_details/customer_details_model.dart';
 import '../customer_details/customer_details_view.dart';
 import '../login_page/token_storage.dart';
 import '../today/today_view_model.dart';
+import 'new_lead_service.dart';
 
 /// Top-level background message handler for Firebase Cloud Messaging.
 /// Must be outside of any class and annotated with @pragma('vm:entry-point').
@@ -141,9 +142,12 @@ class NotificationService {
 
       // 4. Fetch token & register instance
       try {
+        final isTest = TokenStorage.isTestEnvironment;
         // ignore: deprecated_member_use
         final directToken = await FirebaseMessaging.instance.getToken().timeout(
-          const Duration(seconds: 4),
+          isTest
+              ? const Duration(milliseconds: 50)
+              : const Duration(seconds: 15),
           onTimeout: () => null,
         );
         if (directToken != null) {
@@ -155,8 +159,11 @@ class NotificationService {
       }
 
       try {
+        final isTest = TokenStorage.isTestEnvironment;
         await FirebaseMessaging.instance.register().timeout(
-          const Duration(seconds: 4),
+          isTest
+              ? const Duration(milliseconds: 50)
+              : const Duration(seconds: 10),
           onTimeout: () {},
         );
       } catch (e) {
@@ -181,19 +188,29 @@ class NotificationService {
         debugPrint('>>> [FCM Foreground] Received: $title - $body');
         debugPrint('>>> [FCM Foreground] Data payload: ${message.data}');
 
-        // Display in-app banner toast if app is currently in foreground
-        final context = navigatorKey?.currentContext;
-        if (context != null && context.mounted) {
-          final displayText = body.isNotEmpty ? '$title: $body' : title;
-          AppNotification.show(
-            context,
-            displayText,
-            icon: Icons.notifications_active_rounded,
-            duration: const Duration(milliseconds: 3500),
-            onTap: () {
-              unawaited(handleNotificationClick(message, isInitial: false));
-            },
+        final bool isLead = isNewLeadNotification(message);
+        if (isLead) {
+          final customer = parseCustomerFromMessage(message);
+          NewLeadService.instance.notifyNewLead(
+            leadName: customer?.name,
+            location: customer?.location,
+            bookingId: customer?.id,
           );
+        } else {
+          // Display in-app banner toast if app is currently in foreground
+          final context = navigatorKey?.currentContext;
+          if (context != null && context.mounted) {
+            final displayText = body.isNotEmpty ? '$title: $body' : title;
+            AppNotification.show(
+              context,
+              displayText,
+              icon: Icons.notifications_active_rounded,
+              duration: const Duration(milliseconds: 3500),
+              onTap: () {
+                unawaited(handleNotificationClick(message, isInitial: false));
+              },
+            );
+          }
         }
       });
 
@@ -227,6 +244,67 @@ class NotificationService {
     }
   }
 
+  /// Checks whether notifications are currently authorized by the user.
+  static Future<bool> isPermissionGranted() async {
+    if (!isSupportedPlatform) return false;
+    try {
+      final settings = await FirebaseMessaging.instance
+          .getNotificationSettings();
+      return settings.authorizationStatus == AuthorizationStatus.authorized ||
+          settings.authorizationStatus == AuthorizationStatus.provisional;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Explicitly requests notification permissions from the user.
+  static Future<NotificationSettings> requestPermission() async {
+    return FirebaseMessaging.instance.requestPermission(
+      alert: true,
+      announcement: false,
+      badge: true,
+      carPlay: false,
+      criticalAlert: false,
+      provisional: false,
+      sound: true,
+    );
+  }
+
+  /// Checks whether a [RemoteMessage] represents a new lead or new booking notification.
+  static bool isNewLeadNotification(RemoteMessage message) {
+    final type =
+        (message.data['type'] ??
+                message.data['action_type'] ??
+                message.data['event'])
+            ?.toString()
+            .toLowerCase();
+    if (type != null) {
+      if (type.contains('lead') ||
+          type.contains('booking') ||
+          type.contains('new')) {
+        return true;
+      }
+    }
+
+    final title = (message.notification?.title ?? message.data['title'] ?? '')
+        .toString()
+        .toLowerCase();
+    final body =
+        (message.notification?.body ??
+                message.data['body'] ??
+                message.data['message'] ??
+                '')
+            .toString()
+            .toLowerCase();
+
+    return title.contains('lead') ||
+        title.contains('booking') ||
+        body.contains('lead') ||
+        body.contains('booking') ||
+        body.contains('created') ||
+        body.contains('assigned');
+  }
+
   /// Parses or builds a [CustomerDetailsModel] from a [RemoteMessage].
   static CustomerDetailsModel? parseCustomerFromMessage(RemoteMessage message) {
     return parseCustomerFromData(
@@ -241,12 +319,13 @@ class NotificationService {
     RemoteNotification? notification,
   }) {
     // 1. Check for booking ID
-    String? bookingId = (data['bookingId'] ??
-            data['booking_id'] ??
-            data['bookingID'] ??
-            data['id'] ??
-            data['booking'])
-        ?.toString();
+    String? bookingId =
+        (data['bookingId'] ??
+                data['booking_id'] ??
+                data['bookingID'] ??
+                data['id'] ??
+                data['booking'])
+            ?.toString();
 
     // If bookingId is not in data, try extracting "#1234" from title, body or message
     if (bookingId == null || bookingId.isEmpty) {
@@ -271,15 +350,16 @@ class NotificationService {
     }
 
     // 3. Check for customer name
-    final name = (data['customerName'] ??
-            data['customer_name'] ??
-            data['clientName'] ??
-            data['client_name'] ??
-            data['booking_name'] ??
-            data['name'] ??
-            data['title'] ??
-            notification?.title)
-        ?.toString();
+    final name =
+        (data['customerName'] ??
+                data['customer_name'] ??
+                data['clientName'] ??
+                data['client_name'] ??
+                data['booking_name'] ??
+                data['name'] ??
+                data['title'] ??
+                notification?.title)
+            ?.toString();
 
     // If both bookingId and name are empty, we cannot identify the booking
     if ((bookingId == null || bookingId.isEmpty) &&
@@ -322,9 +402,7 @@ class NotificationService {
     try {
       nav.push(
         MaterialPageRoute(
-          builder: (_) => CustomerDetailsPage(
-            customer: customer,
-          ),
+          builder: (_) => CustomerDetailsPage(customer: customer),
         ),
       );
     } catch (e) {
@@ -382,7 +460,9 @@ class NotificationService {
     http.Client? client,
   }) async {
     if (_isRegisteringDevice) {
-      debugPrint('>>> [FCM Backend] Registration already in progress. Skipping duplicate call.');
+      debugPrint(
+        '>>> [FCM Backend] Registration already in progress. Skipping duplicate call.',
+      );
       return true;
     }
     _isRegisteringDevice = true;
@@ -400,9 +480,12 @@ class NotificationService {
       if ((tokenToRegister == null || tokenToRegister.isEmpty) &&
           isSupportedPlatform) {
         try {
+          final isTest = TokenStorage.isTestEnvironment;
           // ignore: deprecated_member_use
           tokenToRegister = await FirebaseMessaging.instance.getToken().timeout(
-            const Duration(seconds: 4),
+            isTest
+                ? const Duration(milliseconds: 50)
+                : const Duration(seconds: 15),
             onTimeout: () => null,
           );
           if (tokenToRegister != null) {
@@ -418,8 +501,12 @@ class NotificationService {
         return false;
       }
 
-      if (tokenToRegister == _lastRegisteredToken && token == _lastRegisteredJwt && client == null) {
-        debugPrint('>>> [FCM Backend] Device already registered with current tokens. Skipping duplicate POST.');
+      if (tokenToRegister == _lastRegisteredToken &&
+          token == _lastRegisteredJwt &&
+          client == null) {
+        debugPrint(
+          '>>> [FCM Backend] Device already registered with current tokens. Skipping duplicate POST.',
+        );
         return true;
       }
 
@@ -432,9 +519,14 @@ class NotificationService {
         final payload = jsonEncode({
           'fcmToken': tokenToRegister,
           'deviceToken': tokenToRegister,
+          'device_token': tokenToRegister,
           'fcm_token': tokenToRegister,
+          'token': tokenToRegister,
           'deviceType': deviceType,
+          'device_type': deviceType,
+          'platform': deviceType,
           'deviceId': deviceId,
+          'device_id': deviceId,
         });
 
         debugPrint('>>> [FCM Backend] Registering device token: $url');
@@ -514,7 +606,9 @@ class NotificationService {
         final payload = jsonEncode({
           'fcmToken': tokenToUnregister,
           'deviceToken': tokenToUnregister,
+          'device_token': tokenToUnregister,
           'fcm_token': tokenToUnregister,
+          'token': tokenToUnregister,
         });
 
         debugPrint('>>> [FCM Backend] Unregistering device: $url');

@@ -57,7 +57,8 @@ void main() {
       expect(result.user?.isCoordinator, isFalse);
       expect(result.isCoordinator, isFalse);
       expect(result.isSuperAdmin, isFalse); // branch_head is Branch Manager, not Coordinator
-      expect(vm.isLoading, isFalse);
+      // Retains isLoading true on success so button pulsing loader does not flash 'Log In' before navigation
+      expect(vm.isLoading, isTrue);
     });
 
     test('coordinator login sets isCoordinator to true based on roleId 2', () async {

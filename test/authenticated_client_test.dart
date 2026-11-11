@@ -133,5 +133,13 @@ void main() {
 
       expect(unauthorizedCallCount, equals(1));
     });
+
+    test('TokenStorage caches token in RAM memory and deleteToken clears both', () async {
+      await tokenStorage.savetoken('ram-token');
+      expect(await tokenStorage.getToken(), equals('ram-token'));
+
+      await tokenStorage.deleteToken();
+      expect(await tokenStorage.getToken(), isNull);
+    });
   });
 }

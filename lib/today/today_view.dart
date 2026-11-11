@@ -13,7 +13,7 @@ import '../core/slide_up_route.dart';
 import '../core/widgets/fitmate_app_bar_title.dart';
 import '../customer_details/customer_details_model.dart';
 import '../customer_details/customer_details_view.dart';
-import '../notification_page/notification_page.dart';
+import '../services/new_lead_service.dart';
 import '../update_status/status_update_result.dart';
 
 class TodayPage extends StatefulWidget {
@@ -46,8 +46,21 @@ class _TodayPageState extends State<TodayPage> {
     super.initState();
     _scrollController = ScrollController();
     _scrollController.addListener(_onScroll);
+    NewLeadService.instance.addRefreshListener(_onNewLeadRefresh);
     _viewModel = widget.viewModel ?? TodayViewModel();
     _viewModel.fetchBookings();
+  }
+
+  void _onNewLeadRefresh() {
+    if (mounted &&
+        _scrollController.hasClients &&
+        _scrollController.offset > 0) {
+      _scrollController.animateTo(
+        0,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+    }
   }
 
   void _onScroll() {
@@ -91,17 +104,18 @@ class _TodayPageState extends State<TodayPage> {
     final maxScroll = position.maxScrollExtent;
     final currentScroll = position.pixels;
 
-    if (maxScroll - currentScroll <= 200 &&
+    if (maxScroll - currentScroll <= 250 &&
         !_viewModel.isLoading &&
         !_viewModel.isLoadingMore &&
         _viewModel.hasMore &&
-        _viewModel.filteredChatItems.length >= 15) {
+        _viewModel.displayChatItems.isNotEmpty) {
       _viewModel.loadNextPage();
     }
   }
 
   @override
   void dispose() {
+    NewLeadService.instance.removeRefreshListener(_onNewLeadRefresh);
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     _searchController.dispose();
@@ -263,35 +277,6 @@ class _TodayPageState extends State<TodayPage> {
                 ),
               ),
               const SizedBox(width: 8),
-              InkWell(
-                borderRadius: BorderRadius.circular(20),
-                onTap: () async {
-                  await Navigator.of(context).push(
-                    SlideUpRoute(
-                      page: const NotificationPage(showBottomBar: false),
-                    ),
-                  );
-                  if (mounted) {
-                    _viewModel.fetchBookings();
-                  }
-                },
-                child: Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: iconBtnBg,
-                    borderRadius: BorderRadius.circular(20),
-                    border: isDark
-                        ? Border.all(color: AppDarkColors.border, width: 1)
-                        : null,
-                  ),
-                  child: Icon(
-                    Icons.notifications_none_rounded,
-                    color: primaryTextColor,
-                    size: 20,
-                  ),
-                ),
-              ),
             ],
           ),
         ),
@@ -501,7 +486,7 @@ class _TodayPageState extends State<TodayPage> {
                   child: ListenableBuilder(
                     listenable: _viewModel,
                     builder: (context, _) {
-                      final filtered = _viewModel.filteredChatItems;
+                      final chatItems = _viewModel.displayChatItems;
                       final hasActiveFilters = _viewModel.hasActiveFilters;
 
                       return Column(
@@ -520,7 +505,7 @@ class _TodayPageState extends State<TodayPage> {
                                 child: Row(
                                   children: [
                                     if (_viewModel.selectedStatusFilter !=
-                                        'All') ...[
+                                        'All')
                                       _buildActiveFilterChip(
                                         label:
                                             'Status: ${_viewModel.selectedStatusFilter}',
@@ -529,12 +514,13 @@ class _TodayPageState extends State<TodayPage> {
                                           _viewModel.setStatusFilter('All');
                                         },
                                       ),
-                                      const SizedBox(width: 8),
-                                    ],
                                     if ((_viewModel.dateFrom != null &&
                                             _viewModel.dateFrom!.isNotEmpty) ||
                                         (_viewModel.dateTo != null &&
                                             _viewModel.dateTo!.isNotEmpty)) ...[
+                                      if (_viewModel.selectedStatusFilter !=
+                                          'All')
+                                        const SizedBox(width: 8),
                                       _buildActiveFilterChip(
                                         label:
                                             'Date: ${formatDateToDayMonthYear(_viewModel.dateFrom)} - ${formatDateToDayMonthYear(_viewModel.dateTo)}',
@@ -546,15 +532,7 @@ class _TodayPageState extends State<TodayPage> {
                                           );
                                         },
                                       ),
-                                      const SizedBox(width: 8),
                                     ],
-                                    _buildActiveFilterChip(
-                                      label: 'Clear All',
-                                      isDark: isDark,
-                                      onDeleted: () {
-                                        _viewModel.resetFilters();
-                                      },
-                                    ),
                                   ],
                                 ),
                               ),
@@ -567,9 +545,9 @@ class _TodayPageState extends State<TodayPage> {
                             child: RefreshIndicator(
                               onRefresh: _viewModel.refreshBookings,
                               color: AppColors.primaryGreen,
-                              child: _viewModel.isLoading && filtered.isEmpty
+                              child: _viewModel.isLoading && chatItems.isEmpty
                                   ? const TodaySkeletonLoading()
-                                  : filtered.isEmpty
+                                  : chatItems.isEmpty
                                   ? ListView(
                                       physics:
                                           const AlwaysScrollableScrollPhysics(),
@@ -597,10 +575,10 @@ class _TodayPageState extends State<TodayPage> {
                                         bottom: 100,
                                       ),
                                       itemCount:
-                                          filtered.length +
+                                          chatItems.length +
                                           (_viewModel.isLoadingMore ? 1 : 0),
                                       separatorBuilder: (context, index) {
-                                        if (index >= filtered.length - 1 &&
+                                        if (index >= chatItems.length - 1 &&
                                             _viewModel.isLoadingMore) {
                                           return const SizedBox.shrink();
                                         }
@@ -617,7 +595,7 @@ class _TodayPageState extends State<TodayPage> {
                                         );
                                       },
                                       itemBuilder: (context, index) {
-                                        if (index >= filtered.length) {
+                                        if (index >= chatItems.length) {
                                           return const Padding(
                                             padding: EdgeInsets.symmetric(
                                               vertical: 20,
@@ -638,7 +616,7 @@ class _TodayPageState extends State<TodayPage> {
                                         }
 
                                         if (index >= 14 &&
-                                            index >= filtered.length - 2 &&
+                                            index >= chatItems.length - 2 &&
                                             !_viewModel.isLoading &&
                                             !_viewModel.isLoadingMore &&
                                             _viewModel.hasMore) {
@@ -653,7 +631,7 @@ class _TodayPageState extends State<TodayPage> {
                                               });
                                         }
 
-                                        final item = filtered[index];
+                                        final item = chatItems[index];
                                         return ChatListItemTile(
                                           title: item['title'] ?? '',
                                           avatarLetter:
@@ -804,10 +782,13 @@ class _TodayPageState extends State<TodayPage> {
                                                 );
                                               } else if (updatedStatus
                                                   is String) {
-                                                _viewModel.updateStatus(
-                                                  item['title'] ?? '',
-                                                  updatedStatus,
-                                                );
+                                                if (updatedStatus !=
+                                                    'DELETED') {
+                                                  _viewModel.updateStatus(
+                                                    item['title'] ?? '',
+                                                    updatedStatus,
+                                                  );
+                                                }
                                               }
                                               _viewModel.fetchBookings();
                                             }

@@ -73,13 +73,7 @@ void main() {
     expect(find.text('Filter Options'), findsOneWidget);
     expect(find.text('Status'), findsOneWidget);
     expect(find.text('Branch Manager'), findsOneWidget);
-    expect(
-      find.descendant(
-        of: find.byType(SuperAdminFilterBottomSheet),
-        matching: find.text('Sarah Jenkins'),
-      ),
-      findsOneWidget,
-    );
+    expect(find.byKey(const Key('branch_manager_dropdown')), findsOneWidget);
     expect(find.text('Apply Filters'), findsOneWidget);
 
     // Select 'Completed' status inside bottom sheet
@@ -91,13 +85,15 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    // Select 'Sarah Jenkins' branch manager
-    await tester.tap(
-      find.descendant(
-        of: find.byType(SuperAdminFilterBottomSheet),
-        matching: find.text('Sarah Jenkins'),
-      ),
-    );
+    // Tap dropdown to reveal branch manager options
+    await tester.tap(find.byKey(const Key('branch_manager_dropdown')));
+    await tester.pumpAndSettle();
+
+    // Verify Sarah Jenkins is in the dropdown menu
+    expect(find.text('Sarah Jenkins'), findsWidgets);
+
+    // Select 'Sarah Jenkins' branch manager from dropdown
+    await tester.tap(find.text('Sarah Jenkins').last);
     await tester.pumpAndSettle();
 
     // Apply filters
@@ -345,6 +341,69 @@ void main() {
     // Verify button scaled back down to 0.0
     final AnimatedScale endScale = tester.widget(scrollToTopButtonFinder);
     expect(endScale.scale, 0.0);
+  });
+
+  test('CoordinatorViewModel excludes Rajesh Menon from branchManagerOptions', () {
+    final vm = CoordinatorViewModel(
+      initialItems: [
+        {'id': '1', 'branchManager': 'Rajesh Menon'},
+        {'id': '2', 'branchManager': 'rajesh menon'},
+        {'id': '3', 'branchManager': 'Sarah Jenkins'},
+        {'id': '4', 'branchManager': 'Bob Smith'},
+      ],
+    );
+
+    expect(vm.branchManagerOptions, isNot(contains('Rajesh Menon')));
+    expect(vm.branchManagerOptions, isNot(contains('rajesh menon')));
+    expect(vm.branchManagerOptions, containsAll(['All', 'Sarah Jenkins', 'Bob Smith']));
+  });
+
+  testWidgets(
+      'CoordinatorFilterBottomSheet excludes Rajesh Menon and renders dropdown with Apply button visible',
+      (WidgetTester tester) async {
+    String appliedStatus = '';
+    String appliedManager = '';
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: CoordinatorFilterBottomSheet(
+            selectedStatus: 'All',
+            selectedBranchManager: 'All',
+            statusOptions: const ['All', 'New', 'Completed'],
+            branchManagerOptions: const ['All', 'Rajesh Menon', 'John Doe'],
+            onApply: (status, manager) {
+              appliedStatus = status;
+              appliedManager = manager;
+            },
+            onReset: () {},
+          ),
+        ),
+      ),
+    );
+
+    // Verify Dropdown is rendered
+    expect(find.byKey(const Key('branch_manager_dropdown')), findsOneWidget);
+    expect(find.text('Apply Filters'), findsOneWidget);
+
+    // Open dropdown
+    await tester.tap(find.byKey(const Key('branch_manager_dropdown')));
+    await tester.pumpAndSettle();
+
+    // Verify 'Rajesh Menon' is NOT present in options, but 'John Doe' is
+    expect(find.text('Rajesh Menon'), findsNothing);
+    expect(find.text('John Doe'), findsWidgets);
+
+    // Select John Doe
+    await tester.tap(find.text('John Doe').last);
+    await tester.pumpAndSettle();
+
+    // Tap Apply Filters
+    await tester.tap(find.text('Apply Filters'));
+    await tester.pumpAndSettle();
+
+    expect(appliedStatus, 'All');
+    expect(appliedManager, 'John Doe');
   });
 }
 

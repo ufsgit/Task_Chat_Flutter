@@ -24,6 +24,9 @@ class CustomerDetailsModel {
   /// Returns the scheduled date formatted as day/month/year (DD/MM/YYYY).
   String get formattedScheduleDate => formatDateToDayMonthYear(scheduleDate);
 
+  /// Convenient getter for the primary location/address.
+  String get location => addressLine1.isNotEmpty ? addressLine1 : addressLine2;
+
 
   const CustomerDetailsModel({
     required this.id,

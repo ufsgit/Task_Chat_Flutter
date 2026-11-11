@@ -45,6 +45,7 @@ class TokenStorage {
     try {
       final token = await _storage.read(key: _primaryKey);
       if (token != null && token.isNotEmpty) {
+        _memoryCache[_primaryKey] = token;
         return token;
       }
       final legacy = await _storage.read(key: _legacyKey);

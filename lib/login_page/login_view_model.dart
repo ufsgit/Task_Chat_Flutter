@@ -91,8 +91,8 @@ class LoginViewModel extends ChangeNotifier {
         final user = UserModel.fromJson(userMap);
         final isCoordinator = user.isCoordinator;
 
-        _isLoading = false;
-        notifyListeners();
+        // Keep _isLoading = true on successful auth so the pulsing loader
+        // continues without reverting back to "Log In" before navigation.
         ConnectivityService.instance.reportSuccess();
         return LoginResult.success(
           token: token,
@@ -107,29 +107,37 @@ class LoginViewModel extends ChangeNotifier {
         return LoginResult.failure(friendlyMsg);
       }
     } on SocketException {
-      ConnectivityService.instance.reportFailure();
-      const errorMsg = 'Connection failed. Please check your network.';
+      final hasInternet = await ConnectivityService.instance.reportFailure();
+      final errorMsg = hasInternet
+          ? 'Unable to connect to server. Please try again.'
+          : 'Connection failed. Please check your network.';
       _errorMessage = errorMsg;
       _isLoading = false;
       notifyListeners();
       return LoginResult.failure(errorMsg);
     } on TimeoutException {
-      ConnectivityService.instance.reportFailure();
-      const errorMsg = 'Connection failed. Please check your network.';
+      final hasInternet = await ConnectivityService.instance.reportFailure();
+      final errorMsg = hasInternet
+          ? 'Server request timed out. Please try again.'
+          : 'Connection failed. Please check your network.';
       _errorMessage = errorMsg;
       _isLoading = false;
       notifyListeners();
       return LoginResult.failure(errorMsg);
     } on http.ClientException {
-      ConnectivityService.instance.reportFailure();
-      const errorMsg = 'Connection failed. Please check your network.';
+      final hasInternet = await ConnectivityService.instance.reportFailure();
+      final errorMsg = hasInternet
+          ? 'Unable to connect to server. Please try again.'
+          : 'Connection failed. Please check your network.';
       _errorMessage = errorMsg;
       _isLoading = false;
       notifyListeners();
       return LoginResult.failure(errorMsg);
     } catch (_) {
-      ConnectivityService.instance.reportFailure();
-      const errorMsg = 'Connection failed. Please check your network.';
+      final hasInternet = await ConnectivityService.instance.reportFailure();
+      final errorMsg = hasInternet
+          ? 'Unable to reach server. Please try again.'
+          : 'Connection failed. Please check your network.';
       _errorMessage = errorMsg;
       _isLoading = false;
       notifyListeners();

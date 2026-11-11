@@ -42,17 +42,17 @@ class AuthenticatedClient extends http.BaseClient {
       response = await _inner.send(request);
       ConnectivityService.instance.reportSuccess();
     } on http.ClientException catch (e) {
-      ConnectivityService.instance.reportFailure();
+      unawaited(ConnectivityService.instance.reportFailure());
       if (e.message.toLowerCase().contains('closed')) {
         _inner = http.Client();
         rethrow;
       }
       rethrow;
     } on TimeoutException {
-      ConnectivityService.instance.reportFailure();
+      unawaited(ConnectivityService.instance.reportFailure());
       rethrow;
     } catch (_) {
-      ConnectivityService.instance.reportFailure();
+      unawaited(ConnectivityService.instance.reportFailure());
       rethrow;
     }
 

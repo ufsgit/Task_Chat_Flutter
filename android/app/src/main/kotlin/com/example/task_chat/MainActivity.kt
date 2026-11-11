@@ -1,5 +1,7 @@
 package com.example.task_chat
 
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.os.Build
 import android.os.Bundle
 import android.view.Display
@@ -12,12 +14,30 @@ class MainActivity : FlutterActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        createNotificationChannel()
         enableHighRefreshRate()
     }
 
     override fun onResume() {
         super.onResume()
         enableHighRefreshRate()
+    }
+
+    private fun createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channelId = "high_importance_channel"
+            val channelName = "High Importance Notifications"
+            val channelDescription = "This channel is used for important Fitmate notifications."
+            val importance = NotificationManager.IMPORTANCE_HIGH
+            val channel = NotificationChannel(channelId, channelName, importance).apply {
+                description = channelDescription
+                enableLights(true)
+                enableVibration(true)
+                setShowBadge(true)
+            }
+            val notificationManager = getSystemService(NotificationManager::class.java)
+            notificationManager?.createNotificationChannel(channel)
+        }
     }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {

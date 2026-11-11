@@ -7,6 +7,7 @@ import '../core/theme.dart';
 import '../core/widgets/fitmate_app_bar_title.dart';
 import '../customer_details/customer_details_model.dart';
 import '../customer_details/customer_details_view.dart';
+import '../services/new_lead_service.dart';
 import '../today/today_model.dart';
 import '../update_status/status_update_result.dart';
 import '../today/widgets/chat_list_item_tile.dart';
@@ -43,6 +44,7 @@ class _CoordinatorViewState extends State<CoordinatorView> {
     super.initState();
     _scrollController = ScrollController();
     _scrollController.addListener(_onScroll);
+    NewLeadService.instance.addRefreshListener(_onNewLeadRefresh);
     if (widget.viewModel != null) {
       _viewModel = widget.viewModel!;
       _internalViewModel = false;
@@ -53,8 +55,19 @@ class _CoordinatorViewState extends State<CoordinatorView> {
     _viewModel.fetchBookings();
   }
 
+  void _onNewLeadRefresh() {
+    if (mounted &&
+        _scrollController.hasClients &&
+        _scrollController.offset > 0) {
+      _scrollController.animateTo(
+        0,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+    }
+  }
+
   void _onScroll() {
-    if (!_scrollController.hasClients) return;
     final position = _scrollController.position;
 
     final shouldShow = position.pixels > 250;
@@ -91,6 +104,7 @@ class _CoordinatorViewState extends State<CoordinatorView> {
 
   @override
   void dispose() {
+    NewLeadService.instance.removeRefreshListener(_onNewLeadRefresh);
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     if (_internalViewModel) {
@@ -567,10 +581,12 @@ class _CoordinatorViewState extends State<CoordinatorView> {
                                             newDate: updatedStatus.scheduleDate,
                                           );
                                         } else if (updatedStatus is String) {
-                                          _viewModel.updateStatus(
-                                            item['title'] ?? '',
-                                            updatedStatus,
-                                          );
+                                          if (updatedStatus != 'DELETED') {
+                                            _viewModel.updateStatus(
+                                              item['title'] ?? '',
+                                              updatedStatus,
+                                            );
+                                          }
                                         }
                                         _viewModel.fetchBookings();
                                       }

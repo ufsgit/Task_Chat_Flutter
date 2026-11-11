@@ -13,7 +13,11 @@ class ConnectivityService {
   static final ConnectivityService instance = ConnectivityService._internal();
 
   /// Flag to indicate test environments to avoid real platform calls or DNS lookups.
-  static bool isTestEnvironment = false;
+  static bool get isTestEnvironment =>
+      _isTestEnvironment ||
+      (!kIsWeb && Platform.environment.containsKey('FLUTTER_TEST'));
+  static set isTestEnvironment(bool value) => _isTestEnvironment = value;
+  static bool _isTestEnvironment = false;
 
   final Connectivity _connectivity = Connectivity();
   final InternetConnection _internetChecker = InternetConnection();
@@ -73,16 +77,32 @@ class ConnectivityService {
       reportSuccess();
     } else {
       _updateStatus(false);
+      _startRecoveryPolling();
     }
 
     return reachable;
   }
 
-  /// Called when an API call fails due to no internet.
-  /// Shows the global banner and starts checking DNS every 10 seconds.
-  void reportFailure() {
-    _updateStatus(false);
-    _startRecoveryPolling();
+  /// Called when an endpoint or network request fails.
+  /// Verifies active internet reachability using internet_connection_checker_plus.
+  /// Only marks offline and triggers the global no-internet banner if the device
+  /// genuinely has NO internet access. If the device has internet but the specific
+  /// endpoint failed, the app remains online and does not show the no-internet banner.
+  Future<bool> reportFailure() async {
+    if (isTestEnvironment) {
+      _updateStatus(false);
+      _startRecoveryPolling();
+      return false;
+    }
+
+    final hasInternet = await checkConnection();
+    if (!hasInternet) {
+      _updateStatus(false);
+      _startRecoveryPolling();
+      return false;
+    } else {
+      return true;
+    }
   }
 
   /// Called when an API call succeeds or DNS check confirms internet is back.

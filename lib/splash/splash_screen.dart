@@ -1,5 +1,8 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import '../api/api.dart';
 import '../bottom_navigator/bottom_navigator.dart';
 import '../core/theme.dart';
 import '../core/widgets/fitmate_logo.dart';
@@ -14,8 +17,14 @@ import '../settings/settings_model.dart';
 class SplashScreen extends StatefulWidget {
   final TokenStorage? tokenStorage;
   final Widget Function(BuildContext, UserModel?)? homeBuilder;
+  final http.Client? client;
 
-  const SplashScreen({super.key, this.tokenStorage, this.homeBuilder});
+  const SplashScreen({
+    super.key,
+    this.tokenStorage,
+    this.homeBuilder,
+    this.client,
+  });
 
   @override
   State<SplashScreen> createState() => _SplashScreenState();
@@ -74,23 +83,134 @@ class _SplashScreenState extends State<SplashScreen>
     if (!mounted) return;
 
     if (token != null && token.isNotEmpty) {
-      unawaited(NotificationService.registerDeviceWithBackend(jwtToken: token));
-      if (!mounted) return;
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder: (ctx) => widget.homeBuilder != null
-              ? widget.homeBuilder!(ctx, user)
-              : HomePage(
-                  isCoordinator: user?.isCoordinator ?? false,
-                  user: user,
-                ),
-        ),
-      );
-    } else {
-      Navigator.of(
-        context,
-      ).pushReplacement(MaterialPageRoute(builder: (_) => const LoginPage()));
+      // Validate session with Checkvalid API on app start
+      final client = widget.client ?? http.Client();
+      final isInternalClient = widget.client == null;
+
+      try {
+        final authHeader =
+            token.startsWith('Bearer ') ? token : 'Bearer $token';
+        final response = await client.get(
+          Uri.parse(ApiConfig.Checkvalid),
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'Authorization': authHeader,
+          },
+        ).timeout(const Duration(seconds: 8));
+
+        if (response.statusCode == 200) {
+          if (response.body.isNotEmpty) {
+            try {
+              final decoded = jsonDecode(response.body);
+              if (decoded is Map<String, dynamic>) {
+                final userMap = decoded['user'] is Map<String, dynamic>
+                    ? decoded['user'] as Map<String, dynamic>
+                    : (decoded['data'] is Map<String, dynamic>
+                        ? (decoded['data']['user'] is Map<String, dynamic>
+                            ? decoded['data']['user'] as Map<String, dynamic>
+                            : decoded['data'] as Map<String, dynamic>)
+                        : decoded);
+
+                if (userMap.containsKey('id') ||
+                    userMap.containsKey('username')) {
+                  user = UserModel.fromJson(userMap);
+                  await UserProfileData.save(user);
+                }
+
+                final refreshedToken = decoded['sessionToken']?.toString() ??
+                    decoded['token']?.toString() ??
+                    decoded['access_token']?.toString() ??
+                    (decoded['data'] is Map<String, dynamic>
+                        ? (decoded['data']['sessionToken']?.toString() ??
+                            decoded['data']['token']?.toString() ??
+                            decoded['data']['access_token']?.toString())
+                        : null);
+
+                if (refreshedToken != null && refreshedToken.isNotEmpty) {
+                  token = refreshedToken;
+                  await tokenStorage.savetoken(refreshedToken);
+                }
+              }
+            } catch (_) {
+              // Non-fatal parse issue, proceed with cached user if present
+            }
+          }
+
+          unawaited(
+            NotificationService.registerDeviceWithBackend(jwtToken: token),
+          );
+          if (!mounted) return;
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (ctx) => widget.homeBuilder != null
+                  ? widget.homeBuilder!(ctx, user)
+                  : HomePage(
+                      isCoordinator: user?.isCoordinator ?? false,
+                      user: user,
+                    ),
+            ),
+          );
+          return;
+        } else if (response.statusCode == 401 || response.statusCode == 403) {
+          // Token is invalid/expired or user is inactive/deleted
+          await tokenStorage.deleteToken();
+          await UserProfileData.clear();
+          if (!mounted) return;
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => const LoginPage()),
+          );
+          return;
+        } else {
+          // Server error (e.g. 500, 502): fallback to cached profile if available
+          if (user != null) {
+            unawaited(
+              NotificationService.registerDeviceWithBackend(jwtToken: token),
+            );
+            if (!mounted) return;
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(
+                builder: (ctx) => widget.homeBuilder != null
+                    ? widget.homeBuilder!(ctx, user)
+                    : HomePage(
+                        isCoordinator: user?.isCoordinator ?? false,
+                        user: user,
+                      ),
+              ),
+            );
+            return;
+          }
+        }
+      } catch (_) {
+        // Network offline/timeout: allow offline access if cached profile exists
+        if (user != null) {
+          unawaited(
+            NotificationService.registerDeviceWithBackend(jwtToken: token),
+          );
+          if (!mounted) return;
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (ctx) => widget.homeBuilder != null
+                  ? widget.homeBuilder!(ctx, user)
+                  : HomePage(
+                        isCoordinator: user?.isCoordinator ?? false,
+                        user: user,
+                      ),
+            ),
+          );
+          return;
+        }
+      } finally {
+        if (isInternalClient) {
+          client.close();
+        }
+      }
     }
+
+    if (!mounted) return;
+    Navigator.of(
+      context,
+    ).pushReplacement(MaterialPageRoute(builder: (_) => const LoginPage()));
   }
 
   @override

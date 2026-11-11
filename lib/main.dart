@@ -65,6 +65,8 @@ Future<void> _initServices() async {
 class FitmateApp extends StatelessWidget {
   static final GlobalKey<NavigatorState> navigatorKey =
       GlobalKey<NavigatorState>();
+  static final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey =
+      GlobalKey<ScaffoldMessengerState>();
 
   const FitmateApp({super.key});
 
@@ -75,6 +77,7 @@ class FitmateApp extends StatelessWidget {
       builder: (context, currentMode, _) {
         return MaterialApp(
           navigatorKey: navigatorKey,
+          scaffoldMessengerKey: scaffoldMessengerKey,
           title: 'Fitmate',
           debugShowCheckedModeBanner: false,
           theme: AppTheme.lightTheme,
