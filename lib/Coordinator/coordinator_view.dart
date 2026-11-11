@@ -83,11 +83,10 @@ class _CoordinatorViewState extends State<CoordinatorView> {
     final maxScroll = position.maxScrollExtent;
     final currentScroll = position.pixels;
 
-    if (maxScroll - currentScroll <= 200 &&
+    if (maxScroll - currentScroll <= 250 &&
         !_viewModel.isLoading &&
         !_viewModel.isLoadingMore &&
-        _viewModel.hasMore &&
-        _viewModel.filteredChatItems.length >= 15) {
+        _viewModel.hasMore) {
       _viewModel.loadNextPage();
     }
   }
@@ -114,6 +113,7 @@ class _CoordinatorViewState extends State<CoordinatorView> {
   }
 
   void _openFilterBottomSheet() {
+    _viewModel.fetchBranchHeads();
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -236,375 +236,460 @@ class _CoordinatorViewState extends State<CoordinatorView> {
         Scaffold(
           backgroundColor: scaffoldBg,
           appBar: AppBar(
-        backgroundColor: scaffoldBg,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        titleSpacing: 20,
-        toolbarHeight: 68,
-        title: const FitmateAppBarTitle(),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 18.0),
-            child: GestureDetector(
-              onTap: () async {
-                await Navigator.of(context).push(
-                  SlideUpRoute(page: const add_booking(isCoordinator: true)),
-                );
-                if (mounted) {
-                  _viewModel.fetchBookings();
-                }
-              },
-              child: Container(
-                width: 38,
-                height: 38,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(100),
-                  color: AppColors.surfaceGrey,
-                ),
-                child: const Icon(Icons.add, color: Colors.black87, size: 22),
-              ),
-            ),
-          ),
-        ],
-      ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Search Input Field & Filter Option Row (Not rebuilt on list updates)
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 16.0,
-                vertical: 6.0,
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: SearchInputField(
-                      controller: _viewModel.searchController,
-                      padding: EdgeInsets.zero,
-                      onChanged: (val) {
-                        _viewModel.onSearchChanged(val);
-                        if (_scrollController.hasClients) {
-                          _scrollController.animateTo(
-                            0.0,
-                            duration: const Duration(milliseconds: 200),
-                            curve: Curves.easeOut,
-                          );
-                        }
-                      },
-                      onClear: () {
-                        _viewModel.clearSearch();
-                        if (_scrollController.hasClients) {
-                          _scrollController.animateTo(
-                            0.0,
-                            duration: const Duration(milliseconds: 200),
-                            curve: Curves.easeOut,
-                          );
-                        }
-                      },
+            backgroundColor: scaffoldBg,
+            elevation: 0,
+            scrolledUnderElevation: 0,
+            titleSpacing: 20,
+            toolbarHeight: 68,
+            title: const FitmateAppBarTitle(),
+            actions: [
+              Padding(
+                padding: const EdgeInsets.only(right: 18.0),
+                child: GestureDetector(
+                  onTap: () async {
+                    await Navigator.of(context).push(
+                      SlideUpRoute(
+                        page: const add_booking(isCoordinator: true),
+                      ),
+                    );
+                    if (mounted) {
+                      _viewModel.fetchBookings();
+                    }
+                  },
+                  child: Container(
+                    width: 38,
+                    height: 38,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(100),
+                      color: AppColors.surfaceGrey,
+                    ),
+                    child: const Icon(
+                      Icons.add,
+                      color: Colors.black87,
+                      size: 22,
                     ),
                   ),
-                  const SizedBox(width: 10),
-                  ListenableBuilder(
-                    listenable: _viewModel,
-                    builder: (context, _) => Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(24),
-                        onTap: _openFilterBottomSheet,
-                        child: Container(
-                          width: 48,
-                          height: 48,
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            color: _viewModel.hasActiveFilters
-                                ? AppColors.chipPendingBg
-                                : AppColors.surfaceGrey,
-                            borderRadius: BorderRadius.circular(24),
-                            border: _viewModel.hasActiveFilters
-                                ? Border.all(
-                                    color: AppColors.brandGreen,
-                                    width: 1.5,
-                                  )
-                                : null,
-                          ),
-                          child: Stack(
-                            clipBehavior: Clip.none,
-                            alignment: Alignment.center,
-                            children: [
-                              Icon(
-                                Icons.tune_rounded,
-                                size: 22,
-                                color: _viewModel.hasActiveFilters
-                                    ? AppColors.brandGreen
-                                    : AppColors.textSecondary,
-                              ),
-                              if (_viewModel.hasActiveFilters)
-                                Positioned(
-                                  top: 2,
-                                  right: 2,
-                                  child: Container(
-                                    width: 7,
-                                    height: 7,
-                                    decoration: const BoxDecoration(
-                                      color: AppColors.brandGreen,
-                                      shape: BoxShape.circle,
-                                    ),
-                                  ),
-                                ),
-                            ],
-                          ),
+                ),
+              ),
+            ],
+          ),
+          body: SafeArea(
+            child: Column(
+              children: [
+                // Search Input Field & Filter Option Row (Not rebuilt on list updates)
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16.0,
+                    vertical: 6.0,
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: SearchInputField(
+                          controller: _viewModel.searchController,
+                          padding: EdgeInsets.zero,
+                          onChanged: (val) {
+                            _viewModel.onSearchChanged(val);
+                            if (_scrollController.hasClients) {
+                              _scrollController.animateTo(
+                                0.0,
+                                duration: const Duration(milliseconds: 200),
+                                curve: Curves.easeOut,
+                              );
+                            }
+                          },
+                          onClear: () {
+                            _viewModel.clearSearch();
+                            if (_scrollController.hasClients) {
+                              _scrollController.animateTo(
+                                0.0,
+                                duration: const Duration(milliseconds: 200),
+                                curve: Curves.easeOut,
+                              );
+                            }
+                          },
                         ),
                       ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // Scoped Content Area (Filter badges, tabs, list)
-            Expanded(
-              child: ListenableBuilder(
-                listenable: _viewModel,
-                builder: (context, _) {
-                  final filtered = _viewModel.filteredChatItems;
-
-                  return Column(
-                    children: [
-
-                // Active Filter Badges
-                if (_viewModel.hasActiveFilters)
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 6.0),
-                    child: Row(
-                      children: [
-                        if (_viewModel.selectedStatusFilter != 'All') ...[
-                          _buildActiveFilterChip(
-                            label: 'Status: ${_viewModel.selectedStatusFilter}',
-                            onDeleted: () => _viewModel.setStatusFilter('All'),
-                          ),
-                          const SizedBox(width: 8),
-                        ],
-                        if (_viewModel.selectedManagerFilter != 'All') ...[
-                          _buildActiveFilterChip(
-                            label: 'Manager: ${_viewModel.selectedManagerFilter}',
-                            onDeleted: () => _viewModel.setManagerFilter('All'),
-                          ),
-                          const SizedBox(width: 8),
-                        ],
-                        const Spacer(),
-                        GestureDetector(
-                          onTap: () => _viewModel.resetFilters(),
-                          child: const Text(
-                            'Clear all',
-                            style: TextStyle(
-                              color: AppColors.brandGreen,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
+                      const SizedBox(width: 10),
+                      ListenableBuilder(
+                        listenable: _viewModel,
+                        builder: (context, _) => Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(24),
+                            onTap: _openFilterBottomSheet,
+                            child: Container(
+                              width: 48,
+                              height: 48,
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                color: _viewModel.hasActiveFilters
+                                    ? AppColors.chipPendingBg
+                                    : AppColors.surfaceGrey,
+                                borderRadius: BorderRadius.circular(24),
+                                border: _viewModel.hasActiveFilters
+                                    ? Border.all(
+                                        color: AppColors.brandGreen,
+                                        width: 1.5,
+                                      )
+                                    : null,
+                              ),
+                              child: Stack(
+                                clipBehavior: Clip.none,
+                                alignment: Alignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.tune_rounded,
+                                    size: 22,
+                                    color: _viewModel.hasActiveFilters
+                                        ? AppColors.brandGreen
+                                        : AppColors.textSecondary,
+                                  ),
+                                  if (_viewModel.hasActiveFilters)
+                                    Positioned(
+                                      top: 2,
+                                      right: 2,
+                                      child: Container(
+                                        width: 7,
+                                        height: 7,
+                                        decoration: const BoxDecoration(
+                                          color: AppColors.brandGreen,
+                                          shape: BoxShape.circle,
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
                             ),
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
+                ),
 
-
-
-                // Lead Chat Items List with extra 'Branch Manager' badge & Pull-to-refresh
+                // Scoped Content Area (Filter badges, tabs, list)
                 Expanded(
-                  child: RefreshIndicator(
-                    onRefresh: _viewModel.fetchBookings,
-                    color: AppColors.primaryGreen,
-                    child: _viewModel.isLoading && filtered.isEmpty
-                        ? const TodaySkeletonLoading()
-                        : filtered.isEmpty
-                            ? ListView(
-                                physics: const AlwaysScrollableScrollPhysics(),
-                                children: const [
-                                  SizedBox(height: 120),
-                                  Center(
-                                    child: Text(
-                                      'No tasks found',
+                  child: ListenableBuilder(
+                    listenable: _viewModel,
+                    builder: (context, _) {
+                      final filtered = _viewModel.filteredChatItems;
+
+                      return Column(
+                        children: [
+                          // Active Filter Badges
+                          if (_viewModel.hasActiveFilters)
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(
+                                16.0,
+                                0,
+                                16.0,
+                                6.0,
+                              ),
+                              child: Row(
+                                children: [
+                                  if (_viewModel.selectedStatusFilter !=
+                                      'All') ...[
+                                    _buildActiveFilterChip(
+                                      label:
+                                          'Status: ${_viewModel.selectedStatusFilter}',
+                                      onDeleted: () =>
+                                          _viewModel.setStatusFilter('All'),
+                                    ),
+                                    const SizedBox(width: 8),
+                                  ],
+                                  if (_viewModel.selectedManagerFilter !=
+                                      'All') ...[
+                                    _buildActiveFilterChip(
+                                      label:
+                                          'Manager: ${_viewModel.selectedManagerFilter}',
+                                      onDeleted: () =>
+                                          _viewModel.setManagerFilter('All'),
+                                    ),
+                                    const SizedBox(width: 8),
+                                  ],
+                                  const Spacer(),
+                                  GestureDetector(
+                                    onTap: () => _viewModel.resetFilters(),
+                                    child: const Text(
+                                      'Clear all',
                                       style: TextStyle(
-                                        color: AppColors.textSubtitle,
-                                        fontSize: 14,
+                                        color: AppColors.brandGreen,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
                                       ),
                                     ),
                                   ),
                                 ],
-                              )
-                            : ListView.separated(
-                                controller: _scrollController,
-                                scrollCacheExtent: const ScrollCacheExtent.pixels(600),
-                                physics: const BouncingScrollPhysics(
-                                  parent: AlwaysScrollableScrollPhysics(),
-                                ),
-                                padding: const EdgeInsets.only(bottom: 100),
-                                itemCount: filtered.length +
-                                    (_viewModel.isLoadingMore ? 1 : 0),
-                                separatorBuilder: (context, index) => const Divider(
-                                  height: 1,
-                                  thickness: 1,
-                                  color: AppColors.divider,
-                                  indent: 78,
-                                ),
-                                itemBuilder: (context, index) {
-                                  if (index == filtered.length) {
-                                    return const Padding(
-                                      padding: EdgeInsets.symmetric(vertical: 20),
-                                      child: Center(
-                                        child: SizedBox(
-                                          width: 24,
-                                          height: 24,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                            color: AppColors.primaryGreen,
-                                          ),
-                                        ),
-                                      ),
-                                    );
-                                  }
-
-                                  if (index >= 14 &&
-                                      index >= filtered.length - 2 &&
-                                      !_viewModel.isLoading &&
-                                      !_viewModel.isLoadingMore &&
-                                      _viewModel.hasMore) {
-                                    WidgetsBinding.instance
-                                        .addPostFrameCallback((_) {
-                                      if (mounted &&
-                                          !_viewModel.isLoading &&
-                                          !_viewModel.isLoadingMore &&
-                                          _viewModel.hasMore) {
-                                        _viewModel.loadNextPage();
-                                      }
-                                    });
-                                  }
-
-                                  final item = filtered[index];
-                                  return ChatListItemTile(
-                                    title: item['title'] ?? '',
-                                    avatarLetter: item['avatarLetter'] ?? '',
-                                    avatarBgColor:
-                                        item['avatarBgColor'] ?? AppColors.surfaceGrey,
-                                    avatarTextColor:
-                                        item['avatarTextColor'] ??
-                                        AppColors.textSecondary,
-                                    avatarBorderColor: item['avatarBorderColor'],
-                                    hasVerifiedBadge: item['hasVerifiedBadge'] ?? false,
-                                    date: formatDateToDayMonthYear(
-                                        item['date']?.toString() ?? ''),
-                                    tagText: item['tagText'] ?? '',
-                                    tagBgColor:
-                                        item['tagBgColor'] ?? AppColors.completedBg,
-                                    tagTextColor:
-                                        item['tagTextColor'] ?? AppColors.completedText,
-                                    location: item['location'] ?? '',
-                                    extraBadgeText:
-                                        item['branchManager'] ??
-                                        item['role'] ??
-                                        'Branch Manager',
-                                    onTap: () async {
-                                      final booking = item['booking'] as BookingModel?;
-                                      final customer = booking != null
-                                          ? CustomerDetailsData(
-                                              id: booking.id.toString(),
-                                              name: booking.name,
-                                              inquiry: booking.notes.isNotEmpty
-                                                  ? booking.notes
-                                                  : 'Steel door enquiry',
-                                              status: booking.status.isNotEmpty
-                                                  ? '${booking.status[0].toUpperCase()}${booking.status.substring(1).toLowerCase()}'
-                                                  : 'New',
-                                              phoneNumber: booking.mobile,
-                                              addressLine1: booking.address,
-                                              addressLine2: [
-                                                booking.areaName,
-                                                booking.districtName,
-                                                booking.stateName,
-                                              ]
-                                                  .where((s) => s.isNotEmpty)
-                                                  .join(', '),
-                                              notes: booking.notes,
-                                              staffNotes: booking.staffNotes,
-                                              documents: booking.documents,
-                                              hasBeenScheduled: booking.status
-                                                          .toLowerCase() ==
-                                                      'scheduled' ||
-                                                  booking.status
-                                                          .toLowerCase() ==
-                                                      'completed',
-                                              branchHeadId: booking.branchHeadId,
-                                              branchHeadName: booking.branchHeadName ??
-                                                  item['branchManager']?.toString(),
-                                              scheduleDate: booking.scheduleDate,
-                                               statusColorCode: booking.statusColorCode,
-                                            )
-                                          : CustomerDetailsData.fromChatInfo(
-                                              name: item['title']?.toString() ??
-                                                  'Customer',
-                                              location: item['location']
-                                                  ?.toString(),
-                                              tagText: item['tagText']
-                                                  ?.toString(),
-                                              id: item['id']?.toString(),
-                                              scheduleDate: item['scheduleDate']?.toString() ??
-                                                  item['date']?.toString(),
-                                              phoneNumber: item['mobile']?.toString() ??
-                                                  item['phoneNumber']?.toString(),
-                                              notes: item['notes']?.toString(),
-                                              documents: item['documents'] is List
-                                                  ? (item['documents'] as List)
-                                                      .map((e) => e.toString())
-                                                      .toList()
-                                                  : null,
-                                              branchHeadId: item['branchHeadId'] is int
-                                                  ? item['branchHeadId'] as int
-                                                  : null,
-                                              branchHeadName: item['branchManager']?.toString() ??
-                                                  item['branchHeadName']?.toString(),
-                                            );
-                                      final updatedStatus = await Navigator.of(context).push(
-                                        SlideRightRoute(
-                                          page: CustomerDetailsPage(
-                                            customer: customer,
-                                            isCoordinator: true,
-                                          ),
-                                        ),
-                                      );
-                                      if (mounted) {
-                                        if (updatedStatus is StatusUpdateResult) {
-                                          _viewModel.updateStatus(
-                                            item['title'] ?? '',
-                                            updatedStatus.status,
-                                            newDate: updatedStatus.scheduleDate,
-                                          );
-                                        } else if (updatedStatus is String) {
-                                          if (updatedStatus != 'DELETED') {
-                                            _viewModel.updateStatus(
-                                              item['title'] ?? '',
-                                              updatedStatus,
-                                            );
-                                          }
-                                        }
-                                        _viewModel.fetchBookings();
-                                      }
-                                    },
-                                  );
-                                },
                               ),
+                            ),
+
+                          // Lead Chat Items List with extra 'Branch Manager' badge & Pull-to-refresh
+                          Expanded(
+                            child: RefreshIndicator(
+                              onRefresh: _viewModel.fetchBookings,
+                              color: AppColors.primaryGreen,
+                              child: _viewModel.isLoading && filtered.isEmpty
+                                  ? const TodaySkeletonLoading()
+                                  : filtered.isEmpty
+                                  ? ListView(
+                                      physics:
+                                          const AlwaysScrollableScrollPhysics(),
+                                      children: const [
+                                        SizedBox(height: 120),
+                                        Center(
+                                          child: Text(
+                                            'No tasks found',
+                                            style: TextStyle(
+                                              color: AppColors.textSubtitle,
+                                              fontSize: 14,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    )
+                                  : ListView.separated(
+                                      controller: _scrollController,
+                                      scrollCacheExtent:
+                                          const ScrollCacheExtent.pixels(600),
+                                      physics: const BouncingScrollPhysics(
+                                        parent: AlwaysScrollableScrollPhysics(),
+                                      ),
+                                      padding: const EdgeInsets.only(
+                                        bottom: 100,
+                                      ),
+                                      itemCount:
+                                          filtered.length +
+                                          (_viewModel.isLoadingMore ? 1 : 0),
+                                      separatorBuilder: (context, index) =>
+                                          const Divider(
+                                            height: 1,
+                                            thickness: 1,
+                                            color: AppColors.divider,
+                                            indent: 78,
+                                          ),
+                                      itemBuilder: (context, index) {
+                                        if (index == filtered.length) {
+                                          return const Padding(
+                                            padding: EdgeInsets.symmetric(
+                                              vertical: 20,
+                                            ),
+                                            child: Center(
+                                              child: SizedBox(
+                                                width: 24,
+                                                height: 24,
+                                                child:
+                                                    CircularProgressIndicator(
+                                                      strokeWidth: 2,
+                                                      color: AppColors
+                                                          .primaryGreen,
+                                                    ),
+                                              ),
+                                            ),
+                                          );
+                                        }
+
+                                        if (filtered.length >= 10 &&
+                                            index >= filtered.length - 2 &&
+                                            !_viewModel.isLoading &&
+                                            !_viewModel.isLoadingMore &&
+                                            _viewModel.hasMore &&
+                                            _scrollController.hasClients &&
+                                            _scrollController
+                                                    .position
+                                                    .userScrollDirection ==
+                                                ScrollDirection.reverse) {
+                                          WidgetsBinding.instance
+                                              .addPostFrameCallback((_) {
+                                                if (mounted &&
+                                                    !_viewModel.isLoading &&
+                                                    !_viewModel.isLoadingMore &&
+                                                    _viewModel.hasMore) {
+                                                  _viewModel.loadNextPage();
+                                                }
+                                              });
+                                        }
+
+                                        final item = filtered[index];
+                                        return ChatListItemTile(
+                                          title: item['title'] ?? '',
+                                          avatarLetter:
+                                              item['avatarLetter'] ?? '',
+                                          avatarBgColor:
+                                              item['avatarBgColor'] ??
+                                              AppColors.surfaceGrey,
+                                          avatarTextColor:
+                                              item['avatarTextColor'] ??
+                                              AppColors.textSecondary,
+                                          avatarBorderColor:
+                                              item['avatarBorderColor'],
+                                          hasVerifiedBadge:
+                                              item['hasVerifiedBadge'] ?? false,
+                                          date: formatDateToDayMonthYear(
+                                            item['date']?.toString() ?? '',
+                                          ),
+                                          tagText: item['tagText'] ?? '',
+                                          tagBgColor:
+                                              item['tagBgColor'] ??
+                                              AppColors.completedBg,
+                                          tagTextColor:
+                                              item['tagTextColor'] ??
+                                              AppColors.completedText,
+                                          location: item['location'] ?? '',
+                                          extraBadgeText:
+                                              item['branchManager'] ??
+                                              item['role'] ??
+                                              'Branch Manager',
+                                          onTap: () async {
+                                            final booking =
+                                                item['booking']
+                                                    as BookingModel?;
+                                            final customer = booking != null
+                                                ? CustomerDetailsData(
+                                                    id: booking.id.toString(),
+                                                    name: booking.name,
+                                                    inquiry:
+                                                        booking.notes.isNotEmpty
+                                                        ? booking.notes
+                                                        : 'Steel door enquiry',
+                                                    status:
+                                                        booking
+                                                            .status
+                                                            .isNotEmpty
+                                                        ? '${booking.status[0].toUpperCase()}${booking.status.substring(1).toLowerCase()}'
+                                                        : 'New',
+                                                    phoneNumber: booking.mobile,
+                                                    addressLine1:
+                                                        booking.address,
+                                                    addressLine2:
+                                                        [
+                                                              booking.areaName,
+                                                              booking
+                                                                  .districtName,
+                                                              booking.stateName,
+                                                            ]
+                                                            .where(
+                                                              (s) =>
+                                                                  s.isNotEmpty,
+                                                            )
+                                                            .join(', '),
+                                                    notes: booking.notes,
+                                                    staffNotes:
+                                                        booking.staffNotes,
+                                                    documents:
+                                                        booking.documents,
+                                                    hasBeenScheduled:
+                                                        booking.status
+                                                                .toLowerCase() ==
+                                                            'scheduled' ||
+                                                        booking.status
+                                                                .toLowerCase() ==
+                                                            'completed',
+                                                    branchHeadId:
+                                                        booking.branchHeadId,
+                                                    branchHeadName:
+                                                        booking
+                                                            .branchHeadName ??
+                                                        item['branchManager']
+                                                            ?.toString(),
+                                                    scheduleDate:
+                                                        booking.scheduleDate,
+                                                    statusColorCode:
+                                                        booking.statusColorCode,
+                                                  )
+                                                : CustomerDetailsData.fromChatInfo(
+                                                    name:
+                                                        item['title']
+                                                            ?.toString() ??
+                                                        'Customer',
+                                                    location: item['location']
+                                                        ?.toString(),
+                                                    tagText: item['tagText']
+                                                        ?.toString(),
+                                                    id: item['id']?.toString(),
+                                                    scheduleDate:
+                                                        item['scheduleDate']
+                                                            ?.toString() ??
+                                                        item['date']
+                                                            ?.toString(),
+                                                    phoneNumber:
+                                                        item['mobile']
+                                                            ?.toString() ??
+                                                        item['phoneNumber']
+                                                            ?.toString(),
+                                                    notes: item['notes']
+                                                        ?.toString(),
+                                                    documents:
+                                                        item['documents']
+                                                            is List
+                                                        ? (item['documents']
+                                                                  as List)
+                                                              .map(
+                                                                (e) => e
+                                                                    .toString(),
+                                                              )
+                                                              .toList()
+                                                        : null,
+                                                    branchHeadId:
+                                                        item['branchHeadId']
+                                                            is int
+                                                        ? item['branchHeadId']
+                                                              as int
+                                                        : null,
+                                                    branchHeadName:
+                                                        item['branchManager']
+                                                            ?.toString() ??
+                                                        item['branchHeadName']
+                                                            ?.toString(),
+                                                  );
+                                            final updatedStatus =
+                                                await Navigator.of(
+                                                  context,
+                                                ).push(
+                                                  SlideRightRoute(
+                                                    page: CustomerDetailsPage(
+                                                      customer: customer,
+                                                      isCoordinator: true,
+                                                    ),
+                                                  ),
+                                                );
+                                            if (mounted) {
+                                              if (updatedStatus
+                                                  is StatusUpdateResult) {
+                                                _viewModel.updateStatus(
+                                                  item['title'] ?? '',
+                                                  updatedStatus.status,
+                                                  newDate: updatedStatus
+                                                      .scheduleDate,
+                                                );
+                                              } else if (updatedStatus
+                                                  is String) {
+                                                if (updatedStatus !=
+                                                    'DELETED') {
+                                                  _viewModel.updateStatus(
+                                                    item['title'] ?? '',
+                                                    updatedStatus,
+                                                  );
+                                                }
+                                              }
+                                              _viewModel.fetchBookings();
+                                            }
+                                          },
+                                        );
+                                      },
+                                    ),
+                            ),
+                          ),
+                        ],
+                      );
+                    },
                   ),
                 ),
               ],
-            );
-          },
+            ),
+          ),
         ),
-      ),
-    ],
-  ),
-),
-),
         // Floating pop-up scroll to top button
         Positioned(
           right: 18,

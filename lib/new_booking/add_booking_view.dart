@@ -5,7 +5,6 @@ import '../core/widgets/circular_back_button.dart';
 import '../core/widgets/document_preview_upload_page.dart';
 import '../core/theme.dart';
 import '../api/document_upload_service.dart';
-import '../services/new_lead_service.dart';
 import '../settings/settings_model.dart';
 import 'add_booking_view_model.dart';
 import 'area_view_model.dart';
@@ -188,11 +187,6 @@ class _add_bookingState extends State<add_booking> {
     if (!mounted) return;
 
     if (saveResult.isSuccess) {
-      NewLeadService.instance.notifyNewLead(
-        leadName: result.name,
-        location: result.areaName ?? result.districtName,
-      );
-
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(

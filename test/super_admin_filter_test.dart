@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -9,6 +10,7 @@ import 'package:task_chat/bottom_navigator/bottom_navigator.dart';
 import 'package:task_chat/login_page/token_storage.dart';
 import 'package:task_chat/Coordinator/cordinator_page.dart';
 import 'package:task_chat/Coordinator/widgets/super_admin_filter_bottom_sheet.dart';
+import 'package:task_chat/today/widgets/today_skeleton_loading.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -404,6 +406,273 @@ void main() {
 
     expect(appliedStatus, 'All');
     expect(appliedManager, 'John Doe');
+  });
+
+  test('CoordinatorViewModel status filter passes status and statusId in API pagination', () async {
+    final requestedUris = <Uri>[];
+    final mockClient = MockClient((request) async {
+      requestedUris.add(request.url);
+      final page = request.url.queryParameters['page'] ?? '1';
+      final status = request.url.queryParameters['status'];
+
+      if (page == '1') {
+        return http.Response(
+          jsonEncode({
+            'status': 'success',
+            'data': [
+              {
+                'id': 101,
+                'name': 'Client 101',
+                'mobile': '9876543210',
+                'address': 'Kochi',
+                'status': status ?? 'Completed',
+                'branchHeadName': 'Manager A',
+              },
+            ],
+            'pagination': {'currentPage': 1, 'totalPages': 2},
+          }),
+          200,
+        );
+      } else {
+        return http.Response(
+          jsonEncode({
+            'status': 'success',
+            'data': [
+              {
+                'id': 102,
+                'name': 'Client 102',
+                'mobile': '9876543220',
+                'address': 'Calicut',
+                'status': status ?? 'Completed',
+                'branchHeadName': 'Manager B',
+              },
+            ],
+            'pagination': {'currentPage': 2, 'totalPages': 2},
+          }),
+          200,
+        );
+      }
+    });
+
+    final vm = CoordinatorViewModel(client: mockClient);
+    vm.setStatusFilter('Completed');
+    await pumpEventQueue();
+
+    expect(requestedUris, isNotEmpty);
+    final page1Uri = requestedUris.first;
+    expect(page1Uri.queryParameters['page'], '1');
+    expect(page1Uri.queryParameters['status'], 'Completed');
+    expect(page1Uri.queryParameters['statusId'], '3');
+    expect(vm.filteredChatItems.length, 1);
+    expect(vm.hasMore, isTrue);
+
+    await vm.loadNextPage();
+    expect(requestedUris.length, 2);
+    final page2Uri = requestedUris[1];
+    expect(page2Uri.queryParameters['page'], '2');
+    expect(page2Uri.queryParameters['status'], 'Completed');
+    expect(page2Uri.queryParameters['statusId'], '3');
+    expect(vm.filteredChatItems.length, 2);
+    expect(vm.hasMore, isFalse);
+
+    vm.dispose();
+  });
+
+  test('CoordinatorViewModel passes districtId, district_id, branchHeadId and branchManager when filtering by Branch Head', () async {
+    final requestedUris = <Uri>[];
+    final mockClient = MockClient((request) async {
+      requestedUris.add(request.url);
+      if (request.url.path.contains('get_branch_heads_for_status_update')) {
+        return http.Response(
+          jsonEncode({
+            'success': true,
+            'data': [
+              {
+                'id': 5,
+                'name': 'Branch Head - Kottayam',
+                'district_id': 5,
+                'district_name': 'Kottayam'
+              },
+              {
+                'id': 7,
+                'name': 'Branch Head - Ernakulam',
+                'district_id': 7,
+                'district_name': 'Ernakulam'
+              }
+            ]
+          }),
+          200,
+        );
+      }
+      return http.Response(
+        jsonEncode({
+          'status': 'success',
+          'data': [
+            {
+              'id': 101,
+              'name': 'Client 101',
+              'mobile': '9876543210',
+              'address': 'Kottayam',
+              'status': 'New',
+              'districtId': 5,
+              'districtName': 'Kottayam',
+              'branchHeadId': 5,
+              'branchHeadName': 'Branch Head - Kottayam',
+            },
+          ],
+          'pagination': {'currentPage': 1, 'totalPages': 1, 'total': 1},
+        }),
+        200,
+      );
+    });
+
+    final vm = CoordinatorViewModel(client: mockClient);
+    vm.setManagerFilter('Branch Head - Kottayam');
+    await pumpEventQueue();
+
+    expect(requestedUris, isNotEmpty);
+    final bookingUri = requestedUris.firstWhere((u) => u.path.contains('/api/bookings'));
+    expect(bookingUri.queryParameters['branchManager'], 'Branch Head - Kottayam');
+    expect(bookingUri.queryParameters['districtId'], '5');
+    expect(bookingUri.queryParameters['district_id'], '5');
+    expect(bookingUri.queryParameters['branchHeadId'], '5');
+    expect(vm.filteredChatItems.length, 1);
+    expect(vm.filteredChatItems.first['branchManager'], 'Branch Head - Kottayam');
+
+    vm.dispose();
+  });
+
+  testWidgets(
+      'CoordinatorPage does not automatically trigger runaway loadNextPage when filtered count is small',
+      (WidgetTester tester) async {
+    int loadNextPageCalls = 0;
+    final mockClient = MockClient((request) async {
+      final page = request.url.queryParameters['page'] ?? '1';
+      if (page != '1') {
+        loadNextPageCalls++;
+      }
+      return http.Response(
+        jsonEncode({
+          'status': 'success',
+          'data': [
+            {
+              'id': 1,
+              'name': 'Single Lead',
+              'mobile': '9876543210',
+              'address': 'Kottayam',
+              'status': 'New',
+              'districtId': 5,
+              'branchHeadId': 5,
+              'branchHeadName': 'Branch Head - Kottayam',
+            }
+          ],
+          'pagination': {'currentPage': int.parse(page), 'totalPages': 5, 'total': 5},
+        }),
+        200,
+      );
+    });
+
+    final vm = CoordinatorViewModel(client: mockClient);
+    await vm.fetchBookings();
+    expect(vm.filteredChatItems.length, 1);
+    expect(vm.hasMore, isTrue);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CoordinatorPage(viewModel: vm),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    // Because filtered.length < 10 and user has not scrolled, loadNextPage should NOT have been called
+    expect(loadNextPageCalls, 0);
+
+    vm.dispose();
+  });
+
+  testWidgets(
+      'CoordinatorPage clears old chats and renders skeleton loader while fetching new filter',
+      (WidgetTester tester) async {
+    final completer = Completer<http.Response>();
+    final mockClient = MockClient((request) async {
+      return completer.future;
+    });
+
+    final vm = CoordinatorViewModel(
+      client: mockClient,
+      initialItems: [
+        {
+          'id': '10',
+          'title': 'Old Client 1',
+          'location': 'Kottayam',
+          'tagText': 'New',
+          'date': '01/01/2026',
+          'branchManager': 'Branch Head - Kottayam',
+          'isPending': true,
+        },
+        {
+          'id': '20',
+          'title': 'Old Client 2',
+          'location': 'Ernakulam',
+          'tagText': 'New',
+          'date': '01/01/2026',
+          'branchManager': 'Branch Head - Ernakulam',
+          'isPending': true,
+        },
+      ],
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CoordinatorPage(viewModel: vm),
+      ),
+    );
+    await tester.pump();
+
+    // Initially old items are present
+    expect(find.text('Old Client 1'), findsOneWidget);
+    expect(find.text('Old Client 2'), findsOneWidget);
+
+    // Apply a new filter
+    vm.applyFilters('All', 'Branch Head - Kottayam');
+    await tester.pump();
+
+    // Old chats are cleared immediately and skeleton loader is displayed
+    expect(find.text('Old Client 1'), findsNothing);
+    expect(find.text('Old Client 2'), findsNothing);
+    expect(find.byType(TodaySkeletonLoading), findsOneWidget);
+
+    // Resolve network request with newly filtered data
+    completer.complete(
+      http.Response(
+        jsonEncode({
+          'status': 'success',
+          'data': [
+            {
+              'id': 101,
+              'name': 'Fresh Kottayam Lead',
+              'mobile': '9876543210',
+              'address': 'Kottayam',
+              'status': 'New',
+              'districtId': 5,
+              'branchHeadId': 5,
+              'branchHeadName': 'Branch Head - Kottayam',
+            }
+          ],
+          'pagination': {'currentPage': 1, 'totalPages': 1, 'total': 1},
+        }),
+        200,
+      ),
+    );
+    await tester.pump();
+    await tester.pumpAndSettle();
+
+    // Skeleton loader disappears and fresh lead appears
+    expect(find.byType(TodaySkeletonLoading), findsNothing);
+    expect(find.text('Fresh Kottayam Lead'), findsOneWidget);
+
+    vm.dispose();
   });
 }
 
