@@ -14,7 +14,6 @@ class SettingsView extends StatefulWidget {
   final SettingsViewModel? viewModel;
   final VoidCallback? onLogout;
   final VoidCallback? onAbout;
-  final VoidCallback? onEditProfile;
 
   const SettingsView({
     super.key,
@@ -22,7 +21,6 @@ class SettingsView extends StatefulWidget {
     this.viewModel,
     this.onLogout,
     this.onAbout,
-    this.onEditProfile,
   });
 
   @override
@@ -103,10 +101,7 @@ class _SettingsViewState extends State<SettingsView> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // 1. Profile Header Card
-          ProfileHeaderCard(
-            profile: _activeProfile,
-            onEdit: widget.onEditProfile ?? () => _handleEditProfile(context),
-          ),
+          ProfileHeaderCard(profile: _activeProfile),
           const SizedBox(height: 14),
 
           // 2. WhatsApp Theme Action Tile
@@ -171,16 +166,6 @@ class _SettingsViewState extends State<SettingsView> {
             onTap: widget.onLogout ?? () => _handleLogout(context),
           ),
         ],
-      ),
-    );
-  }
-
-  void _handleEditProfile(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Profile edit tapped'),
-        duration: Duration(seconds: 1),
-        behavior: SnackBarBehavior.floating,
       ),
     );
   }

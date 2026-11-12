@@ -53,36 +53,6 @@ class ProfileHeaderCard extends StatelessWidget {
                   ),
                 ),
               ),
-              Positioned(
-                bottom: -2,
-                right: -2,
-                child: GestureDetector(
-                  onTap: onEdit,
-                  child: Container(
-                    padding: const EdgeInsets.all(4.5),
-                    decoration: BoxDecoration(
-                      color: isDark ? AppDarkColors.primaryGreen : AppColors.primaryGreen,
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: isDark ? const Color(0xFF1F2C34) : Colors.white,
-                        width: 2,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.primaryGreen.withValues(alpha: 0.3),
-                          blurRadius: 4,
-                          offset: const Offset(0, 1),
-                        ),
-                      ],
-                    ),
-                    child: const Icon(
-                      Icons.edit,
-                      size: 11,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              ),
             ],
           ),
           const SizedBox(width: 16),
