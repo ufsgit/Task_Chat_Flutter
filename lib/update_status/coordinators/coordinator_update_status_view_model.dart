@@ -4,6 +4,7 @@ import '../../core/widgets/app_pill_notification.dart';
 import '../../customer_details/customer_details_model.dart';
 import '../../login_page/token_storage.dart';
 import '../models/status_chip_model.dart';
+import '../services/status_update_helper.dart';
 import '../branch_manager/branch_manager_update_status_logic.dart';
 import 'coordinator_update_status_logic.dart';
 
@@ -54,9 +55,7 @@ class CoordinatorUpdateStatusViewModel extends ChangeNotifier {
       _selectedStatus = 'Scheduled';
     }
 
-    _notesController = TextEditingController(
-        text: customer.staffNotes.isNotEmpty ? customer.staffNotes : '',
-      );
+    _notesController = TextEditingController();
     _scheduleDate =
         (customer.scheduleDate != null && customer.scheduleDate!.isNotEmpty)
         ? customer.scheduleDate!
@@ -231,8 +230,11 @@ class CoordinatorUpdateStatusViewModel extends ChangeNotifier {
     }
   }
 
+  StatusChipModel? get selectedStatusChip =>
+      findStatusChip(_selectedStatus, statusChips);
+
   CoordinatorUpdateStatusVisibility get visibility =>
-      CoordinatorUpdateStatusVisibility(_selectedStatus);
+      CoordinatorUpdateStatusVisibility(_selectedStatus, selectedChip: selectedStatusChip);
 
   bool get showSchedule => visibility.showSchedule;
   bool get showBranchManager => visibility.showBranchManager;
@@ -299,6 +301,13 @@ class CoordinatorUpdateStatusViewModel extends ChangeNotifier {
 
     if (_selectedStatus.toLowerCase() == 'completed') {
       _scheduleDate = formatCurrentDate();
+    } else if (showSchedule && _scheduleDate.trim().isEmpty) {
+      _errorMessage = 'Please select a date';
+      if (context.mounted) {
+        AppNotification.showError(context, _errorMessage!);
+      }
+      notifyListeners();
+      return false;
     }
 
     _isSaving = true;
@@ -321,6 +330,7 @@ class CoordinatorUpdateStatusViewModel extends ChangeNotifier {
         branchManagerName: bmName,
         districtId: districtId,
         districtName: districtName,
+        isFollowUp: selectedStatusChip?.isFollowUp,
         documents: _documents,
       );
 

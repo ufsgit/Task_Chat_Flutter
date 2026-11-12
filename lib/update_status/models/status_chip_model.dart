@@ -6,6 +6,8 @@ class StatusChipModel {
   final String? colorCode;
   final int sortOrder;
   final bool isActive;
+  final bool isFollowUp;
+  final bool isDate;
 
   const StatusChipModel({
     required this.id,
@@ -14,7 +16,12 @@ class StatusChipModel {
     this.colorCode,
     required this.sortOrder,
     required this.isActive,
+    this.isFollowUp = false,
+    this.isDate = false,
   });
+
+  static bool _parseBoolFlag(dynamic val) =>
+      val == 1 || val == true || val == '1';
 
   factory StatusChipModel.fromJson(Map<String, dynamic> json) {
     return StatusChipModel(
@@ -27,9 +34,9 @@ class StatusChipModel {
       sortOrder: json['sortOrder'] is int
           ? json['sortOrder'] as int
           : int.tryParse(json['sortOrder']?.toString() ?? '') ?? 0,
-      isActive: json['isActive'] == 1 ||
-          json['isActive'] == true ||
-          json['isActive'] == '1',
+      isActive: _parseBoolFlag(json['isActive']),
+      isFollowUp: _parseBoolFlag(json['isFollowUp'] ?? json['is_follow_up']),
+      isDate: _parseBoolFlag(json['isDate'] ?? json['is_date']),
     );
   }
 
@@ -43,6 +50,8 @@ class StatusChipModel {
     },
     'sortOrder': sortOrder,
     'isActive': isActive ? 1 : 0,
+    'isFollowUp': isFollowUp ? 1 : 0,
+    'isDate': isDate ? 1 : 0,
   };
 
   @override

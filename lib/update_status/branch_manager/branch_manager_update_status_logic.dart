@@ -36,13 +36,13 @@ String formatCurrentDate() {
 /// Helper determining UI field visibility rules for status updates.
 class UpdateStatusVisibility {
   final String status;
+  final StatusChipModel? selectedChip;
 
-  const UpdateStatusVisibility(this.status);
+  const UpdateStatusVisibility(this.status, {this.selectedChip});
 
-  /// Schedule (Calendar) is shown for Scheduled, hidden for Completed and Cancelled.
+  /// Schedule (Calendar) is shown when isFollowUp == 1 or isDate == 1 (fallback: not Completed/Cancelled).
   bool get showSchedule =>
-      status.toLowerCase() != 'cancelled' &&
-      status.toLowerCase() != 'completed';
+      isDateRequiredForStatus(status, chip: selectedChip);
 
   /// All statuses use Notes.
   bool get showNotes => true;
@@ -66,6 +66,7 @@ class StatusUpdateRequest {
   final String? branchManagerName;
   final int? districtId;
   final String? districtName;
+  final int? isFollowUp;
 
   const StatusUpdateRequest({
     required this.clientId,
@@ -80,6 +81,7 @@ class StatusUpdateRequest {
     this.branchManagerName,
     this.districtId,
     this.districtName,
+    this.isFollowUp,
   });
 
   Map<String, dynamic> toJson() => {
@@ -98,6 +100,7 @@ class StatusUpdateRequest {
     if (districtId != null && districtId! > 0) 'districtId': districtId,
     if (districtName != null && districtName!.isNotEmpty)
       'districtName': districtName,
+    if (isFollowUp != null) 'isFollowUp': isFollowUp,
   };
 
   factory StatusUpdateRequest.fromJson(Map<String, dynamic> json) {
@@ -122,6 +125,9 @@ class StatusUpdateRequest {
           json['districtId'] as int? ??
           int.tryParse(json['districtId']?.toString() ?? ''),
       districtName: json['districtName']?.toString(),
+      isFollowUp:
+          json['isFollowUp'] as int? ??
+          int.tryParse(json['isFollowUp']?.toString() ?? ''),
     );
   }
 }
@@ -151,6 +157,7 @@ class BranchManagerUpdateStatusLogic {
     required String status,
     required String scheduleDate,
     required String notes,
+    bool? isFollowUp,
     List<String>? documents,
   }) async {
     final isTest = TokenStorage.isTestEnvironment;
@@ -179,6 +186,7 @@ class BranchManagerUpdateStatusLogic {
           : (user?.username.isNotEmpty == true
                 ? user!.username
                 : 'Branch Manager'),
+      isFollowUp: resolveIsFollowUpFlag(status, explicitIsFollowUp: isFollowUp),
     );
 
     final headers = await tokenStorage.authHeaders(includeContentType: true);

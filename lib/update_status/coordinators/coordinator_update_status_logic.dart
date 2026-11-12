@@ -80,13 +80,13 @@ class BranchHeadUser {
 /// Helper determining UI field visibility rules for Coordinator status updates.
 class CoordinatorUpdateStatusVisibility {
   final String status;
+  final StatusChipModel? selectedChip;
 
-  const CoordinatorUpdateStatusVisibility(this.status);
+  const CoordinatorUpdateStatusVisibility(this.status, {this.selectedChip});
 
-  /// Schedule (Calendar) is shown for Scheduled, hidden for Completed and Cancelled.
+  /// Schedule (Calendar) is shown when isFollowUp == 1 or isDate == 1 (fallback: not Completed/Cancelled).
   bool get showSchedule =>
-      status.toLowerCase() != 'cancelled' &&
-      status.toLowerCase() != 'completed';
+      isDateRequiredForStatus(status, chip: selectedChip);
 
   /// All statuses use Notes.
   bool get showNotes => true;
@@ -152,6 +152,7 @@ class CoordinatorUpdateStatusLogic {
     String? branchManagerName,
     int? districtId,
     String? districtName,
+    bool? isFollowUp,
     List<String>? documents,
   }) async {
     final isTest = TokenStorage.isTestEnvironment;
@@ -191,6 +192,7 @@ class CoordinatorUpdateStatusLogic {
       branchManagerName: effectiveCreatedByName,
       districtId: effectiveDistrictId,
       districtName: effectiveDistrictName,
+      isFollowUp: resolveIsFollowUpFlag(status, explicitIsFollowUp: isFollowUp),
     );
 
     final headers = await tokenStorage.authHeaders(includeContentType: true);

@@ -5,6 +5,37 @@ import '../../api/api.dart';
 import '../../customer_details/customer_details_model.dart';
 import '../../today/today_view_model.dart';
 import '../branch_manager/branch_manager_update_status_logic.dart';
+import '../models/status_chip_model.dart';
+
+/// Matches a status string against loaded [StatusChipModel] items by label or code.
+StatusChipModel? findStatusChip(String status, List<StatusChipModel> chips) {
+  final target = status.toLowerCase().trim();
+  for (final chip in chips) {
+    if (chip.label.toLowerCase().trim() == target ||
+        chip.code.toLowerCase().trim() == target) {
+      return chip;
+    }
+  }
+  return null;
+}
+
+/// Resolves whether a status requires/shows the date field based on chip flags or fallback.
+bool isDateRequiredForStatus(String status, {StatusChipModel? chip}) {
+  if (chip != null) {
+    return chip.isFollowUp || chip.isDate;
+  }
+  final lower = status.toLowerCase().trim();
+  return lower != 'cancelled' && lower != 'completed';
+}
+
+/// Resolves the `isFollowUp` integer flag (1 or 0) for POST /api/status.
+int resolveIsFollowUpFlag(String status, {bool? explicitIsFollowUp}) {
+  if (explicitIsFollowUp != null) {
+    return explicitIsFollowUp ? 1 : 0;
+  }
+  final lower = status.toLowerCase().trim();
+  return (lower == 'completed' || lower == 'cancelled') ? 0 : 1;
+}
 
 /// Shared helper that performs the status update POST and optional document sync PUT.
 Future<bool> executeStatusUpdateSubmit({

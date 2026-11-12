@@ -4,6 +4,7 @@ import '../../core/widgets/app_pill_notification.dart';
 import '../../customer_details/customer_details_model.dart';
 import '../../login_page/token_storage.dart';
 import '../models/status_chip_model.dart';
+import '../services/status_update_helper.dart';
 import 'branch_manager_update_status_logic.dart';
 
 /// ViewModel managing state, form validation, and submissions for Branch Manager status updates.
@@ -48,9 +49,7 @@ class BranchManagerUpdateStatusViewModel extends ChangeNotifier {
       _selectedStatus = 'Scheduled';
     }
 
-    _notesController = TextEditingController(
-      text: customer.staffNotes.isNotEmpty ? customer.staffNotes : '',
-    );
+    _notesController = TextEditingController();
     _scheduleDate =
         (customer.scheduleDate != null && customer.scheduleDate!.isNotEmpty)
         ? customer.scheduleDate!
@@ -145,8 +144,11 @@ class BranchManagerUpdateStatusViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  StatusChipModel? get selectedStatusChip =>
+      findStatusChip(_selectedStatus, statusChips);
+
   UpdateStatusVisibility get visibility =>
-      UpdateStatusVisibility(_selectedStatus);
+      UpdateStatusVisibility(_selectedStatus, selectedChip: selectedStatusChip);
 
   bool get showSchedule => visibility.showSchedule;
 
@@ -182,6 +184,13 @@ class BranchManagerUpdateStatusViewModel extends ChangeNotifier {
 
     if (_selectedStatus.toLowerCase() == 'completed') {
       _scheduleDate = formatCurrentDate();
+    } else if (showSchedule && _scheduleDate.trim().isEmpty) {
+      _errorMessage = 'Please select a date';
+      if (context.mounted) {
+        AppNotification.showError(context, _errorMessage!);
+      }
+      notifyListeners();
+      return false;
     }
 
     _isSaving = true;
@@ -194,6 +203,7 @@ class BranchManagerUpdateStatusViewModel extends ChangeNotifier {
         status: _selectedStatus,
         scheduleDate: _scheduleDate,
         notes: _notesController.text,
+        isFollowUp: selectedStatusChip?.isFollowUp,
         documents: _documents,
       );
 
