@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
 import '../connectivity_service.dart';
 import '../theme.dart';
-import 'new_lead_in_app_banner.dart';
 
 /// Global wrapper widget that displays a Lottie-animated popup
 /// whenever the internet connection is lost, with an option to close or retry.
@@ -102,7 +101,6 @@ class _GlobalConnectivityBannerState extends State<GlobalConnectivityBanner> {
                   ],
                 ),
               ),
-            const NewLeadBannerOverlay(),
           ],
         );
       },

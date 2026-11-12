@@ -7,7 +7,6 @@ import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../api/api.dart';
-import '../core/widgets/app_pill_notification.dart';
 import '../customer_details/customer_details_model.dart';
 import '../customer_details/customer_details_view.dart';
 import '../login_page/token_storage.dart';
@@ -190,28 +189,10 @@ class NotificationService {
 
         final bool isLead = isNewLeadNotification(message);
         if (isLead) {
-          final customer = parseCustomerFromMessage(message);
-          NewLeadService.instance.notifyNewLead(
-            leadName: customer?.name,
-            location: customer?.location,
-            bookingId: customer?.id,
-          );
-        } else {
-          // Display in-app banner toast if app is currently in foreground
-          final context = navigatorKey?.currentContext;
-          if (context != null && context.mounted) {
-            final displayText = body.isNotEmpty ? '$title: $body' : title;
-            AppNotification.show(
-              context,
-              displayText,
-              icon: Icons.notifications_active_rounded,
-              duration: const Duration(milliseconds: 3500),
-              onTap: () {
-                unawaited(handleNotificationClick(message, isInitial: false));
-              },
-            );
-          }
+          // Silently refresh active lists in background without showing in-app banner
+          NewLeadService.instance.triggerRefresh();
         }
+        // In-app notifications are stopped for now
       });
 
       // 7. Handle notification click when app launched from terminated state

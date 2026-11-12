@@ -12,10 +12,6 @@ class ReportViewModel extends ChangeNotifier {
   final bool _isInternalClient;
   final TokenStorage? tokenStorage;
 
-  TaskReportData _data;
-  bool _isLoading = false;
-  String? _errorMessage;
-
   List<BookingReportGraphItem> _graphData = [];
   bool _isGraphLoading = false;
   String? _graphErrorMessage;
@@ -40,7 +36,6 @@ class ReportViewModel extends ChangeNotifier {
   }
 
   ReportViewModel({
-    TaskReportData? initialData,
     List<BookingReportGraphItem>? initialGraphData,
     String? initialDateFrom,
     String? initialDateTo,
@@ -49,15 +44,10 @@ class ReportViewModel extends ChangeNotifier {
     bool useDefaultDateRange = true,
   }) : _client = client ?? AuthenticatedClient(),
        _isInternalClient = client == null,
-       _data = initialData ?? defaultTaskReportData,
        _graphData = initialGraphData ?? [],
        _dateFrom =
            initialDateFrom ?? (useDefaultDateRange ? defaultDateFrom : null),
        _dateTo = initialDateTo ?? (useDefaultDateRange ? defaultDateTo : null);
-
-  TaskReportData get data => _data;
-  bool get isLoading => _isLoading;
-  String? get errorMessage => _errorMessage;
 
   List<BookingReportGraphItem> get graphData => _graphData;
   bool get isGraphLoading => _isGraphLoading;
@@ -65,11 +55,6 @@ class ReportViewModel extends ChangeNotifier {
 
   String? get dateFrom => _dateFrom;
   String? get dateTo => _dateTo;
-
-  void updateData(TaskReportData newData) {
-    _data = newData;
-    notifyListeners();
-  }
 
   void setGraphData(List<BookingReportGraphItem> newGraphData) {
     _graphData = newGraphData;
@@ -174,14 +159,7 @@ class ReportViewModel extends ChangeNotifier {
   }
 
   Future<void> refreshReport() async {
-    _isLoading = true;
-    _errorMessage = null;
-    notifyListeners();
-
     await fetchGraphReport(force: true);
-
-    _isLoading = false;
-    notifyListeners();
   }
 
   @override

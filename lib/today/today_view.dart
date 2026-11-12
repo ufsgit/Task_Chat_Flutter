@@ -18,8 +18,9 @@ import '../update_status/status_update_result.dart';
 
 class TodayPage extends StatefulWidget {
   final TodayViewModel? viewModel;
+  final bool isDealer;
 
-  const TodayPage({super.key, this.viewModel});
+  const TodayPage({super.key, this.viewModel, this.isDealer = false});
 
   @override
   State<TodayPage> createState() => _TodayPageState();
@@ -251,7 +252,7 @@ class _TodayPageState extends State<TodayPage> {
                   onTap: () async {
                     await Navigator.of(context, rootNavigator: true).push(
                       SlideUpRoute(
-                        page: const add_booking(isCoordinator: false),
+                        page: add_booking(isCoordinator: widget.isDealer),
                       ),
                     );
                     if (mounted) {

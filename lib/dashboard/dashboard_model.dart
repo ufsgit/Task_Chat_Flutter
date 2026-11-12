@@ -87,38 +87,8 @@ const List<String> defaultTimeFilters = [
 ];
 
 // -----------------------------------------------------------------------------
-// Metric Card & Progress Data Models
+// Metric Card Data Model
 // -----------------------------------------------------------------------------
-
-/// Performance data model for each day in the weekly performance chart.
-class DayPerformanceData {
-  final String day;
-  final double completed;
-  final double newBooking;
-  final bool isPeak;
-
-  const DayPerformanceData({
-    required this.day,
-    required this.completed,
-    required this.newBooking,
-    this.isPeak = false,
-  });
-}
-
-/// Lead progress metric model.
-class BookingProgressData {
-  final String title;
-  final String badgeText;
-  final int totalLeads;
-  final double progressPercent;
-
-  const BookingProgressData({
-    required this.title,
-    required this.badgeText,
-    required this.totalLeads,
-    required this.progressPercent,
-  });
-}
 
 /// Metric summary card data model matching the modern dashboard cards design.
 class MetricCardData {
@@ -154,77 +124,6 @@ class MetricCardData {
     this.progressColor,
   });
 }
-
-// -----------------------------------------------------------------------------
-// Default / Fallback Metrics Data
-// -----------------------------------------------------------------------------
-
-const BookingProgressData defaultBookingProgress = BookingProgressData(
-  title: 'New Booking',
-  badgeText: 'NEW',
-  totalLeads: 48,
-  progressPercent: 0.68,
-);
-
-const MetricCardData defaultNewBookingMetric = MetricCardData(
-  title: 'New Booking',
-  value: '48',
-  subtitle: 'New bookings per month',
-  titleColor: Color(0xFFA3E635),
-  leadingIcon: Icons.person_add_alt_1_rounded,
-  iconBgColor: Color(0xFF1D61E7),
-  iconColor: Color(0xFFA3E635),
-  cardBgColor: Color(0xFFF2F7FE),
-  darkCardBgColor: Color.fromARGB(255, 36, 36, 41),
-);
-
-const MetricCardData defaultPendingMetric = MetricCardData(
-  title: 'Pending',
-  value: '19',
-  subtitle: 'Pending follow-ups per month',
-  titleColor: Colors.purple,
-  leadingIcon: Icons.hourglass_empty_rounded,
-  iconBgColor: Color.fromARGB(255, 109, 19, 211),
-  iconColor: Colors.purple,
-  cardBgColor: Color.fromARGB(255, 235, 225, 243),
-  darkCardBgColor: Color.fromARGB(255, 36, 36, 41),
-);
-
-const MetricCardData defaultCompletedMetric = MetricCardData(
-  title: 'Completed',
-  value: '31',
-  subtitle: 'Completed orders per month',
-  percentageText: '64.5%',
-  percentageColor: Colors.green,
-  titleColor: Colors.green,
-  leadingIcon: Icons.check_circle_outline_rounded,
-  iconBgColor: Color(0xFF15803D),
-  iconColor: Colors.green,
-  cardBgColor: Color(0xFFEFFBF3),
-  darkCardBgColor: Color.fromARGB(255, 36, 36, 41),
-);
-
-const MetricCardData defaultScheduledMetric = MetricCardData(
-  title: 'Scheduled',
-  value: '35',
-  subtitle: 'Scheduled visits per month',
-  titleColor: Colors.orange,
-  leadingIcon: Icons.calendar_today_rounded,
-  iconBgColor: Color(0xFFB45309),
-  iconColor: Colors.orange,
-  cardBgColor: Color(0xFFFFF9EC),
-  darkCardBgColor: Color.fromARGB(255, 36, 36, 41),
-);
-
-const List<DayPerformanceData> defaultWeeklyPerformance = [
-  DayPerformanceData(day: 'Mon', completed: 6.0, newBooking: 3.5),
-  DayPerformanceData(day: 'Tue', completed: 8.0, newBooking: 5.5),
-  DayPerformanceData(day: 'Wed', completed: 10.0, newBooking: 7.5),
-  DayPerformanceData(day: 'Thu', completed: 12.5, newBooking: 9.5),
-  DayPerformanceData(day: 'Fri', completed: 6.5, newBooking: 4.2),
-  DayPerformanceData(day: 'Sat', completed: 3.8, newBooking: 2.0),
-  DayPerformanceData(day: 'Sun', completed: 2.4, newBooking: 1.3),
-];
 
 // -----------------------------------------------------------------------------
 // Dashboard Main Model

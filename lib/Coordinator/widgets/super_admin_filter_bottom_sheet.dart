@@ -27,9 +27,6 @@ class CoordinatorFilterBottomSheet extends StatefulWidget {
       _CoordinatorFilterBottomSheetState();
 }
 
-/// Backward compatibility alias for CoordinatorFilterBottomSheet.
-typedef SuperAdminFilterBottomSheet = CoordinatorFilterBottomSheet;
-
 class _CoordinatorFilterBottomSheetState
     extends State<CoordinatorFilterBottomSheet> {
   late String _tempStatus;

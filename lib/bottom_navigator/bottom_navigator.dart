@@ -30,14 +30,11 @@ class BottomNavigator extends StatefulWidget {
     super.key,
     this.initialIndex = 0,
     bool? isCoordinator,
-    bool? isSuperAdmin,
     this.user,
     this.todayViewModel,
     this.coordinatorViewModel,
     this.dashboardViewModel,
   }) : isCoordinator = isCoordinator ?? false;
-
-  bool get isSuperAdmin => isCoordinator;
 
   @override
   State<BottomNavigator> createState() => _BottomNavigatorState();
@@ -88,7 +85,10 @@ class _BottomNavigatorState extends State<BottomNavigator> {
     _pages = [
       widget.isCoordinator
           ? CoordinatorPage(viewModel: _coordinatorViewModel)
-          : TodayPage(viewModel: _todayViewModel),
+          : TodayPage(
+              viewModel: _todayViewModel,
+              isDealer: widget.user?.isDealer ?? false,
+            ),
       DashboardPage(
         onBack: () => _onItemTapped(0),
         viewModel: _dashboardViewModel,

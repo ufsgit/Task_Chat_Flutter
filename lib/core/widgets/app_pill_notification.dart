@@ -55,7 +55,8 @@ class AppPillNotification extends StatelessWidget {
                 Icon(
                   icon,
                   size: 18,
-                  color: iconColor ??
+                  color:
+                      iconColor ??
                       (isDark
                           ? AppDarkColors.primaryGreen
                           : AppColors.primaryGreen),
@@ -66,7 +67,8 @@ class AppPillNotification extends StatelessWidget {
                 child: Text(
                   message,
                   textAlign: TextAlign.center,
-                  style: textStyle ??
+                  style:
+                      textStyle ??
                       TextStyle(
                         fontFamily: 'Helvetica Neue',
                         fontSize: 14.5,
@@ -121,7 +123,8 @@ class AppNotification {
     if (messenger == null) return;
 
     final bottomPadding = MediaQuery.maybePaddingOf(context)?.bottom ?? 0.0;
-    final effectiveBottomMargin = bottomMargin ??
+    final effectiveBottomMargin =
+        bottomMargin ??
         (aboveBottomNav
             ? (kAboveBottomNavMargin + bottomPadding)
             : kDefaultBottomMargin);
@@ -164,8 +167,8 @@ class AppNotification {
   }) {
     final assignmentSuffix =
         (assignment != null && assignment.trim().isNotEmpty)
-            ? ' (Assigned: $assignment)'
-            : '';
+        ? ' (Assigned: $assignment)'
+        : '';
     show(
       context,
       'Status updated to $status for $customerName$assignmentSuffix',
@@ -184,6 +187,26 @@ class AppNotification {
   }) {
     final displayMessage = customerName != null && customerName.isNotEmpty
         ? 'Contact "$customerName" deleted successfully'
+        : message;
+    show(
+      context,
+      displayMessage,
+      icon: Icons.check_circle_rounded,
+      iconColor: AppColors.primaryGreen,
+      aboveBottomNav: aboveBottomNav,
+    );
+  }
+
+  /// Convenience helper for new booking saved notifications matching status change design.
+  static void showBookingSaved(
+    BuildContext context, {
+    String message = 'Booking saved successfully!',
+    String? customerName,
+    bool aboveBottomNav = true,
+  }) {
+    final displayMessage =
+        customerName != null && customerName.trim().isNotEmpty
+        ? 'Booking saved for ${customerName.trim()}'
         : message;
     show(
       context,

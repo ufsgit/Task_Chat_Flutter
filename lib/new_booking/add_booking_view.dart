@@ -1,6 +1,7 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../core/widgets/app_pill_notification.dart';
 import '../core/widgets/circular_back_button.dart';
 import '../core/widgets/document_preview_upload_page.dart';
 import '../core/theme.dart';
@@ -115,7 +116,7 @@ class _add_bookingState extends State<add_booking> {
   Future<void> _loadCoordinatorRole() async {
     final user = await UserProfileData.loadUser();
     if (mounted && user != null) {
-      final isCoord = user.roleId == 2;
+      final isCoord = user.canSelectDistrictInBooking;
       setState(() {
         _isCoordinator = isCoord;
         _viewModel.areaViewModel.isCoordinator = isCoord;
@@ -187,16 +188,9 @@ class _add_bookingState extends State<add_booking> {
     if (!mounted) return;
 
     if (saveResult.isSuccess) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Booking saved successfully!',
-            style: TextStyle(fontFamily: 'Helvetica Neue'),
-          ),
-          backgroundColor: AppColors.whatsappGreen,
-          behavior: SnackBarBehavior.floating,
-          duration: Duration(seconds: 2),
-        ),
+      AppNotification.showBookingSaved(
+        context,
+        aboveBottomNav: true,
       );
 
       if (widget.onSave != null) {
@@ -205,15 +199,10 @@ class _add_bookingState extends State<add_booking> {
         Navigator.of(context).pop(result);
       }
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            saveResult.errorMessage ?? 'Failed to save booking',
-            style: const TextStyle(fontFamily: 'Helvetica Neue'),
-          ),
-          backgroundColor: const Color(0xFFEF4444),
-          behavior: SnackBarBehavior.floating,
-        ),
+      AppNotification.showError(
+        context,
+        saveResult.errorMessage ?? 'Failed to save booking',
+        aboveBottomNav: true,
       );
     }
   }

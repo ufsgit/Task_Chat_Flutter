@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:task_chat/api/api.dart';
+import 'package:task_chat/core/widgets/app_pill_notification.dart';
 import 'package:task_chat/new_booking/add_booking_view.dart';
 import 'package:task_chat/new_booking/add_booking_view_model.dart';
 import 'package:task_chat/new_booking/model/area_model.dart';
@@ -303,6 +304,13 @@ void main() {
       expect(savedLead!.documents, isEmpty);
       expect(savedLead!.toJson()['status'], 'NEW');
       expect(savedLead!.toJson()['documents'], isEmpty);
+
+      // Verify pill notification is rendered above bottom nav bar
+      expect(find.byType(AppPillNotification), findsOneWidget);
+      expect(find.text('Booking saved successfully!'), findsOneWidget);
+      final snackBar = tester.widget<SnackBar>(find.byType(SnackBar));
+      final margin = snackBar.margin as EdgeInsets;
+      expect(margin.bottom, greaterThanOrEqualTo(AppNotification.kAboveBottomNavMargin));
     });
 
     testWidgets('renders District dropdown when isCoordinator is true and selects district', (WidgetTester tester) async {
@@ -474,6 +482,74 @@ void main() {
       expect(areaVm.areas.length, 1);
       expect(areaVm.areas.first.id, 3);
       expect(areaVm.areas.first.name, 'Aluva');
+    });
+
+    testWidgets('add_booking enables District and Area selection for Dealer role (roleId 4)', (WidgetTester tester) async {
+      SharedPreferences.setMockInitialValues({
+        'auth_user_profile': jsonEncode({
+          'id': 169,
+          'username': 'dealer_85',
+          'roleId': 4,
+          'role': 'dealer',
+          'name': 'Steel Doors Dealer 85',
+        }),
+      });
+
+      final mockClient = MockClient((request) async {
+        if (request.url.path.endsWith('/api/dropdowns/districts')) {
+          return http.Response(
+            jsonEncode({
+              'type': 'district',
+              'page': 1,
+              'limit': 20,
+              'count': 2,
+              'data': [
+                {'id': 5, 'name': 'Kottayam'},
+                {'id': 7, 'name': 'Ernakulam'},
+              ],
+            }),
+            200,
+          );
+        }
+        if (request.url.path.endsWith('/api/dropdowns/areas')) {
+          return http.Response(
+            jsonEncode({
+              'type': 'area',
+              'page': 1,
+              'limit': 20,
+              'count': 1,
+              'data': [
+                {'id': 49, 'name': 'Kanjikuzhy', 'districtId': 5},
+              ],
+            }),
+            200,
+          );
+        }
+        return http.Response('{}', 200);
+      });
+
+      final areaVm = AreaViewModel(client: mockClient);
+      final districtVm = DistrictViewModel(client: mockClient);
+      final bookingVm = AddBookingViewModel(
+        client: mockClient,
+        areaViewModel: areaVm,
+        districtViewModel: districtVm,
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: add_booking(viewModel: bookingVm),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Dealer roleId 4 should show District selector and load areas for that district
+      expect(find.text('District'), findsOneWidget);
+      expect(find.text('Area'), findsOneWidget);
+      expect(areaVm.isCoordinator, isTrue);
+      expect(areaVm.areas.first.name, 'Kanjikuzhy');
     });
   });
 }

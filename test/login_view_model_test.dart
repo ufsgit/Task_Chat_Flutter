@@ -13,131 +13,201 @@ void main() {
       expect(vm.errorMessage, 'Please enter both username and password');
     });
 
-    test('successful login parses exact API response payload correctly', () async {
-      final mockClient = MockClient((request) async {
-        expect(request.url.path, '/api/auth/mobile-login');
-        return http.Response(
-          jsonEncode({
-            "user": {
-              "id": 4,
-              "username": "branch_ekm",
-              "roleId": 3,
-              "role": "branch_head",
-              "userTypeId": 2,
-              "userType": "staff",
-              "name": "Rajesh Menon",
-              "email": "rajesh.menon@steeldoor.com",
-              "phone": "+91 98470 12345",
-              "stateId": 1,
-              "stateName": "Kerala",
-              "districtId": 1,
-              "districtName": "Ernakulam Hub",
-              "districtCode": "dist-ekm",
-              "address": null,
-              "isActive": 1,
-              "lastLoginAt": "2026-10-21T05:30:00.000Z"
-            },
-            "sessionToken": "eyJpZCI6NCwidXNlcm5hbWUiOiJicmFuY2hfZWttIn0="
-          }),
-          200,
-          headers: {'content-type': 'application/json'},
+    test(
+      'successful login parses exact API response payload correctly',
+      () async {
+        final mockClient = MockClient((request) async {
+          expect(request.url.path, '/api/auth/mobile-login');
+          return http.Response(
+            jsonEncode({
+              "user": {
+                "id": 4,
+                "username": "branch_ekm",
+                "roleId": 3,
+                "role": "branch_head",
+                "userTypeId": 2,
+                "userType": "staff",
+                "name": "Rajesh Menon",
+                "email": "rajesh.menon@steeldoor.com",
+                "phone": "+91 98470 12345",
+                "stateId": 1,
+                "stateName": "Kerala",
+                "districtId": 1,
+                "districtName": "Ernakulam Hub",
+                "districtCode": "dist-ekm",
+                "address": null,
+                "isActive": 1,
+                "lastLoginAt": "2026-10-21T05:30:00.000Z",
+              },
+              "sessionToken": "eyJpZCI6NCwidXNlcm5hbWUiOiJicmFuY2hfZWttIn0=",
+            }),
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        });
+
+        final vm = LoginViewModel(client: mockClient);
+        final result = await vm.login(
+          username: 'branch_ekm',
+          password: 'password',
         );
-      });
 
-      final vm = LoginViewModel(client: mockClient);
-      final result = await vm.login(username: 'branch_ekm', password: 'password');
+        expect(result.isSuccess, isTrue);
+        expect(result.token, 'eyJpZCI6NCwidXNlcm5hbWUiOiJicmFuY2hfZWttIn0=');
+        expect(result.user?.name, 'Rajesh Menon');
+        expect(result.user?.districtName, 'Ernakulam Hub');
+        expect(result.user?.role, 'branch_head');
+        expect(result.user?.roleId, 3);
+        expect(result.user?.isBranchManager, isTrue);
+        expect(result.user?.isCoordinator, isFalse);
+        expect(result.isCoordinator, isFalse);
+        // Retains isLoading true on success so button pulsing loader does not flash 'Log In' before navigation
+        expect(vm.isLoading, isTrue);
+      },
+    );
 
-      expect(result.isSuccess, isTrue);
-      expect(result.token, 'eyJpZCI6NCwidXNlcm5hbWUiOiJicmFuY2hfZWttIn0=');
-      expect(result.user?.name, 'Rajesh Menon');
-      expect(result.user?.districtName, 'Ernakulam Hub');
-      expect(result.user?.role, 'branch_head');
-      expect(result.user?.roleId, 3);
-      expect(result.user?.isBranchManager, isTrue);
-      expect(result.user?.isCoordinator, isFalse);
-      expect(result.isCoordinator, isFalse);
-      expect(result.isSuperAdmin, isFalse); // branch_head is Branch Manager, not Coordinator
-      // Retains isLoading true on success so button pulsing loader does not flash 'Log In' before navigation
-      expect(vm.isLoading, isTrue);
-    });
+    test(
+      'coordinator login sets isCoordinator to true based on roleId 2',
+      () async {
+        final mockClient = MockClient((request) async {
+          return http.Response(
+            jsonEncode({
+              "user": {
+                "id": 1,
+                "username": "coordinator_main",
+                "roleId": 2,
+                "role": "coordinator",
+                "name": "Central Coordinator",
+              },
+              "sessionToken": "coordinator_token_123",
+            }),
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        });
 
-    test('coordinator login sets isCoordinator to true based on roleId 2', () async {
-      final mockClient = MockClient((request) async {
-        return http.Response(
-          jsonEncode({
-            "user": {
-              "id": 1,
-              "username": "coordinator_main",
-              "roleId": 2,
-              "role": "coordinator",
-              "name": "Central Coordinator",
-            },
-            "sessionToken": "coordinator_token_123"
-          }),
-          200,
-          headers: {'content-type': 'application/json'},
+        final vm = LoginViewModel(client: mockClient);
+        final result = await vm.login(
+          username: 'coordinator_main',
+          password: 'password',
         );
-      });
 
-      final vm = LoginViewModel(client: mockClient);
-      final result = await vm.login(username: 'coordinator_main', password: 'password');
+        expect(result.isSuccess, isTrue);
+        expect(result.user?.roleId, 2);
+        expect(result.user?.isCoordinator, isTrue);
+        expect(result.user?.isBranchManager, isFalse);
+        expect(result.isCoordinator, isTrue);
+      },
+    );
 
-      expect(result.isSuccess, isTrue);
-      expect(result.user?.roleId, 2);
-      expect(result.user?.isCoordinator, isTrue);
-      expect(result.user?.isBranchManager, isFalse);
-      expect(result.isCoordinator, isTrue);
-      expect(result.isSuperAdmin, isTrue); // roleId 2 is Coordinator
-    });
+    test(
+      'dealer login sets isDealer and canSelectDistrictInBooking to true based on roleId 4',
+      () async {
+        final mockClient = MockClient((request) async {
+          return http.Response(
+            jsonEncode({
+              "user": {
+                "id": 169,
+                "username": "dealer_85",
+                "roleId": 4,
+                "role": "dealer",
+                "name": "Steel Doors Dealer 85",
+              },
+              "sessionToken": "dealer_token_123",
+            }),
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        });
 
-    test('failed login on 401 converts developer message to user-friendly message', () async {
-      final mockClient = MockClient((request) async {
-        return http.Response(
-          jsonEncode({'error': 'Invalid credentials or user is not authorized for mobile login (role 2 or 3).'}),
-          401,
-          headers: {'content-type': 'application/json'},
+        final vm = LoginViewModel(client: mockClient);
+        final result = await vm.login(
+          username: 'dealer_85',
+          password: 'password',
         );
-      });
 
-      final vm = LoginViewModel(client: mockClient);
-      final result = await vm.login(username: 'test', password: 'wrong');
+        expect(result.isSuccess, isTrue);
+        expect(result.user?.roleId, 4);
+        expect(result.user?.isDealer, isTrue);
+        expect(result.user?.canSelectDistrictInBooking, isTrue);
+        expect(result.user?.isCoordinator, isFalse);
+        expect(result.user?.isBranchManager, isFalse);
+        expect(result.isCoordinator, isFalse);
+      },
+    );
 
-      expect(result.isSuccess, isFalse);
-      expect(result.errorMessage, 'Incorrect username or password, or your account is not authorized for mobile access.');
-      expect(vm.errorMessage, 'Incorrect username or password, or your account is not authorized for mobile access.');
-    });
+    test(
+      'failed login on 401 converts developer message to user-friendly message',
+      () async {
+        final mockClient = MockClient((request) async {
+          return http.Response(
+            jsonEncode({
+              'error':
+                  'Invalid credentials or user is not authorized for mobile login (role 2 or 3).',
+            }),
+            401,
+            headers: {'content-type': 'application/json'},
+          );
+        });
 
-    test('failed login on 500 returns user-friendly server error message', () async {
-      final mockClient = MockClient((request) async {
-        return http.Response(
-          'Internal Server Error: DB connection failed',
-          500,
-          headers: {'content-type': 'text/plain'},
+        final vm = LoginViewModel(client: mockClient);
+        final result = await vm.login(username: 'test', password: 'wrong');
+
+        expect(result.isSuccess, isFalse);
+        expect(
+          result.errorMessage,
+          'Incorrect username or password, or your account is not authorized for mobile access.',
         );
-      });
-
-      final vm = LoginViewModel(client: mockClient);
-      final result = await vm.login(username: 'test', password: 'wrong');
-
-      expect(result.isSuccess, isFalse);
-      expect(result.errorMessage, 'Our server is temporarily unavailable. Please try again shortly.');
-    });
-
-    test('deactivated account returns user-friendly contact admin message', () async {
-      final mockClient = MockClient((request) async {
-        return http.Response(
-          jsonEncode({'message': 'User account is deactivated'}),
-          403,
-          headers: {'content-type': 'application/json'},
+        expect(
+          vm.errorMessage,
+          'Incorrect username or password, or your account is not authorized for mobile access.',
         );
-      });
+      },
+    );
 
-      final vm = LoginViewModel(client: mockClient);
-      final result = await vm.login(username: 'test', password: 'wrong');
+    test(
+      'failed login on 500 returns user-friendly server error message',
+      () async {
+        final mockClient = MockClient((request) async {
+          return http.Response(
+            'Internal Server Error: DB connection failed',
+            500,
+            headers: {'content-type': 'text/plain'},
+          );
+        });
 
-      expect(result.isSuccess, isFalse);
-      expect(result.errorMessage, 'Your account is deactivated. Please contact your administrator.');
-    });
+        final vm = LoginViewModel(client: mockClient);
+        final result = await vm.login(username: 'test', password: 'wrong');
+
+        expect(result.isSuccess, isFalse);
+        expect(
+          result.errorMessage,
+          'Our server is temporarily unavailable. Please try again shortly.',
+        );
+      },
+    );
+
+    test(
+      'deactivated account returns user-friendly contact admin message',
+      () async {
+        final mockClient = MockClient((request) async {
+          return http.Response(
+            jsonEncode({'message': 'User account is deactivated'}),
+            403,
+            headers: {'content-type': 'application/json'},
+          );
+        });
+
+        final vm = LoginViewModel(client: mockClient);
+        final result = await vm.login(username: 'test', password: 'wrong');
+
+        expect(result.isSuccess, isFalse);
+        expect(
+          result.errorMessage,
+          'Your account is deactivated. Please contact your administrator.',
+        );
+      },
+    );
 
     test('network exception returns Connection failed message', () async {
       final mockClient = MockClient((request) async {
@@ -148,7 +218,10 @@ void main() {
       final result = await vm.login(username: 'test', password: 'password');
 
       expect(result.isSuccess, isFalse);
-      expect(result.errorMessage, 'Connection failed. Please check your network.');
+      expect(
+        result.errorMessage,
+        'Connection failed. Please check your network.',
+      );
       expect(vm.errorMessage, 'Connection failed. Please check your network.');
     });
   });

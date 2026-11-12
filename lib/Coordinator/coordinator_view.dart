@@ -30,9 +30,6 @@ class CoordinatorView extends StatefulWidget {
 /// Backward compatibility alias for CoordinatorView.
 typedef CoordinatorPage = CoordinatorView;
 
-/// Backward compatibility alias for SuperAdminPage.
-typedef SuperAdminPage = CoordinatorView;
-
 class _CoordinatorViewState extends State<CoordinatorView> {
   late final CoordinatorViewModel _viewModel;
   late final bool _internalViewModel;

@@ -81,12 +81,17 @@ class UserModel {
     );
   }
 
-  /// Role 2 represents Coordinator (formerly Super Admin).
-  bool get isCoordinator => roleId == 2;
-  bool get isSuperAdmin => isCoordinator;
+  /// Role 1 & 2 represent Coordinator.
+  bool get isCoordinator => roleId == 2 || roleId == 1;
 
-  /// Role 3 represents Branch Manager (formerly Admin).
-  bool get isBranchManager => roleId == 3;
+  /// Role 3 represents Branch Manager (Branch Head).
+  bool get isBranchManager => roleId == 3 ;
+
+  /// Role 4 represents Dealer.
+  bool get isDealer => roleId == 4;
+
+  /// Coordinators and Dealers can select both District and Area when creating bookings.
+  bool get canSelectDistrictInBooking => isCoordinator || isDealer;
 
   Map<String, dynamic> toJson() => {
         'id': id,
@@ -115,7 +120,6 @@ class LoginResult {
   final String? token;
   final UserModel? user;
   final bool isCoordinator;
-  bool get isSuperAdmin => isCoordinator;
   final String? errorMessage;
 
   const LoginResult({

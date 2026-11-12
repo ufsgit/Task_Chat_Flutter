@@ -16,9 +16,9 @@ import 'package:task_chat/report_activity/widgets/activity_skeleton_loading.dart
 import 'package:task_chat/report_activity/report/report_model.dart';
 import 'package:task_chat/report_activity/report/report_view.dart';
 import 'package:task_chat/report_activity/report/report_view_model.dart';
+import 'package:task_chat/report_activity/widgets/graph_skeleton_loading.dart';
 import 'package:task_chat/report_activity/widgets/report_date_range_bar.dart';
 import 'package:task_chat/report_activity/widgets/status_activity_graph_card.dart';
-import 'package:task_chat/report_activity/widgets/weekly_activity_graph_card.dart';
 
 void main() {
   setUp(() {
@@ -1074,134 +1074,6 @@ void main() {
       expect(vm.graphErrorMessage, isNull);
     });
 
-    testWidgets('WeeklyActivityGraphCard renders header, legend, and day labels', (tester) async {
-      final items = [
-        const BookingReportGraphItem(
-          periodLabel: 'Mon',
-          periodDate: '2026-11-02',
-          newCount: 15,
-          scheduledCount: 11,
-          completedCount: 9,
-          cancelledCount: 3,
-          totalActivities: 38,
-        ),
-      ];
-
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: SingleChildScrollView(
-              child: WeeklyActivityGraphCard(graphData: items),
-            ),
-          ),
-        ),
-      );
-
-      expect(find.text('Weekly activity'), findsOneWidget);
-      expect(find.text('Mon to Sun, by status'), findsOneWidget);
-      expect(find.text('Mon'), findsOneWidget);
-
-      // By default, Monday info is displayed below the graph
-      expect(find.text('Mon (2026-11-02)'), findsOneWidget);
-      expect(find.text('Total: 38'), findsOneWidget);
-      // '15' appears on the dynamic Y-axis tick mark and in the breakdown card below
-      expect(find.text('15'), findsNWidgets(2));
-      expect(find.text('11'), findsOneWidget);
-      expect(find.text('9'), findsOneWidget);
-      expect(find.text('3'), findsOneWidget);
-
-      // Verify status breakdown items are present for each status
-      expect(find.text('New'), findsWidgets);
-      expect(find.text('Scheduled'), findsWidgets);
-      expect(find.text('Completed'), findsWidgets);
-      expect(find.text('Cancelled'), findsWidgets);
-    });
-
-    testWidgets('WeeklyActivityGraphCard dynamically adapts Y-axis to max count', (tester) async {
-      // Small data with max count = 8
-      final smallItems = [
-        const BookingReportGraphItem(
-          periodLabel: 'Wed',
-          periodDate: '2026-11-04',
-          newCount: 8,
-          scheduledCount: 4,
-          completedCount: 2,
-          cancelledCount: 1,
-          totalActivities: 15,
-        ),
-      ];
-
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: SingleChildScrollView(
-              child: WeeklyActivityGraphCard(graphData: smallItems),
-            ),
-          ),
-        ),
-      );
-
-      // Y-axis dynamically scales to 8 instead of hardcoded 20
-      expect(find.text('8'), findsNWidgets(2)); // Tick mark + count
-      expect(find.text('20'), findsNothing); // 20 does not appear
-    });
-
-    testWidgets('WeeklyActivityGraphCard makes graph horizontally scrollable when data count > 3', (tester) async {
-      final weekItems = [
-        const BookingReportGraphItem(periodLabel: 'Mon', periodDate: '2026-11-02', newCount: 10, scheduledCount: 8, completedCount: 5, cancelledCount: 2, totalActivities: 25),
-        const BookingReportGraphItem(periodLabel: 'Tue', periodDate: '2026-11-03', newCount: 12, scheduledCount: 6, completedCount: 4, cancelledCount: 1, totalActivities: 23),
-        const BookingReportGraphItem(periodLabel: 'Wed', periodDate: '2026-11-04', newCount: 8, scheduledCount: 9, completedCount: 7, cancelledCount: 3, totalActivities: 27),
-        const BookingReportGraphItem(periodLabel: 'Thu', periodDate: '2026-11-05', newCount: 14, scheduledCount: 11, completedCount: 8, cancelledCount: 2, totalActivities: 35),
-        const BookingReportGraphItem(periodLabel: 'Fri', periodDate: '2026-11-06', newCount: 18, scheduledCount: 14, completedCount: 12, cancelledCount: 4, totalActivities: 48),
-        const BookingReportGraphItem(periodLabel: 'Sat', periodDate: '2026-11-07', newCount: 7, scheduledCount: 5, completedCount: 3, cancelledCount: 1, totalActivities: 16),
-        const BookingReportGraphItem(periodLabel: 'Sun', periodDate: '2026-11-08', newCount: 3, scheduledCount: 2, completedCount: 1, cancelledCount: 0, totalActivities: 6),
-      ];
-
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: SingleChildScrollView(
-              child: WeeklyActivityGraphCard(graphData: weekItems),
-            ),
-          ),
-        ),
-      );
-
-      // Verify horizontal SingleChildScrollView exists for chart content (> 3 items) and legend
-      final horizontalScrollFinder = find.byWidgetPredicate(
-        (widget) =>
-            widget is SingleChildScrollView &&
-            widget.scrollDirection == Axis.horizontal,
-      );
-      expect(horizontalScrollFinder, findsNWidgets(2));
-
-      // Verify all 7 day labels are present in the widget tree
-      expect(find.text('Mon'), findsOneWidget);
-      expect(find.text('Tue'), findsOneWidget);
-      expect(find.text('Wed'), findsOneWidget);
-      expect(find.text('Thu'), findsOneWidget);
-      expect(find.text('Fri'), findsOneWidget);
-      expect(find.text('Sat'), findsOneWidget);
-      expect(find.text('Sun'), findsOneWidget);
-    });
-
-    testWidgets('WeeklyActivityGraphCard renders GraphSkeletonLoading when isLoading is true', (tester) async {
-      await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(
-            body: SingleChildScrollView(
-              child: WeeklyActivityGraphCard(
-                graphData: [],
-                isLoading: true,
-              ),
-            ),
-          ),
-        ),
-      );
-
-      expect(find.byType(GraphSkeletonLoading), findsOneWidget);
-    });
-
     testWidgets('ReportView renders status activity graph cards and fetches report', (tester) async {
       final mockData = {
         'success': true,
@@ -1236,7 +1108,6 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(ReportDateRangeBar), findsOneWidget);
-      expect(find.byType(WeeklyActivityGraphCard), findsNothing);
       expect(find.text('Weekly activity'), findsNothing);
       // Verify separate stacked graph cards for each status are rendered
       expect(find.byType(StatusActivityGraphCard), findsNWidgets(4));

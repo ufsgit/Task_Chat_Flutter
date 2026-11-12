@@ -28,15 +28,13 @@ class CustomerDetailsView extends StatefulWidget {
   final bool isCoordinator;
   final CustomerDetailsViewModel? viewModel;
 
-  bool get isSuperAdmin => isCoordinator;
 
   const CustomerDetailsView({
     super.key,
     required this.customer,
     this.viewModel,
     bool? isCoordinator,
-    bool? isSuperAdmin,
-  }) : isCoordinator = isCoordinator ?? isSuperAdmin ?? false;
+  }) : isCoordinator = isCoordinator ?? false;
 
   @override
   State<CustomerDetailsView> createState() => _CustomerDetailsViewState();

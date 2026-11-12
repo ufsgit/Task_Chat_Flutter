@@ -8,7 +8,8 @@ import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:task_chat/bottom_navigator/bottom_navigator.dart';
 import 'package:task_chat/login_page/token_storage.dart';
-import 'package:task_chat/Coordinator/cordinator_page.dart';
+import 'package:task_chat/Coordinator/coordinator_view.dart';
+import 'package:task_chat/Coordinator/coordinator_view_model.dart';
 import 'package:task_chat/Coordinator/widgets/super_admin_filter_bottom_sheet.dart';
 import 'package:task_chat/today/widgets/today_skeleton_loading.dart';
 
@@ -41,7 +42,7 @@ void main() {
   });
 
   testWidgets(
-      'SuperAdminPage renders search bar and filter button with Status and Branch Manager options',
+      'CoordinatorPage renders search bar and filter button with Status and Branch Manager options',
       (WidgetTester tester) async {
     final vm = CoordinatorViewModel(
       initialItems: [
@@ -59,7 +60,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: SuperAdminPage(viewModel: vm),
+        home: CoordinatorPage(viewModel: vm),
       ),
     );
 
@@ -81,7 +82,7 @@ void main() {
     // Select 'Completed' status inside bottom sheet
     await tester.tap(
       find.descendant(
-        of: find.byType(SuperAdminFilterBottomSheet),
+        of: find.byType(CoordinatorFilterBottomSheet),
         matching: find.text('Completed'),
       ),
     );

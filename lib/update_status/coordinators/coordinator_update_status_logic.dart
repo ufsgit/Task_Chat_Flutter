@@ -18,10 +18,6 @@ const List<String> availableCoordinatorStatusOptions = [
   'Cancelled',
 ];
 
-/// Backward compatibility alias
-const List<String> availableSuperAdminStatusOptions =
-    availableCoordinatorStatusOptions;
-
 /// Data model representing a Branch Head user returned by GET /api/users?role=branch_head.
 class BranchHeadUser {
   final int id;
