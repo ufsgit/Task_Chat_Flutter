@@ -87,7 +87,8 @@ void main() {
 
         expect(model.id, equals('31'));
         expect(model.title, equals('test notes'));
-        expect(model.statusTag, equals('New'));
+        expect(model.statusTag, equals('New Booking Created'));
+        expect(model.status, equals('New'));
         expect(model.avatarLetter, equals('T'));
         expect(model.statusTagTextColor, equals(const Color(0xFF3B82F6)));
         expect(model.subtitlePrefix, equals('Branch Manager: '));
@@ -96,6 +97,24 @@ void main() {
         expect(model.location, equals('Kozhikode'));
       },
     );
+
+    test('ActivityModel.fromJson styles deleted booking in red', () {
+      final jsonSample = {
+        "history_id": 42,
+        "booking_id": 26,
+        "booking_name": "Deleted Customer",
+        "action_type": "Booking Deleted",
+        "new_status_label": "Deleted",
+      };
+
+      final model = ActivityModel.fromJson(jsonSample);
+
+      expect(model.statusTag, equals('Booking Deleted'));
+      expect(model.statusTagTextColor, equals(const Color(0xFFEF4444)));
+      expect(model.avatarTextColor, equals(const Color(0xFFEF4444)));
+      expect(model.statusTagIcon, equals(Icons.delete_outline_rounded));
+      expect(model.isPending, isFalse);
+    });
   });
 
   group('ActivityViewModel Tests', () {

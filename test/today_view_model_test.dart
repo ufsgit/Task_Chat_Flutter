@@ -16,23 +16,23 @@ void main() {
     TodayViewModel.resetSession();
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(
-      const MethodChannel('plugins.it_nomads.com/flutter_secure_storage'),
-      (MethodCall methodCall) async {
-        if (methodCall.method == 'read') {
-          return 'test_mock_token';
-        }
-        return null;
-      },
-    );
+          const MethodChannel('plugins.it_nomads.com/flutter_secure_storage'),
+          (MethodCall methodCall) async {
+            if (methodCall.method == 'read') {
+              return 'test_mock_token';
+            }
+            return null;
+          },
+        );
   });
 
   tearDown(() {
     TodayViewModel.resetSession();
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(
-      const MethodChannel('plugins.it_nomads.com/flutter_secure_storage'),
-      null,
-    );
+          const MethodChannel('plugins.it_nomads.com/flutter_secure_storage'),
+          null,
+        );
   });
 
   group('TodayViewModel & BookingModel MVVM Tests', () {
@@ -105,8 +105,11 @@ void main() {
 
     test('TodayViewModel fetches bookings and filters correctly', () async {
       final mockClient = MockClient((request) async {
-        return http.Response(mockApiResponse, 200,
-            headers: {'content-type': 'application/json'});
+        return http.Response(
+          mockApiResponse,
+          200,
+          headers: {'content-type': 'application/json'},
+        );
       });
 
       final vm = TodayViewModel(client: mockClient);
@@ -130,85 +133,100 @@ void main() {
       expect(vm.filteredChatItems.first['title'], 'Anand Varma');
     });
 
-    test('TodayViewModel sends authorization header when token is stored',
-        () async {
-      String? authHeader;
-      final mockClient = MockClient((request) async {
-        authHeader = request.headers['authorization'];
-        return http.Response(mockApiResponse, 200,
-            headers: {'content-type': 'application/json'});
-      });
+    test(
+      'TodayViewModel sends authorization header when token is stored',
+      () async {
+        String? authHeader;
+        final mockClient = MockClient((request) async {
+          authHeader = request.headers['authorization'];
+          return http.Response(
+            mockApiResponse,
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        });
 
-      final vm = TodayViewModel(client: mockClient);
-      await vm.fetchBookings();
+        final vm = TodayViewModel(client: mockClient);
+        await vm.fetchBookings();
 
-      expect(authHeader, 'Bearer test_mock_token');
-    });
+        expect(authHeader, 'Bearer test_mock_token');
+      },
+    );
 
     testWidgets(
-        'BottomNavigator calls fetchBookings whenever Today page is selected',
-        (WidgetTester tester) async {
-      int fetchCount = 0;
-      final mockClient = MockClient((request) async {
-        fetchCount++;
-        return http.Response(mockApiResponse, 200,
-            headers: {'content-type': 'application/json'});
-      });
+      'BottomNavigator calls fetchBookings whenever Today page is selected',
+      (WidgetTester tester) async {
+        int fetchCount = 0;
+        final mockClient = MockClient((request) async {
+          fetchCount++;
+          return http.Response(
+            mockApiResponse,
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        });
 
-      final vm = TodayViewModel(client: mockClient);
+        final vm = TodayViewModel(client: mockClient);
 
-      await tester.pumpWidget(
-        MaterialApp(
-          home: BottomNavigator(todayViewModel: vm),
-        ),
-      );
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
+        await tester.pumpWidget(
+          MaterialApp(home: BottomNavigator(todayViewModel: vm)),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
 
-      // Initial load calls fetchBookings once
-      expect(fetchCount, 1);
+        // Initial load calls fetchBookings once
+        expect(fetchCount, 1);
 
-      // Tap Dashboard tab (index 1)
-      await tester.tap(find.byIcon(Icons.chat_bubble_outline_rounded));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
-      expect(fetchCount, 1);
+        // Tap Dashboard tab (index 1)
+        await tester.tap(find.byIcon(Icons.chat_bubble_outline_rounded));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+        expect(fetchCount, 1);
 
-      // Tap Today tab (index 0) - selects Today page again
-      await tester.tap(find.byIcon(Icons.calendar_today_outlined));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
+        // Tap Today tab (index 0) - selects Today page again
+        await tester.tap(find.byIcon(Icons.calendar_today_outlined));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
 
-      // fetchBookings must be called again
-      expect(fetchCount, 2);
+        // fetchBookings must be called again
+        expect(fetchCount, 2);
 
-      // Tap Today tab a second time while on Today page
-      await tester.tap(find.byIcon(Icons.calendar_today_outlined));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
+        // Tap Today tab a second time while on Today page
+        await tester.tap(find.byIcon(Icons.calendar_today_outlined));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
 
-      // fetchBookings must be called every time it is selected
-      expect(fetchCount, 3);
-    });
+        // fetchBookings must be called every time it is selected
+        expect(fetchCount, 3);
+      },
+    );
 
-    test('TodayViewModel ignores concurrent fetchBookings calls when already loading', () async {
-      int requestCount = 0;
-      final mockClient = MockClient((request) async {
-        requestCount++;
-        await Future.delayed(const Duration(milliseconds: 50));
-        return http.Response(mockApiResponse, 200,
-            headers: {'content-type': 'application/json'});
-      });
+    test(
+      'TodayViewModel ignores concurrent fetchBookings calls when already loading',
+      () async {
+        int requestCount = 0;
+        final mockClient = MockClient((request) async {
+          requestCount++;
+          await Future.delayed(const Duration(milliseconds: 50));
+          return http.Response(
+            mockApiResponse,
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        });
 
-      final vm = TodayViewModel(client: mockClient);
-      final future1 = vm.fetchBookings();
-      final future2 = vm.fetchBookings();
-      await Future.wait([future1, future2]);
+        final vm = TodayViewModel(client: mockClient);
+        final future1 = vm.fetchBookings();
+        final future2 = vm.fetchBookings();
+        await Future.wait([future1, future2]);
 
-      expect(requestCount, 1);
-    });
+        expect(requestCount, 1);
+      },
+    );
 
-    testWidgets('BottomNavigator configures extendBody true on Scaffold', (tester) async {
+    testWidgets('BottomNavigator configures extendBody true on Scaffold', (
+      tester,
+    ) async {
       final mock = MockClient((_) async => http.Response('{"data":[]}', 200));
       final vm = TodayViewModel(client: mock);
       final cvm = CoordinatorViewModel(client: mock);
@@ -264,228 +282,258 @@ void main() {
       expect(todayChatItems.first['scheduleDate'], '10/29/2026');
     });
 
-    test('TodayViewModel session isolation prevents data leaking across unauthenticated sessions', () {
-      // User A logs in and has chat items
-      final userAVm = TodayViewModel(initialChatItems: [
-        {'title': 'User A Lead', 'tagText': 'New'},
-      ]);
-      expect(userAVm.todayChatItems.length, 1);
-      expect(todayChatItems.first['title'], 'User A Lead');
+    test(
+      'TodayViewModel session isolation prevents data leaking across unauthenticated sessions',
+      () {
+        // User A logs in and has chat items
+        final userAVm = TodayViewModel(
+          initialChatItems: [
+            {'title': 'User A Lead', 'tagText': 'New'},
+          ],
+        );
+        expect(userAVm.todayChatItems.length, 1);
+        expect(todayChatItems.first['title'], 'User A Lead');
 
-      // User A logs out -> resetSession called
-      TodayViewModel.resetSession();
-      expect(todayChatItems, isEmpty);
-      expect(userAVm.todayChatItems, isEmpty);
+        // User A logs out -> resetSession called
+        TodayViewModel.resetSession();
+        expect(todayChatItems, isEmpty);
+        expect(userAVm.todayChatItems, isEmpty);
 
-      // User B logs in fresh without process restart
-      final userBVm = TodayViewModel();
-      expect(userBVm.todayChatItems, isEmpty);
-      expect(todayChatItems, isEmpty);
-    });
+        // User B logs in fresh without process restart
+        final userBVm = TodayViewModel();
+        expect(userBVm.todayChatItems, isEmpty);
+        expect(todayChatItems, isEmpty);
+      },
+    );
 
-    test('TodayViewModel buildQueryParameters includes provided fields and omits null/all fields', () {
-      final vm = TodayViewModel();
+    test(
+      'TodayViewModel buildQueryParameters includes provided fields and omits null/all fields',
+      () {
+        final vm = TodayViewModel();
 
-      // Test default: all empty/null/All => empty map
-      expect(vm.buildQueryParameters(), isEmpty);
+        // Test default: default listing has page=1, limit=10, isFollowUp=1
+        expect(vm.buildQueryParameters(), {
+          'page': '1',
+          'limit': '10',
+          'isFollowUp': '1',
+        });
 
-      // Full query parameters as specified in requirement
-      final params = vm.buildQueryParameters(
-        search: 'Rahul',
-        districtId: '1',
-        dateFrom: '2026-10-01',
-        dateTo: '2026-10-24',
-        filterRole: '5',
-        status: 'Scheduled',
-        page: '1',
-        limit: '15',
-      );
+        // Full query parameters as specified in requirement
+        final params = vm.buildQueryParameters(
+          search: 'Rahul',
+          districtId: '1',
+          dateFrom: '2026-10-01',
+          dateTo: '2026-10-24',
+          filterRole: '5',
+          status: 'Scheduled',
+          page: '1',
+          limit: '15',
+        );
 
-      expect(params, {
-        'search': 'Rahul',
-        'districtId': '1',
-        'dateFrom': '2026-10-01',
-        'dateTo': '2026-10-24',
-        'filterRole': '5',
-        'status': 'Scheduled',
-        'page': '1',
-        'limit': '15',
-      });
+        expect(params, {
+          'search': 'Rahul',
+          'districtId': '1',
+          'dateFrom': '2026-10-01',
+          'dateTo': '2026-10-24',
+          'filterRole': '5',
+          'status': 'Scheduled',
+          'page': '1',
+          'limit': '15',
+          'isFollowUp': '1',
+        });
 
-      // Partial query parameters: omits null, empty, or 'all'
-      final partial = vm.buildQueryParameters(
-        search: '',
-        districtId: '2',
-        dateFrom: null,
-        dateTo: null,
-        filterRole: '3',
-        status: 'All',
-        page: null,
-        limit: null,
-      );
+        // Partial query parameters: omits null, empty, or 'all'
+        final partial = vm.buildQueryParameters(
+          search: '',
+          districtId: '2',
+          dateFrom: null,
+          dateTo: null,
+          filterRole: '3',
+          status: 'All',
+          page: null,
+          limit: null,
+        );
 
-      expect(partial, {
-        'districtId': '2',
-        'filterRole': '3',
-      });
-      expect(partial.containsKey('search'), isFalse);
-      expect(partial.containsKey('dateFrom'), isFalse);
-      expect(partial.containsKey('dateTo'), isFalse);
-      expect(partial.containsKey('status'), isFalse);
-      expect(partial.containsKey('page'), isFalse);
-      expect(partial.containsKey('limit'), isFalse);
-    });
+        expect(partial, {
+          'districtId': '2',
+          'filterRole': '3',
+          'page': '1',
+          'limit': '10',
+          'isFollowUp': '1',
+        });
+        expect(partial.containsKey('search'), isFalse);
+        expect(partial.containsKey('dateFrom'), isFalse);
+        expect(partial.containsKey('dateTo'), isFalse);
+        expect(partial.containsKey('status'), isFalse);
+        expect(partial.containsKey('page'), isTrue);
+        expect(partial.containsKey('limit'), isTrue);
+        expect(partial.containsKey('isFollowUp'), isTrue);
+      },
+    );
 
-    test('TodayViewModel fetchBookings sends query parameters to ApiConfig.bookings', () async {
-      Uri? capturedUri;
-      final mockClient = MockClient((request) async {
-        capturedUri = request.url;
-        return http.Response(mockApiResponse, 200,
-            headers: {'content-type': 'application/json'});
-      });
+    test(
+      'TodayViewModel fetchBookings sends query parameters to ApiConfig.bookings',
+      () async {
+        Uri? capturedUri;
+        final mockClient = MockClient((request) async {
+          capturedUri = request.url;
+          return http.Response(
+            mockApiResponse,
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        });
 
-      final vm = TodayViewModel(client: mockClient);
-      vm.applyFilters(
-        status: 'Scheduled',
-        districtId: '1',
-        dateFrom: '2026-10-01',
-        dateTo: '2026-10-24',
-        filterRole: '5',
-        page: '1',
-        limit: '15',
-      );
+        final vm = TodayViewModel(client: mockClient);
+        vm.applyFilters(
+          status: 'Scheduled',
+          districtId: '1',
+          dateFrom: '2026-10-01',
+          dateTo: '2026-10-24',
+          filterRole: '5',
+          page: '1',
+          limit: '15',
+        );
 
-      // Search query
-      vm.setSearchQuery('Rahul', immediate: true);
-      await vm.fetchBookings(force: true);
+        // Search query
+        vm.setSearchQuery('Rahul', immediate: true);
+        await vm.fetchBookings(force: true);
 
-      expect(capturedUri, isNotNull);
-      expect(capturedUri!.path, '/api/bookings');
-      expect(capturedUri!.queryParameters['search'], 'Rahul');
-      expect(capturedUri!.queryParameters['districtId'], '1');
-      expect(capturedUri!.queryParameters['dateFrom'], '2026-10-01');
-      expect(capturedUri!.queryParameters['dateTo'], '2026-10-24');
-      expect(capturedUri!.queryParameters['filterRole'], '5');
-      expect(capturedUri!.queryParameters['status'], 'Scheduled');
-      expect(capturedUri!.queryParameters['page'], '1');
-      expect(capturedUri!.queryParameters['limit'], '15');
+        expect(capturedUri, isNotNull);
+        expect(capturedUri!.path, '/api/bookings');
+        expect(capturedUri!.queryParameters['search'], 'Rahul');
+        expect(capturedUri!.queryParameters['districtId'], '1');
+        expect(capturedUri!.queryParameters['dateFrom'], '2026-10-01');
+        expect(capturedUri!.queryParameters['dateTo'], '2026-10-24');
+        expect(capturedUri!.queryParameters['filterRole'], '5');
+        expect(capturedUri!.queryParameters['status'], 'Scheduled');
+        expect(capturedUri!.queryParameters['page'], '1');
+        expect(capturedUri!.queryParameters['limit'], '15');
+        expect(capturedUri!.queryParameters['isFollowUp'], '1');
 
-      // Reset filters and verify null/empty keys are omitted
-      vm.resetFilters();
-      await vm.fetchBookings(force: true);
-      expect(capturedUri!.queryParameters, isEmpty);
-    });
+        // Reset filters and verify default listing parameters
+        vm.resetFilters();
+        await vm.fetchBookings(force: true);
+        expect(capturedUri!.queryParameters, {
+          'page': '1',
+          'limit': '10',
+          'isFollowUp': '1',
+        });
+      },
+    );
 
-    test('TodayViewModel pagination loads next page and appends bookings seamlessly', () async {
-      final List<Uri> requestedUris = [];
-      final page1Response = json.encode({
-        'data': List.generate(
+    test(
+      'TodayViewModel pagination loads next page and appends bookings seamlessly',
+      () async {
+        final List<Uri> requestedUris = [];
+        final page1Response = json.encode({
+          'data': List.generate(
+            15,
+            (i) => {
+              'id': 1000 + i,
+              'name': 'Customer $i',
+              'mobile': '+91 98000000$i',
+              'address': 'Address $i',
+              'notes': 'Note $i',
+              'status': 'New',
+              'stateName': 'Kerala',
+              'districtName': 'Ernakulam',
+              'areaName': 'Area $i',
+              'documents': [],
+            },
+          ),
+          'pagination': {'total': 30, 'page': 1, 'limit': 15, 'totalPages': 2},
+        });
+
+        final page2Response = json.encode({
+          'data': List.generate(
+            15,
+            (i) => {
+              'id': 2000 + i,
+              'name': 'Customer Page 2 - $i',
+              'mobile': '+91 99000000$i',
+              'address': 'Address 2 - $i',
+              'notes': 'Note 2 - $i',
+              'status': 'Completed',
+              'stateName': 'Kerala',
+              'districtName': 'Ernakulam',
+              'areaName': 'Area 2 - $i',
+              'documents': [],
+            },
+          ),
+          'pagination': {'total': 30, 'page': 2, 'limit': 15, 'totalPages': 2},
+        });
+
+        final mockClient = MockClient((request) async {
+          requestedUris.add(request.url);
+          final requestedPage = request.url.queryParameters['page'];
+          final body = requestedPage == '2' ? page2Response : page1Response;
+          return http.Response(
+            body,
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        });
+
+        final vm = TodayViewModel(client: mockClient);
+        await vm.fetchBookings();
+
+        expect(vm.bookings.length, 15);
+        expect(vm.todayChatItems.length, 15);
+        expect(vm.currentPage, 1);
+        expect(vm.hasMore, isTrue);
+
+        // Load next page (page 2)
+        await vm.loadNextPage();
+
+        expect(requestedUris.length, 2);
+        expect(requestedUris.last.queryParameters['page'], '2');
+        expect(requestedUris.last.queryParameters['limit'], '10');
+        expect(requestedUris.last.queryParameters['isFollowUp'], '1');
+        expect(vm.bookings.length, 30);
+        expect(vm.todayChatItems.length, 30);
+        expect(vm.currentPage, 2);
+        // Since page 2 == totalPages (2), hasMore should now be false
+        expect(vm.hasMore, isFalse);
+
+        // Attempting to load next page again should not trigger another network call
+        await vm.loadNextPage();
+        expect(requestedUris.length, 2);
+
+        // Refreshing bookings resets to page 1 to bring the latest top chats
+        await vm.refreshBookings();
+        expect(vm.currentPage, 1);
+        expect(requestedUris.last.queryParameters['page'], '1');
+
+        // Search query resets page to 1
+        await vm.loadNextPage(); // advance to page 2
+        expect(vm.currentPage, 2);
+        vm.setSearchQuery('Customer', immediate: true);
+        expect(vm.currentPage, 1);
+      },
+    );
+
+    test(
+      'TodayViewModel handles backend pagination with total=718 and totalPages=48',
+      () async {
+        final List<Uri> requestedUris = [];
+        final page1Items = List.generate(
           15,
-          (i) => {
-            'id': 1000 + i,
-            'name': 'Customer $i',
-            'mobile': '+91 98000000$i',
-            'address': 'Address $i',
-            'notes': 'Note $i',
-            'status': 'New',
-            'stateName': 'Kerala',
-            'districtName': 'Ernakulam',
-            'areaName': 'Area $i',
-            'documents': [],
-          },
-        ),
-        'pagination': {
-          'total': 30,
-          'page': 1,
-          'limit': 15,
-          'totalPages': 2,
-        },
-      });
-
-      final page2Response = json.encode({
-        'data': List.generate(
+          (i) =>
+              '{"id": $i, "name": "Customer $i", "status": "New", "mobile": "+91 90000000$i"}',
+        ).join(',');
+        final page2Items = List.generate(
           15,
-          (i) => {
-            'id': 2000 + i,
-            'name': 'Customer Page 2 - $i',
-            'mobile': '+91 99000000$i',
-            'address': 'Address 2 - $i',
-            'notes': 'Note 2 - $i',
-            'status': 'Completed',
-            'stateName': 'Kerala',
-            'districtName': 'Ernakulam',
-            'areaName': 'Area 2 - $i',
-            'documents': [],
-          },
-        ),
-        'pagination': {
-          'total': 30,
-          'page': 2,
-          'limit': 15,
-          'totalPages': 2,
-        },
-      });
+          (i) =>
+              '{"id": ${i + 15}, "name": "Customer ${i + 15}", "status": "New", "mobile": "+91 90000000${i + 15}"}',
+        ).join(',');
 
-      final mockClient = MockClient((request) async {
-        requestedUris.add(request.url);
-        final requestedPage = request.url.queryParameters['page'];
-        final body = requestedPage == '2' ? page2Response : page1Response;
-        return http.Response(body, 200,
-            headers: {'content-type': 'application/json'});
-      });
-
-      final vm = TodayViewModel(client: mockClient);
-      await vm.fetchBookings();
-
-      expect(vm.bookings.length, 15);
-      expect(vm.todayChatItems.length, 15);
-      expect(vm.currentPage, 1);
-      expect(vm.hasMore, isTrue);
-
-      // Load next page (page 2)
-      await vm.loadNextPage();
-
-      expect(requestedUris.length, 2);
-      expect(requestedUris.last.queryParameters['page'], '2');
-      expect(requestedUris.last.queryParameters['limit'], '15');
-      expect(vm.bookings.length, 30);
-      expect(vm.todayChatItems.length, 30);
-      expect(vm.currentPage, 2);
-      // Since page 2 == totalPages (2), hasMore should now be false
-      expect(vm.hasMore, isFalse);
-
-      // Attempting to load next page again should not trigger another network call
-      await vm.loadNextPage();
-      expect(requestedUris.length, 2);
-
-      // Refreshing bookings resets to page 1 to bring the latest top chats
-      await vm.refreshBookings();
-      expect(vm.currentPage, 1);
-      expect(requestedUris.last.queryParameters.containsKey('page'), isFalse);
-
-      // Search query resets page to 1
-      await vm.loadNextPage(); // advance to page 2
-      expect(vm.currentPage, 2);
-      vm.setSearchQuery('Customer', immediate: true);
-      expect(vm.currentPage, 1);
-    });
-
-    test('TodayViewModel handles backend pagination with total=718 and totalPages=48', () async {
-      final List<Uri> requestedUris = [];
-      final page1Items = List.generate(
-        15,
-        (i) => '{"id": $i, "name": "Customer $i", "status": "New", "mobile": "+91 90000000$i"}',
-      ).join(',');
-      final page2Items = List.generate(
-        15,
-        (i) => '{"id": ${i + 15}, "name": "Customer ${i + 15}", "status": "New", "mobile": "+91 90000000${i + 15}"}',
-      ).join(',');
-
-      final mockClient = MockClient((request) async {
-        requestedUris.add(request.url);
-        final requestedPage = request.url.queryParameters['page'] ?? '1';
-        final items = requestedPage == '2' ? page2Items : page1Items;
-        final responseJson = '''
+        final mockClient = MockClient((request) async {
+          requestedUris.add(request.url);
+          final requestedPage = request.url.queryParameters['page'] ?? '1';
+          final items = requestedPage == '2' ? page2Items : page1Items;
+          final responseJson =
+              '''
         {
           "success": true,
           "data": [$items],
@@ -497,28 +545,32 @@ void main() {
           }
         }
         ''';
-        return http.Response(responseJson, 200,
-            headers: {'content-type': 'application/json'});
-      });
+          return http.Response(
+            responseJson,
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        });
 
-      final vm = TodayViewModel(client: mockClient);
-      await vm.fetchBookings();
+        final vm = TodayViewModel(client: mockClient);
+        await vm.fetchBookings();
 
-      expect(vm.totalCount, 718);
-      expect(vm.totalPages, 48);
-      expect(vm.currentPage, 1);
-      expect(vm.hasMore, isTrue);
-      expect(vm.chatItems.length, 15);
+        expect(vm.totalCount, 718);
+        expect(vm.totalPages, 48);
+        expect(vm.currentPage, 1);
+        expect(vm.hasMore, isTrue);
+        expect(vm.chatItems.length, 15);
 
-      // Scroll to trigger next page
-      await vm.loadNextPage();
+        // Scroll to trigger next page
+        await vm.loadNextPage();
 
-      expect(requestedUris.last.queryParameters['page'], '2');
-      expect(requestedUris.last.queryParameters['limit'], '15');
-      expect(vm.currentPage, 2);
-      expect(vm.hasMore, isTrue);
-      expect(vm.chatItems.length, 30);
-    });
+        expect(requestedUris.last.queryParameters['page'], '2');
+        expect(requestedUris.last.queryParameters['limit'], '10');
+        expect(requestedUris.last.queryParameters['isFollowUp'], '1');
+        expect(vm.currentPage, 2);
+        expect(vm.hasMore, isTrue);
+        expect(vm.chatItems.length, 30);
+      },
+    );
   });
 }
-

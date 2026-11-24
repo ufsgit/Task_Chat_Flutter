@@ -77,8 +77,15 @@ class ActivityViewModel extends ChangeNotifier {
     return _activities.where((item) {
       // 1. Status Filter from bottom sheet
       if (_selectedStatusFilter != 'All') {
-        final status = item.statusTag ?? item.status ?? '';
-        if (status.toLowerCase() != _selectedStatusFilter.toLowerCase()) {
+        final target = _selectedStatusFilter.toLowerCase();
+        final tag = (item.statusTag ?? '').toLowerCase();
+        final st = (item.status ?? '').toLowerCase();
+        final act = (item.actionType ?? '').toLowerCase();
+        if (tag != target &&
+            st != target &&
+            !tag.contains(target) &&
+            !st.contains(target) &&
+            !act.contains(target)) {
           return false;
         }
       }

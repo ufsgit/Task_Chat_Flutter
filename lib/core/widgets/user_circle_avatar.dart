@@ -41,7 +41,7 @@ AvatarColorPair getAvatarColorsForStatus(
       background: isDark ? AppDarkColors.completedBg : AppColors.completedBg,
       icon: isDark ? AppDarkColors.completedText : AppColors.completedText,
     );
-  } else if (normalized.contains('cancel')) {
+  } else if (normalized.contains('cancel') || normalized.contains('delet')) {
     return AvatarColorPair(
       background: isDark ? AppDarkColors.cancelledBg : AppColors.cancelledBg,
       icon: isDark ? AppDarkColors.cancelledText : AppColors.cancelledText,

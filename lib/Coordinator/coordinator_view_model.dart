@@ -27,7 +27,10 @@ class CoordinatorViewModel extends ChangeNotifier {
   bool _isLoadingMore = false;
   bool _hasMore = true;
   int _currentPage = 1;
-  final String _limit = '15';
+  final String _limit = '10';
+  final String _isFollowUp = '1';
+  String get limit => _limit;
+  String get isFollowUp => _isFollowUp;
   String? _errorMessage;
   List<BookingModel> _bookings = [];
   List<Map<String, dynamic>> _items = [];
@@ -72,25 +75,28 @@ class CoordinatorViewModel extends ChangeNotifier {
     String initialStatusFilter = 'All',
     String initialManagerFilter = 'All',
     Duration? debounceDuration,
-  })  : _client = client ?? AuthenticatedClient(),
-        _isInternalClient = client == null,
-        _items = initialItems != null
-            ? List<Map<String, dynamic>>.from(initialItems)
-            : (todayViewModel != null && todayViewModel.todayChatItems.isNotEmpty
-                ? List<Map<String, dynamic>>.from(todayViewModel.todayChatItems)
-                : []),
-        debounceDuration = debounceDuration ??
-            (TokenStorage.isTestEnvironment
-                ? Duration.zero
-                : const Duration(milliseconds: 300)),
-        searchController = searchController ?? TextEditingController(),
-        _internalController = searchController == null,
-        _selectedFilterIndex = initialFilterIndex,
-        _selectedStatusFilter = initialStatusFilter,
-        _selectedManagerFilter =
-            initialManagerFilter.toLowerCase().trim() == 'rajesh menon'
-                ? 'All'
-                : initialManagerFilter {
+  }) : _client = client ?? AuthenticatedClient(),
+       _isInternalClient = client == null,
+       _items = initialItems != null
+           ? List<Map<String, dynamic>>.from(initialItems)
+           : (todayViewModel != null && todayViewModel.todayChatItems.isNotEmpty
+                 ? List<Map<String, dynamic>>.from(
+                     todayViewModel.todayChatItems,
+                   )
+                 : []),
+       debounceDuration =
+           debounceDuration ??
+           (TokenStorage.isTestEnvironment
+               ? Duration.zero
+               : const Duration(milliseconds: 300)),
+       searchController = searchController ?? TextEditingController(),
+       _internalController = searchController == null,
+       _selectedFilterIndex = initialFilterIndex,
+       _selectedStatusFilter = initialStatusFilter,
+       _selectedManagerFilter =
+           initialManagerFilter.toLowerCase().trim() == 'rajesh menon'
+           ? 'All'
+           : initialManagerFilter {
     currentSession = this;
     for (final it in _items) {
       final m = it['branchManager']?.toString();
@@ -121,11 +127,14 @@ class CoordinatorViewModel extends ChangeNotifier {
     names.addAll(_knownManagers);
     final dynamicManagers = _items
         .map((e) => e['branchManager']?.toString() ?? '')
-        .where((m) =>
-            m.trim().isNotEmpty && m.toLowerCase().trim() != 'rajesh menon');
+        .where(
+          (m) =>
+              m.trim().isNotEmpty && m.toLowerCase().trim() != 'rajesh menon',
+        );
     names.addAll(dynamicManagers);
-    names.removeWhere((m) =>
-        m.toLowerCase().trim() == 'rajesh menon' || m.trim().isEmpty);
+    names.removeWhere(
+      (m) => m.toLowerCase().trim() == 'rajesh menon' || m.trim().isEmpty,
+    );
 
     if (names.isNotEmpty) {
       return ['All', ...names];
@@ -208,8 +217,9 @@ class CoordinatorViewModel extends ChangeNotifier {
 
         if (rawList is List && rawList.isNotEmpty) {
           final heads = rawList
-              .map((item) =>
-                  BranchHeadUser.fromJson(item as Map<String, dynamic>))
+              .map(
+                (item) => BranchHeadUser.fromJson(item as Map<String, dynamic>),
+              )
               .where((u) => u.name.isNotEmpty)
               .toList();
 
@@ -263,7 +273,8 @@ class CoordinatorViewModel extends ChangeNotifier {
       // 3. Branch Manager filter from bottom sheet
       if (_selectedManagerFilter != 'All') {
         final filterDistrictId = _resolveDistrictId(_selectedManagerFilter);
-        final itemDistrictId = (item['districtId'] as int?) ??
+        final itemDistrictId =
+            (item['districtId'] as int?) ??
             (item['booking'] as BookingModel?)?.districtId;
         if (filterDistrictId != null && itemDistrictId != null) {
           if (filterDistrictId != itemDistrictId) return false;
@@ -300,6 +311,7 @@ class CoordinatorViewModel extends ChangeNotifier {
     final params = <String, String>{
       'page': page.toString(),
       'limit': _limit,
+      'isFollowUp': _isFollowUp,
     };
 
     if (_selectedStatusFilter.isNotEmpty &&
@@ -349,13 +361,11 @@ class CoordinatorViewModel extends ChangeNotifier {
       final headers = await (tokenStorage ?? TokenStorage()).authHeaders();
 
       final baseUri = Uri.parse(ApiConfig.bookings);
-      final uri =
-          baseUri.replace(queryParameters: buildQueryParameters(page: 1));
-
-      final future = _client.get(
-        uri,
-        headers: headers,
+      final uri = baseUri.replace(
+        queryParameters: buildQueryParameters(page: 1),
       );
+
+      final future = _client.get(uri, headers: headers);
       final response = TokenStorage.isTestEnvironment
           ? await future
           : await future.timeout(const Duration(seconds: 10));
@@ -375,13 +385,14 @@ class CoordinatorViewModel extends ChangeNotifier {
 
           _items = _bookings.map((booking) {
             final baseChat = booking.toChatItem();
-            final assignedManager = (booking.branchHeadName != null &&
+            final assignedManager =
+                (booking.branchHeadName != null &&
                     booking.branchHeadName!.trim().isNotEmpty)
                 ? booking.branchHeadName!.trim()
                 : ((booking.loginName != null &&
-                        booking.loginName!.trim().isNotEmpty)
-                    ? booking.loginName!.trim()
-                    : 'Unassigned');
+                          booking.loginName!.trim().isNotEmpty)
+                      ? booking.loginName!.trim()
+                      : 'Unassigned');
 
             return {
               ...baseChat,
@@ -412,7 +423,7 @@ class CoordinatorViewModel extends ChangeNotifier {
               _hasMore = _bookings.length < total;
             }
           } else {
-            final effectiveLimit = int.tryParse(_limit) ?? 15;
+            final effectiveLimit = int.tryParse(_limit) ?? 10;
             if (_bookings.length < effectiveLimit) {
               _hasMore = false;
             }
@@ -478,13 +489,14 @@ class CoordinatorViewModel extends ChangeNotifier {
 
           final newItems = uniqueBookings.map((booking) {
             final baseChat = booking.toChatItem();
-            final assignedManager = (booking.branchHeadName != null &&
+            final assignedManager =
+                (booking.branchHeadName != null &&
                     booking.branchHeadName!.trim().isNotEmpty)
                 ? booking.branchHeadName!.trim()
                 : ((booking.loginName != null &&
-                        booking.loginName!.trim().isNotEmpty)
-                    ? booking.loginName!.trim()
-                    : 'Unassigned');
+                          booking.loginName!.trim().isNotEmpty)
+                      ? booking.loginName!.trim()
+                      : 'Unassigned');
 
             return {
               ...baseChat,
@@ -517,7 +529,7 @@ class CoordinatorViewModel extends ChangeNotifier {
               _hasMore = _bookings.length < total;
             }
           } else {
-            final effectiveLimit = int.tryParse(_limit) ?? 15;
+            final effectiveLimit = int.tryParse(_limit) ?? 10;
             if (uniqueBookings.length < effectiveLimit) {
               _hasMore = false;
             }
@@ -574,8 +586,9 @@ class CoordinatorViewModel extends ChangeNotifier {
   }
 
   void setManagerFilter(String manager) {
-    final sanitized =
-        manager.toLowerCase().trim() == 'rajesh menon' ? 'All' : manager;
+    final sanitized = manager.toLowerCase().trim() == 'rajesh menon'
+        ? 'All'
+        : manager;
     if (_selectedManagerFilter != sanitized) {
       _selectedManagerFilter = sanitized;
       _currentPage = 1;
@@ -589,8 +602,9 @@ class CoordinatorViewModel extends ChangeNotifier {
   }
 
   void applyFilters(String status, String manager) {
-    final sanitizedManager =
-        manager.toLowerCase().trim() == 'rajesh menon' ? 'All' : manager;
+    final sanitizedManager = manager.toLowerCase().trim() == 'rajesh menon'
+        ? 'All'
+        : manager;
     _selectedStatusFilter = status;
     _selectedManagerFilter = sanitizedManager;
     _currentPage = 1;

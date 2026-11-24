@@ -232,9 +232,11 @@ class _BookingHistoryPageState extends State<BookingHistoryPage> {
         item['colorCode']?.toString() ??
         item['color_code']?.toString();
     final parsedColor = StatusColorService.parseHexColor(colorCode);
+    final isDeleted = actionTitle.toLowerCase().contains('delet') ||
+        (newStatusLabel?.toLowerCase().contains('delet') ?? false);
     final badgeColors = StatusColorService.getBadgeColors(
       newStatusLabel ?? actionTitle,
-      customColor: parsedColor,
+      customColor: isDeleted ? const Color(0xFFEF4444) : parsedColor,
     );
     final dotColor = badgeColors.dot;
     final badgeBg = badgeColors.bg;

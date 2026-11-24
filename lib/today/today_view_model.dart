@@ -233,8 +233,9 @@ class TodayViewModel extends ChangeNotifier {
   String? _dateFrom;
   String? _dateTo;
   String? _filterRole;
-  String? _page;
-  String? _limit;
+  String? _page = '1';
+  String? _limit = '10';
+  String? _isFollowUp = '1';
 
   static const Map<String, int> statusNameToId = {
     'new': 1,
@@ -265,6 +266,7 @@ class TodayViewModel extends ChangeNotifier {
       _filterRole != null ? roleNames[_filterRole] ?? _filterRole : null;
   String? get page => _page;
   String? get limit => _limit;
+  String? get isFollowUp => _isFollowUp;
 
   bool get hasActiveFilters =>
       _selectedStatusFilter != 'All' ||
@@ -366,6 +368,7 @@ class TodayViewModel extends ChangeNotifier {
     String? filterRole,
     String? page,
     String? limit,
+    String? isFollowUp,
   }) {
     if (status != null) _selectedStatusFilter = status;
     _districtId = districtId;
@@ -379,6 +382,7 @@ class TodayViewModel extends ChangeNotifier {
       _currentPage = 1;
     }
     if (limit != null) _limit = limit;
+    if (isFollowUp != null) _isFollowUp = isFollowUp;
     _hasMore = true;
     notifyListeners();
     fetchBookings();
@@ -390,8 +394,9 @@ class TodayViewModel extends ChangeNotifier {
     _dateFrom = null;
     _dateTo = null;
     _filterRole = null;
-    _page = null;
-    _limit = null;
+    _page = '1';
+    _limit = '10';
+    _isFollowUp = '1';
     _currentPage = 1;
     _hasMore = true;
     _searchQuery = '';
@@ -428,6 +433,7 @@ class TodayViewModel extends ChangeNotifier {
     String? status,
     String? page,
     String? limit,
+    String? isFollowUp,
   }) {
     final queryParameters = <String, String>{};
 
@@ -463,14 +469,19 @@ class TodayViewModel extends ChangeNotifier {
       queryParameters['status'] = st;
     }
 
-    final p = (page ?? _page)?.trim();
-    if (p != null && p.isNotEmpty && p.toLowerCase() != 'null') {
+    final p = (page ?? _page ?? '1').trim();
+    if (p.isNotEmpty && p.toLowerCase() != 'null') {
       queryParameters['page'] = p;
     }
 
-    final l = (limit ?? _limit)?.trim();
-    if (l != null && l.isNotEmpty && l.toLowerCase() != 'null') {
+    final l = (limit ?? _limit ?? '10').trim();
+    if (l.isNotEmpty && l.toLowerCase() != 'null') {
       queryParameters['limit'] = l;
+    }
+
+    final followUp = (isFollowUp ?? _isFollowUp ?? '1').trim();
+    if (followUp.isNotEmpty && followUp.toLowerCase() != 'null') {
+      queryParameters['isFollowUp'] = followUp;
     }
 
     return queryParameters;
@@ -557,7 +568,7 @@ class TodayViewModel extends ChangeNotifier {
               _hasMore = _bookings.length < _totalCount!;
             }
           } else {
-            final effectiveLimit = int.tryParse(_limit ?? '15') ?? 15;
+            final effectiveLimit = int.tryParse(_limit ?? '10') ?? 10;
             if (_bookings.length < effectiveLimit) {
               _hasMore = false;
             }
@@ -588,7 +599,7 @@ class TodayViewModel extends ChangeNotifier {
       if (!params.containsKey('limit')) {
         params['limit'] = (_limit != null && _limit!.isNotEmpty)
             ? _limit!
-            : '15';
+            : '10';
       }
       if (params.containsKey('status') && !params.containsKey('statusId')) {
         final id =
@@ -659,7 +670,7 @@ class TodayViewModel extends ChangeNotifier {
               _hasMore = _bookings.length < _totalCount!;
             }
           } else {
-            final effectiveLimit = int.tryParse(params['limit'] ?? '15') ?? 15;
+            final effectiveLimit = int.tryParse(params['limit'] ?? '10') ?? 10;
             if (newBookings.length < effectiveLimit) {
               _hasMore = false;
             }

@@ -14,6 +14,8 @@ class StatusColorService {
     'scheduled': const Color(0xFF7C3AED),  // #7c3aed (backend status code from /api/status)
     'completed': const Color(0xFF10B981),  // #10b981
     'cancelled': const Color(0xFFEF4444),  // #ef4444
+    'deleted': const Color(0xFFEF4444),    // #ef4444
+    'booking deleted': const Color(0xFFEF4444),
     'pending': const Color(0xFF8B5CF6),    // #8b5cf6
     'in-progress': const Color(0xFF7C3AED),
     'in progress': const Color(0xFF7C3AED),
@@ -71,7 +73,7 @@ class StatusColorService {
     if (key.contains('complet') || key.contains('done')) {
       return _statusColors['completed']!;
     }
-    if (key.contains('cancel')) {
+    if (key.contains('cancel') || key.contains('delet')) {
       return _statusColors['cancelled']!;
     }
     if (key.contains('sched')) {

@@ -112,18 +112,23 @@ class ActivityModel {
         json['client_name']?.toString() ??
         'Client';
 
-    // 2. Status: use new_status_label, with fallback to new_status_code, action_type, status
-    final rawStatus = json['new_status_label']?.toString() ??
-        json['new_status_code']?.toString() ??
-        json['statusLabel']?.toString() ??
-        json['statusCode']?.toString() ??
-        json['status']?.toString() ??
-        json['action_type']?.toString() ??
+    // 2. Status & Action Type: use action_type for latest status display on activity page
+    final actionTypeRaw = json['action_type']?.toString().trim() ??
+        json['actionType']?.toString().trim();
+    final hasActionType = actionTypeRaw != null && actionTypeRaw.isNotEmpty;
+
+    final fallbackStatus = json['new_status_label']?.toString().trim() ??
+        json['new_status_code']?.toString().trim() ??
+        json['statusLabel']?.toString().trim() ??
+        json['statusCode']?.toString().trim() ??
+        json['status']?.toString().trim() ??
         'New';
 
-    final status = rawStatus.isNotEmpty
-        ? '${rawStatus[0].toUpperCase()}${rawStatus.substring(1).toLowerCase()}'
+    final underlyingStatus = fallbackStatus.isNotEmpty
+        ? '${fallbackStatus[0].toUpperCase()}${fallbackStatus.substring(1).toLowerCase()}'
         : 'New';
+
+    final displayStatus = hasActionType ? actionTypeRaw : underlyingStatus;
 
     // 3. Notes: customer_note or staff_note or notes or action_type
     final note = json['customer_note']?.toString() ??
@@ -212,9 +217,18 @@ class ActivityModel {
           json['statusColorCode']?.toString(),
     );
 
-    final statusLower = status.toLowerCase();
-    final resolvedColor =
-        StatusColorService.getColor(status, customColor: customColor);
+    final statusLower = displayStatus.toLowerCase();
+    final underlyingLower = underlyingStatus.toLowerCase();
+    final isDeleted =
+        statusLower.contains('delet') || underlyingLower.contains('delet');
+
+    final resolvedColor = isDeleted
+        ? const Color(0xFFEF4444)
+        : (customColor ??
+            (StatusColorService.getColor(underlyingStatus) !=
+                    const Color(0xFF3B82F6)
+                ? StatusColorService.getColor(underlyingStatus)
+                : StatusColorService.getColor(displayStatus)));
     final avatarBg = resolvedColor.withValues(alpha: 0.15);
     final avatarFg = resolvedColor;
     final tagBg = resolvedColor.withValues(alpha: 0.12);
@@ -222,15 +236,31 @@ class ActivityModel {
     IconData? tagIcon;
     bool isPending = false;
 
-    if (statusLower.contains('complete') || statusLower.contains('done')) {
+    if (isDeleted) {
+      tagIcon = Icons.delete_outline_rounded;
+      isPending = false;
+    } else if (underlyingLower.contains('complete') ||
+        statusLower.contains('complete') ||
+        statusLower.contains('done')) {
       tagIcon = Icons.check_circle_rounded;
       isPending = false;
-    } else if (statusLower.contains('cancel')) {
+    } else if (underlyingLower.contains('cancel') ||
+        statusLower.contains('cancel')) {
       tagIcon = Icons.cancel_rounded;
       isPending = false;
-    } else if (statusLower.contains('schedul')) {
+    } else if (underlyingLower.contains('schedul') ||
+        statusLower.contains('schedul')) {
       tagIcon = Icons.calendar_today_rounded;
       isPending = true;
+    } else if (statusLower.contains('transfer')) {
+      tagIcon = Icons.swap_horiz_rounded;
+      isPending = false;
+    } else if (statusLower.contains('note')) {
+      tagIcon = Icons.notes_rounded;
+      isPending = false;
+    } else if (statusLower.contains('update') || statusLower.contains('edit')) {
+      tagIcon = Icons.update_rounded;
+      isPending = false;
     } else {
       tagIcon = Icons.fiber_new_rounded;
       isPending = true;
@@ -273,7 +303,7 @@ class ActivityModel {
       dateTime: dt,
       subtitlePrefix: subtitlePrefix,
       subtitleHighlight: subtitleHighlight,
-      statusTag: status,
+      statusTag: displayStatus,
       statusTagIcon: tagIcon,
       statusTagBg: tagBg,
       statusTagTextColor: tagFg,
@@ -288,11 +318,11 @@ class ActivityModel {
       bookingId: bId,
       documents: docs,
       clientName: name,
-      status: status,
+      status: underlyingStatus,
       notes: note,
       createdByName: actionByName,
       createdAt: dt,
-      actionType: json['action_type']?.toString(),
+      actionType: actionTypeRaw,
       actionByRoleId: actionByRoleId,
       actionByName: actionByName,
     );
