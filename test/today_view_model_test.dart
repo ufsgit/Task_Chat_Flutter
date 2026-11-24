@@ -318,7 +318,7 @@ void main() {
           'isFollowUp': '1',
         });
 
-        // Full query parameters as specified in requirement
+        // Full query parameters as specified in requirement: filters omit isFollowUp
         final params = vm.buildQueryParameters(
           search: 'Rahul',
           districtId: '1',
@@ -339,10 +339,17 @@ void main() {
           'status': 'Scheduled',
           'page': '1',
           'limit': '15',
-          'isFollowUp': '1',
         });
+        expect(params.containsKey('isFollowUp'), isFalse);
 
-        // Partial query parameters: omits null, empty, or 'all'
+        // Explicit isFollowUp override with filters
+        final explicitParams = vm.buildQueryParameters(
+          districtId: '1',
+          isFollowUp: '1',
+        );
+        expect(explicitParams['isFollowUp'], '1');
+
+        // Partial query parameters with filter (districtId): omits null, empty, 'all', and isFollowUp
         final partial = vm.buildQueryParameters(
           search: '',
           districtId: '2',
@@ -358,8 +365,7 @@ void main() {
           'districtId': '2',
           'filterRole': '3',
           'page': '1',
-          'limit': '10',
-          'isFollowUp': '1',
+          'limit': '20',
         });
         expect(partial.containsKey('search'), isFalse);
         expect(partial.containsKey('dateFrom'), isFalse);
@@ -367,7 +373,7 @@ void main() {
         expect(partial.containsKey('status'), isFalse);
         expect(partial.containsKey('page'), isTrue);
         expect(partial.containsKey('limit'), isTrue);
-        expect(partial.containsKey('isFollowUp'), isTrue);
+        expect(partial.containsKey('isFollowUp'), isFalse);
       },
     );
 
@@ -409,9 +415,10 @@ void main() {
         expect(capturedUri!.queryParameters['status'], 'Scheduled');
         expect(capturedUri!.queryParameters['page'], '1');
         expect(capturedUri!.queryParameters['limit'], '15');
-        expect(capturedUri!.queryParameters['isFollowUp'], '1');
+        // When filters are applied in Today page, no need for follow up
+        expect(capturedUri!.queryParameters.containsKey('isFollowUp'), isFalse);
 
-        // Reset filters and verify default listing parameters
+        // Reset filters and verify default listing parameters restores isFollowUp=1
         vm.resetFilters();
         await vm.fetchBookings(force: true);
         expect(capturedUri!.queryParameters, {

@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:share_plus/share_plus.dart';
 import '../api/document_upload_service.dart';
 import '../core/widgets/app_pill_notification.dart';
 import '../core/widgets/circular_back_button.dart';
@@ -252,6 +253,82 @@ class _CustomerDetailsViewState extends State<CustomerDetailsView> {
     }
   }
 
+  Future<void> _handleDataSharing() async {
+    final phone = _viewModel.customer.phoneNumber.trim();
+    if (phone.isEmpty) {
+      if (mounted) {
+        AppNotification.showError(
+          context,
+          'No phone number available for this contact',
+        );
+      }
+      return;
+    }
+
+    final success = await _viewModel.shareDataToWhatsApp();
+    if (!success && mounted) {
+      AppNotification.showError(
+        context,
+        'Could not open WhatsApp for sharing',
+      );
+    }
+  }
+
+  Future<void> _handleBrochureSharing() async {
+    final phone = _viewModel.customer.phoneNumber.trim();
+    if (phone.isEmpty) {
+      if (mounted) {
+        AppNotification.showError(
+          context,
+          'No phone number available for this contact',
+        );
+      }
+      return;
+    }
+
+    try {
+      final files = await FilePicker.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf'],
+        dialogTitle: 'Select Brochure PDF',
+      );
+
+      if (files.isNotEmpty) {
+        final file = files.first;
+        final shareText =
+            'Hello ${_viewModel.customer.name}, please find our brochure attached.';
+
+        if (file.path != null && file.path!.isNotEmpty) {
+          await _viewModel.shareBrochurePdf(
+            filePath: file.path,
+            text: shareText,
+          );
+        } else {
+          final bytes = await file.readAsBytes();
+          if (bytes != null) {
+            final xFile = XFile.fromData(
+              bytes,
+              name: file.name,
+              mimeType: 'application/pdf',
+            );
+            await _viewModel.shareBrochurePdf(
+              xFile: xFile,
+              text: shareText,
+            );
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Error picking or sharing brochure: $e');
+      if (mounted) {
+        AppNotification.showError(
+          context,
+          'Failed to pick or share brochure',
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -307,6 +384,81 @@ class _CustomerDetailsViewState extends State<CustomerDetailsView> {
               ),
               titleSpacing: 8,
               actions: [
+                PopupMenuButton<String>(
+                  key: const ValueKey('share_contact_popup_button'),
+                  tooltip: 'Share',
+                  color: scaffoldBg,
+                  surfaceTintColor: Colors.transparent,
+                  elevation: 4,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    side: BorderSide(color: borderColor, width: 1),
+                  ),
+                  icon: Icon(
+                    Icons.share_outlined,
+                    color: isDark
+                        ? AppDarkColors.textSecondary
+                        : primaryTextColor,
+                    size: 22,
+                  ),
+                  onSelected: (value) {
+                    if (value == 'data_sharing') {
+                      _handleDataSharing();
+                    } else if (value == 'brochure_sharing') {
+                      _handleBrochureSharing();
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    PopupMenuItem(
+                      value: 'data_sharing',
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.chat_outlined,
+                            size: 18,
+                            color: isDark
+                                ? AppDarkColors.whatsappGreen
+                                : AppColors.primaryGreen,
+                          ),
+                          const SizedBox(width: 10),
+                          Text(
+                            'Data sharing',
+                            style: TextStyle(
+                              fontFamily: 'Helvetica Neue',
+                              color: primaryTextColor,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: 'brochure_sharing',
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.picture_as_pdf_outlined,
+                            size: 18,
+                            color: isDark
+                                ? AppDarkColors.whatsappGreen
+                                : AppColors.primaryGreen,
+                          ),
+                          const SizedBox(width: 10),
+                          Text(
+                            'Brochure sharing',
+                            style: TextStyle(
+                              fontFamily: 'Helvetica Neue',
+                              color: primaryTextColor,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
                 PopupMenuButton<String>(
                   color: scaffoldBg,
                   surfaceTintColor: Colors.transparent,

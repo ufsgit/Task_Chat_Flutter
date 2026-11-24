@@ -20,6 +20,7 @@ class CustomerDetailsModel {
 
   final String? scheduleDate;
   final String? statusColorCode;
+  final String? mapLink;
 
   /// Returns the scheduled date formatted as day/month/year (DD/MM/YYYY).
   String get formattedScheduleDate => formatDateToDayMonthYear(scheduleDate);
@@ -44,6 +45,7 @@ class CustomerDetailsModel {
     this.branchHeadName,
     this.scheduleDate,
     this.statusColorCode,
+    this.mapLink,
   });
 
   CustomerDetailsModel copyWith({
@@ -62,6 +64,7 @@ class CustomerDetailsModel {
     String? branchHeadName,
     String? scheduleDate,
     String? statusColorCode,
+    String? mapLink,
   }) {
     return CustomerDetailsModel(
       id: id ?? this.id,
@@ -79,6 +82,7 @@ class CustomerDetailsModel {
       branchHeadName: branchHeadName ?? this.branchHeadName,
       scheduleDate: scheduleDate ?? this.scheduleDate,
       statusColorCode: statusColorCode ?? this.statusColorCode,
+      mapLink: mapLink ?? this.mapLink,
     );
   }
 
@@ -97,6 +101,7 @@ class CustomerDetailsModel {
     String? staffNotes,
     String? inquiry,
     String? statusColorCode,
+    String? mapLink,
   }) {
     final resolvedStatus =
         (tagText != null && tagText.isNotEmpty) ? tagText : 'New';
@@ -125,6 +130,7 @@ class CustomerDetailsModel {
       branchHeadName: branchHeadName,
       scheduleDate: scheduleDate,
       statusColorCode: statusColorCode,
+      mapLink: mapLink,
     );
   }
 
@@ -148,12 +154,16 @@ class CustomerDetailsModel {
       inquiry: '5ft Steel door enquiry',
       status: resolvedStatus,
       phoneNumber: booking.mobile.isNotEmpty ? booking.mobile : '7096797345',
-      addressLine1: locationStr.isNotEmpty
-          ? '742 Evergreen Terrace, $locationStr'
-          : '742 Evergreen Terrace',
-      addressLine2: booking.stateName.isNotEmpty
-          ? '${booking.stateName}, India'
-          : 'Springfield, OR 97477',
+      addressLine1: booking.address.isNotEmpty
+          ? booking.address
+          : (locationStr.isNotEmpty
+              ? '742 Evergreen Terrace, $locationStr'
+              : '742 Evergreen Terrace'),
+      addressLine2: [
+        booking.areaName,
+        booking.districtName,
+        booking.stateName,
+      ].where((s) => s.isNotEmpty).join(', '),
       notes: booking.notes,
       staffNotes: booking.staffNotes,
       hasBeenScheduled: isScheduledOrCompleted,
@@ -162,6 +172,7 @@ class CustomerDetailsModel {
       branchHeadName: booking.branchHeadName,
       scheduleDate: booking.scheduleDate,
       statusColorCode: booking.statusColorCode,
+      mapLink: booking.mapLink,
     );
   }
 
@@ -242,6 +253,8 @@ class CustomerDetailsModel {
             data['branch_manager'])
         ?.toString();
 
+    final mapLink = (data['mapLink'] ?? data['map_link'])?.toString();
+
     List<String> documents = [];
     final rawDocs = data['documents'];
     if (rawDocs is List) {
@@ -282,6 +295,7 @@ class CustomerDetailsModel {
       documents: documents,
       branchHeadId: branchHeadId,
       branchHeadName: branchHeadName,
+      mapLink: mapLink,
     );
   }
 }

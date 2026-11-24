@@ -311,6 +311,9 @@ class TodayViewModel extends ChangeNotifier {
   void setStatusFilter(String status) {
     if (_selectedStatusFilter != status) {
       _selectedStatusFilter = status;
+      _limit = (status.toLowerCase().trim() != 'all' || hasActiveFilters)
+          ? '20'
+          : '10';
       _currentPage = 1;
       _hasMore = true;
       notifyListeners();
@@ -381,8 +384,8 @@ class TodayViewModel extends ChangeNotifier {
     } else {
       _currentPage = 1;
     }
-    if (limit != null) _limit = limit;
-    if (isFollowUp != null) _isFollowUp = isFollowUp;
+    _limit = limit ?? '20';
+    _isFollowUp = isFollowUp;
     _hasMore = true;
     notifyListeners();
     fetchBookings();
@@ -474,14 +477,39 @@ class TodayViewModel extends ChangeNotifier {
       queryParameters['page'] = p;
     }
 
-    final l = (limit ?? _limit ?? '10').trim();
+    final bool hasFilter =
+        (districtId != null && districtId.trim().isNotEmpty && districtId.toLowerCase() != 'null') ||
+        (dId != null && dId.isNotEmpty && dId.toLowerCase() != 'null') ||
+        (dateFrom != null && dateFrom.trim().isNotEmpty && dateFrom.toLowerCase() != 'null') ||
+        (dFrom != null && dFrom.isNotEmpty && dFrom.toLowerCase() != 'null') ||
+        (dateTo != null && dateTo.trim().isNotEmpty && dateTo.toLowerCase() != 'null') ||
+        (dTo != null && dTo.isNotEmpty && dTo.toLowerCase() != 'null') ||
+        (filterRole != null && filterRole.trim().isNotEmpty && filterRole.toLowerCase() != 'null') ||
+        (role != null && role.isNotEmpty && role.toLowerCase() != 'null') ||
+        (status != null && status.trim().isNotEmpty && status.toLowerCase() != 'all' && status.toLowerCase() != 'null') ||
+        (st.isNotEmpty && st.toLowerCase() != 'all' && st.toLowerCase() != 'null');
+
+    final String defaultLimit;
+    if (hasFilter) {
+      defaultLimit = (_limit != null && _limit != '10') ? _limit! : '20';
+    } else {
+      defaultLimit = _limit ?? '10';
+    }
+    final l = (limit ?? defaultLimit).trim();
     if (l.isNotEmpty && l.toLowerCase() != 'null') {
       queryParameters['limit'] = l;
     }
 
-    final followUp = (isFollowUp ?? _isFollowUp ?? '1').trim();
-    if (followUp.isNotEmpty && followUp.toLowerCase() != 'null') {
-      queryParameters['isFollowUp'] = followUp;
+    // For default listing, isFollowUp is included. For filters in today page, no need for follow up.
+    if (!hasFilter) {
+      final followUp = (isFollowUp ?? _isFollowUp ?? '1').trim();
+      if (followUp.isNotEmpty && followUp.toLowerCase() != 'null') {
+        queryParameters['isFollowUp'] = followUp;
+      }
+    } else if (isFollowUp != null &&
+        isFollowUp.trim().isNotEmpty &&
+        isFollowUp.toLowerCase() != 'null') {
+      queryParameters['isFollowUp'] = isFollowUp.trim();
     }
 
     return queryParameters;
@@ -722,6 +750,8 @@ class TodayViewModel extends ChangeNotifier {
     if (identical(currentSession, this)) {
       currentSession = null;
     }
+    _chatItems.clear();
+    _bookings.clear();
     _searchDebounceTimer?.cancel();
     if (_isInternalClient) {
       _client.close();

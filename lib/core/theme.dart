@@ -299,7 +299,8 @@ abstract final class AppTheme {
         ),
       ),
       actionIconTheme: ActionIconThemeData(
-        backButtonIconBuilder: (BuildContext context) => const CircularBackButton(),
+        backButtonIconBuilder: (BuildContext context) =>
+            const CircularBackButton(),
       ),
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
@@ -323,15 +324,15 @@ abstract final class AppTheme {
   /// Custom transitions builder that slides incoming pages down from top to bottom.
   static const PageTransitionsTheme _pageTransitionsTheme =
       PageTransitionsTheme(
-    builders: {
-      TargetPlatform.android: TopToBottomPageTransitionsBuilder(),
-      TargetPlatform.iOS: TopToBottomPageTransitionsBuilder(),
-      TargetPlatform.windows: TopToBottomPageTransitionsBuilder(),
-      TargetPlatform.macOS: TopToBottomPageTransitionsBuilder(),
-      TargetPlatform.linux: TopToBottomPageTransitionsBuilder(),
-      TargetPlatform.fuchsia: TopToBottomPageTransitionsBuilder(),
-    },
-  );
+        builders: {
+          TargetPlatform.android: TopToBottomPageTransitionsBuilder(),
+          TargetPlatform.iOS: TopToBottomPageTransitionsBuilder(),
+          TargetPlatform.windows: TopToBottomPageTransitionsBuilder(),
+          TargetPlatform.macOS: TopToBottomPageTransitionsBuilder(),
+          TargetPlatform.linux: TopToBottomPageTransitionsBuilder(),
+          TargetPlatform.fuchsia: TopToBottomPageTransitionsBuilder(),
+        },
+      );
 
   /// Dark Mode Theme configuration.
   static ThemeData get darkTheme {
@@ -409,7 +410,8 @@ abstract final class AppTheme {
         modalBackgroundColor: AppDarkColors.surfaceCard,
       ),
       actionIconTheme: ActionIconThemeData(
-        backButtonIconBuilder: (BuildContext context) => const CircularBackButton(),
+        backButtonIconBuilder: (BuildContext context) =>
+            const CircularBackButton(),
       ),
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
@@ -447,14 +449,9 @@ class TopToBottomPageTransitionsBuilder extends PageTransitionsBuilder {
     const end = Offset.zero;
     const curve = Curves.easeOutCubic;
 
-    final tween = Tween(begin: begin, end: end).chain(
-      CurveTween(curve: curve),
-    );
+    final tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
 
-    return SlideTransition(
-      position: animation.drive(tween),
-      child: child,
-    );
+    return SlideTransition(position: animation.drive(tween), child: child);
   }
 }
 
@@ -464,11 +461,11 @@ class AppScrollBehavior extends MaterialScrollBehavior {
 
   @override
   Set<PointerDeviceKind> get dragDevices => {
-        PointerDeviceKind.touch,
-        PointerDeviceKind.mouse,
-        PointerDeviceKind.stylus,
-        PointerDeviceKind.trackpad,
-      };
+    PointerDeviceKind.touch,
+    PointerDeviceKind.mouse,
+    PointerDeviceKind.stylus,
+    PointerDeviceKind.trackpad,
+  };
 
   @override
   Widget buildOverscrollIndicator(
@@ -482,29 +479,27 @@ class AppScrollBehavior extends MaterialScrollBehavior {
 
   @override
   ScrollPhysics getScrollPhysics(BuildContext context) {
-    return const BouncingScrollPhysics(
-      parent: AlwaysScrollableScrollPhysics(),
-    );
+    return const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics());
   }
 }
 
-/// Sleek Dark Mode Palette matching the design reference.
+/// Sleek, eye-friendly Dark Mode Palette with balanced, non-glaring tones.
 abstract final class AppDarkColors {
-  // Vibrant emerald green accents (WhatsApp Green)
-  static const Color primaryGreen = Color(0xFF22C55E);
+  // Calmer, muted emerald green (less neon, avoids eye strain)
+  static const Color primaryGreen = Color(0xFF1EB759);
   static const Color whatsappGreen = primaryGreen;
   static const Color brandGreen = primaryGreen;
 
-  // Backgrounds: Deep Midnight Charcoal & Sleek Elevated Cards
+  // Backgrounds: Deep Midnight Charcoal & Soft Dark Surfaces
   static const Color scaffoldBackground = Color(0xFF0F1115);
   static const Color surface = Color(0xFF16191E);
   static const Color surfaceCard = Color(0xFF16191E);
   static const Color surfaceGrey = Color(0xFF16191E);
-  static const Color surfaceGreyLight = Color(0xFF1F242C);
+  static const Color surfaceGreyLight = Color(0xFF1D222A);
   static const Color surfaceSecondary = Color(0xFF101317);
 
-  // Text & Neutral Colors
-  static const Color textPrimary = Colors.white;
+  // Text & Neutral Colors (Soft off-white to eliminate high-contrast halation)
+  static const Color textPrimary = Color(0xFFE2E8F0);
   static const Color textSecondary = Color(0xFF94A3B8);
   static const Color textSubtitle = Color(0xFF94A3B8);
   static const Color textPlaceholder = Color(0xFF64748B);
@@ -513,28 +508,28 @@ abstract final class AppDarkColors {
   static const Color border = Color(0xFF22262E);
   static const Color divider = Color(0xFF1E222A);
 
-  // Status & Badges
-  static const Color completedBg = Color(0xFF0D281E);
+  // Status & Badges (Muted tones instead of harsh saturated neons)
+  static const Color completedBg = Color(0xFF0A2018);
   static const Color completedText = primaryGreen;
-  static const Color cancelledBg = Color(0xFF38161A);
-  static const Color cancelledText = Color(0xFFEF4444);
-  static const Color newBg = Color(0xFF112240);
-  static const Color newText = Color(0xFF38BDF8);
-  static const Color inProgressBg = Color(0xFF112240);
-  static const Color inProgressText = Color(0xFF38BDF8);
-  static const Color scheduledBg = Color(0xFF452B0E);
-  static const Color scheduledText = Color(0xFFFBBF24);
+  static const Color cancelledBg = Color(0xFF2B1417);
+  static const Color cancelledText = Color(0xFFE05D5D);
+  static const Color newBg = Color(0xFF0F1D33);
+  static const Color newText = Color(0xFF5B9EEA);
+  static const Color inProgressBg = Color(0xFF0F1D33);
+  static const Color inProgressText = Color(0xFF5B9EEA);
+  static const Color scheduledBg = Color(0xFF291B0C);
+  static const Color scheduledText = Color(0xFFDE9B2E);
 
   // Chips & Avatar backgrounds
-  static const Color chipPendingBg = Color(0xFF0D281E);
-  static const Color pillActiveBg = Color(0xFF0D281E);
+  static const Color chipPendingBg = Color(0xFF0A2018);
+  static const Color pillActiveBg = Color(0xFF0A2018);
   static const Color chipPendingText = primaryGreen;
   static const Color chipUnselectedBg = Color(0xFF16191E);
   static const Color chipUnselectedText = Color(0xFF94A3B8);
 
   // Dropdowns & Dialogs
   static const Color dropdownBackground = Color(0xFF16191E);
-  static const Color dropdownItemText = Colors.white;
+  static const Color dropdownItemText = textPrimary;
 }
 
 /// Centralized light/dark color resolver.

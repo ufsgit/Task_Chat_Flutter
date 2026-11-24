@@ -408,7 +408,7 @@ class _FloatingBottomBarState extends State<FloatingBottomBar> {
               fontSize: 11.5,
               fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
               color: isSelected
-                  ? (isDark ? Colors.white : activeColor)
+                  ? (isDark ? AppDarkColors.textPrimary : activeColor)
                   : inactiveColor,
               letterSpacing: -0.2,
             ),

@@ -21,6 +21,11 @@ class CoordinatorUpdateStatusViewModel extends ChangeNotifier {
   late bool _hasBeenScheduled;
   bool _isSaving = false;
   bool _isLoadingManagers = false;
+  bool _isLoadingMoreManagers = false;
+  bool _hasMoreManagers = false;
+  int _managerPage = 1;
+  final int _managerLimit = 20;
+  int _managerTotalCount = 0;
   bool _isLoadingChips = false;
   bool _isUploadingDocument = false;
   String? _errorMessage;
@@ -87,6 +92,11 @@ class CoordinatorUpdateStatusViewModel extends ChangeNotifier {
   bool get hasBeenScheduled => _hasBeenScheduled;
   bool get isSaving => _isSaving;
   bool get isLoadingManagers => _isLoadingManagers;
+  bool get isLoadingMoreManagers => _isLoadingMoreManagers;
+  bool get hasMoreManagers => _hasMoreManagers;
+  int get managerPage => _managerPage;
+  int get managerLimit => _managerLimit;
+  int get managerTotalCount => _managerTotalCount;
   bool get isLoadingChips => _isLoadingChips;
   bool get isUploadingDocument => _isUploadingDocument;
   String? get errorMessage => _errorMessage;
@@ -130,7 +140,10 @@ class CoordinatorUpdateStatusViewModel extends ChangeNotifier {
   }
 
   List<String> get availableManagers {
-    final list = _branchManagers.map((m) => m.name).toList();
+    if (_branchManagers.isEmpty) {
+      return const [];
+    }
+    final list = _branchManagers.map((m) => m.listingLabel).toList();
 
     if (_selectedBranchManager.isNotEmpty &&
         !list.contains(_selectedBranchManager)) {
@@ -140,15 +153,30 @@ class CoordinatorUpdateStatusViewModel extends ChangeNotifier {
   }
 
   /// Fetches branch head managers from API and updates available options.
-  Future<void> loadBranchManagers() async {
+  Future<void> loadBranchManagers({bool refresh = false}) async {
     _isLoadingManagers = true;
+    _managerPage = 1;
     notifyListeners();
 
     try {
-      final managers = await _logic.fetchBranchManagers();
+      final result = await _logic.fetchBranchManagersPaginated(
+        page: _managerPage,
+        limit: _managerLimit,
+      );
+
+      final managers = result.users.isNotEmpty
+          ? result.users
+          : await _logic.fetchBranchManagers(
+              page: _managerPage,
+              limit: _managerLimit,
+            );
+
       if (managers.isNotEmpty) {
         _branchManagers = managers;
-        final names = _branchManagers.map((m) => m.name).toList();
+        _managerTotalCount = result.count > 0 ? result.count : managers.length;
+        _hasMoreManagers = result.hasMore;
+
+        final labels = _branchManagers.map((m) => m.listingLabel).toList();
 
         // If customer has an assigned branch head, match it
         BranchHeadUser? matched;
@@ -162,32 +190,91 @@ class CoordinatorUpdateStatusViewModel extends ChangeNotifier {
             (customer.branchHeadName != null &&
                 customer.branchHeadName!.trim().isNotEmpty)
             ? customer.branchHeadName!.trim()
-            : null;
+            : (_selectedBranchManager.isNotEmpty
+                  ? _selectedBranchManager
+                  : null);
 
         if (matched == null && targetName != null) {
           matched = _branchManagers
               .where(
                 (m) =>
-                    m.name.toLowerCase().trim() == targetName.toLowerCase() ||
-                    m.username.toLowerCase().trim() == targetName.toLowerCase(),
+                    m.listingLabel.toLowerCase().trim() ==
+                        targetName.toLowerCase().trim() ||
+                    m.name.toLowerCase().trim() ==
+                        targetName.toLowerCase().trim() ||
+                    (m.displayLabel != null &&
+                        m.displayLabel!.toLowerCase().trim() ==
+                            targetName.toLowerCase().trim()) ||
+                    m.username.toLowerCase().trim() ==
+                        targetName.toLowerCase().trim(),
               )
               .firstOrNull;
         }
 
         if (matched != null) {
-          _selectedBranchManager = matched.name;
-        } else if (targetName != null) {
+          _selectedBranchManager = matched.listingLabel;
+        } else if (targetName != null && labels.contains(targetName)) {
           _selectedBranchManager = targetName;
         } else if ((_selectedBranchManager.isEmpty ||
-                !names.contains(_selectedBranchManager)) &&
-            names.isNotEmpty) {
-          _selectedBranchManager = names.first;
+                !labels.contains(_selectedBranchManager)) &&
+            labels.isNotEmpty) {
+          _selectedBranchManager = labels.first;
         }
+      } else {
+        _branchManagers = [];
+        _hasMoreManagers = false;
+        _managerTotalCount = 0;
       }
     } catch (_) {
       // Ignored - fallback to availableBranchManagers
     } finally {
       _isLoadingManagers = false;
+      notifyListeners();
+    }
+  }
+
+  /// Fetches the next page of branch managers and appends them to the current list.
+  Future<void> loadNextBranchManagersPage() async {
+    if (_isLoadingManagers || _isLoadingMoreManagers || !_hasMoreManagers) {
+      return;
+    }
+
+    _isLoadingMoreManagers = true;
+    notifyListeners();
+
+    try {
+      final nextPage = _managerPage + 1;
+      final result = await _logic.fetchBranchManagersPaginated(
+        page: nextPage,
+        limit: _managerLimit,
+      );
+
+      final newManagers = result.users.isNotEmpty
+          ? result.users
+          : await _logic.fetchBranchManagers(
+              page: nextPage,
+              limit: _managerLimit,
+            );
+
+      if (newManagers.isNotEmpty) {
+        _managerPage = nextPage;
+        final existingIds = _branchManagers.map((m) => m.id).toSet();
+        final uniqueNew = newManagers
+            .where((m) => !existingIds.contains(m.id))
+            .toList();
+        _branchManagers.addAll(uniqueNew);
+
+        if (result.count > 0) {
+          _managerTotalCount = result.count;
+        }
+        _hasMoreManagers = result.hasMore;
+      } else {
+        _hasMoreManagers = false;
+      }
+    } catch (_) {
+      // Ignored
+    } finally {
+      _isLoadingMoreManagers = false;
       notifyListeners();
     }
   }
@@ -234,7 +321,10 @@ class CoordinatorUpdateStatusViewModel extends ChangeNotifier {
       findStatusChip(_selectedStatus, statusChips);
 
   CoordinatorUpdateStatusVisibility get visibility =>
-      CoordinatorUpdateStatusVisibility(_selectedStatus, selectedChip: selectedStatusChip);
+      CoordinatorUpdateStatusVisibility(
+        _selectedStatus,
+        selectedChip: selectedStatusChip,
+      );
 
   bool get showSchedule => visibility.showSchedule;
   bool get showBranchManager => visibility.showBranchManager;
@@ -274,23 +364,28 @@ class CoordinatorUpdateStatusViewModel extends ChangeNotifier {
 
   BranchHeadUser? get selectedBranchHead {
     if (_branchManagers.isEmpty) return null;
+    final selectedTrimmed = _selectedBranchManager.toLowerCase().trim();
     if (customer.branchHeadId != null) {
       final byId = _branchManagers
           .where((m) => m.id == customer.branchHeadId)
           .firstOrNull;
       if (byId != null &&
-          byId.name.toLowerCase().trim() ==
-              _selectedBranchManager.toLowerCase().trim()) {
+          (byId.listingLabel.toLowerCase().trim() == selectedTrimmed ||
+              byId.name.toLowerCase().trim() == selectedTrimmed ||
+              (byId.displayLabel != null &&
+                  byId.displayLabel!.toLowerCase().trim() ==
+                      selectedTrimmed))) {
         return byId;
       }
     }
     return _branchManagers
         .where(
           (m) =>
-              m.name.toLowerCase().trim() ==
-                  _selectedBranchManager.toLowerCase().trim() ||
-              m.username.toLowerCase().trim() ==
-                  _selectedBranchManager.toLowerCase().trim(),
+              m.listingLabel.toLowerCase().trim() == selectedTrimmed ||
+              m.name.toLowerCase().trim() == selectedTrimmed ||
+              (m.displayLabel != null &&
+                  m.displayLabel!.toLowerCase().trim() == selectedTrimmed) ||
+              m.username.toLowerCase().trim() == selectedTrimmed,
         )
         .firstOrNull;
   }

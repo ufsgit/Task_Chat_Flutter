@@ -204,6 +204,9 @@ class _CoordinatorUpdateStatusViewState
                     onManagerChanged: _viewModel.setBranchManager,
                     managers: _viewModel.availableManagers,
                     isLoading: _viewModel.isLoadingManagers,
+                    hasMore: _viewModel.hasMoreManagers,
+                    isLoadingMore: _viewModel.isLoadingMoreManagers,
+                    onLoadMore: _viewModel.loadNextBranchManagersPage,
                   ),
 
                   const SizedBox(height: 20),

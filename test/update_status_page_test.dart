@@ -14,6 +14,7 @@ import 'package:task_chat/today/today_view_model.dart';
 import 'package:task_chat/update_status/branch_manager/branch_manager_update_status_logic.dart';
 import 'package:task_chat/update_status/branch_manager/branch_manager_update_status_view.dart';
 import 'package:task_chat/update_status/branch_manager/branch_manager_update_status_view_model.dart';
+import 'package:task_chat/update_status/coordinators/coordinator_update_status_logic.dart';
 import 'package:task_chat/update_status/coordinators/coordinator_update_status_view.dart';
 import 'package:task_chat/update_status/coordinators/coordinator_update_status_view_model.dart';
 import 'package:task_chat/update_status/widgets/branch_manager_field_card.dart';
@@ -414,7 +415,12 @@ void main() {
 
       expect(capturedRequest, isNotNull);
       expect(capturedRequest!.method, 'GET');
-      expect(capturedRequest!.url.toString(), ApiConfig.branch_head_listing);
+      expect(
+        capturedRequest!.url.path,
+        Uri.parse(ApiConfig.branch_head_listing).path,
+      );
+      expect(capturedRequest!.url.queryParameters['page'], '1');
+      expect(capturedRequest!.url.queryParameters['limit'], '20');
       expect(
         capturedRequest!.headers['authorization'],
         'Bearer test_coord_token',
@@ -450,7 +456,7 @@ void main() {
 
       final mockClient = MockClient((request) async {
         if (request.method == 'GET' &&
-            request.url.toString() == ApiConfig.branch_head_listing) {
+            request.url.path == Uri.parse(ApiConfig.branch_head_listing).path) {
           return http.Response(
             jsonEncode({
               'data': [
@@ -590,7 +596,7 @@ void main() {
       http.Request? capturedStatusRequest;
       final mockClient = MockClient((request) async {
         if (request.method == 'GET' &&
-            request.url.toString() == ApiConfig.branch_head_listing) {
+            request.url.path == Uri.parse(ApiConfig.branch_head_listing).path) {
           return http.Response(
             jsonEncode({
               'data': [
@@ -710,7 +716,7 @@ void main() {
 
       final mockClient = MockClient((request) async {
         if (request.method == 'GET' &&
-            request.url.toString() == ApiConfig.branch_head_listing) {
+            request.url.path == Uri.parse(ApiConfig.branch_head_listing).path) {
           return http.Response(
             jsonEncode({
               'data': [
@@ -837,6 +843,409 @@ void main() {
       expect(find.text('Add File'), findsOneWidget);
       // Delete icon is visible for Coordinator
       expect(find.byIcon(Icons.delete_outline_rounded), findsOneWidget);
+    },
+  );
+
+  test('BranchHeadUser parses new backend schema and formats listingLabel', () {
+    final jsonItem = {
+      'branch_head_id': 10001,
+      'branch_head_name': 'anu',
+      'district_id': 7,
+      'district_name': 'Ernakulam',
+      'area_id': 90,
+      'area_name': 'Cherai',
+      'area_pincode': '683514',
+      'display_label': 'anu (Ernakulam - Cherai)',
+    };
+
+    final user = BranchHeadUser.fromJson(jsonItem);
+    expect(user.id, 10001);
+    expect(user.name, 'anu');
+    expect(user.districtId, 7);
+    expect(user.districtName, 'Ernakulam');
+    expect(user.areaId, 90);
+    expect(user.areaName, 'Cherai');
+    expect(user.areaPincode, '683514');
+    expect(user.displayLabel, 'anu (Ernakulam - Cherai)');
+    expect(user.listingLabel, 'anu (Ernakulam - Cherai) - 683514');
+  });
+
+  testWidgets(
+    'BranchManagerFieldCard displays empty message inside dropdown box when managers list is empty',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: BranchManagerFieldCard(
+              selectedManager: '',
+              onManagerChanged: (_) {},
+              managers: const [],
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('No branch managers available'), findsOneWidget);
+    },
+  );
+
+  test(
+    'CoordinatorUpdateStatusViewModel loads new schema and formats display_label - pincode in availableManagers',
+    () async {
+      const customer = CustomerDetailsData(
+        id: '1',
+        name: 'Jane Doe',
+        inquiry: 'Door Inquiry',
+        phoneNumber: '9876543210',
+        addressLine1: 'Marine Drive',
+        addressLine2: 'Kochi',
+        status: 'Scheduled',
+        notes: '',
+        documents: [],
+      );
+
+      final mockClient = MockClient((request) async {
+        if (request.url.path == Uri.parse(ApiConfig.branch_head_listing).path) {
+          return http.Response(
+            json.encode({
+              'success': true,
+              'page': 1,
+              'limit': 20,
+              'count': 2,
+              'data': [
+                {
+                  'branch_head_id': 10001,
+                  'branch_head_name': 'anu',
+                  'district_id': 7,
+                  'district_name': 'Ernakulam',
+                  'area_id': 90,
+                  'area_name': 'Cherai',
+                  'area_pincode': '683514',
+                  'display_label': 'anu (Ernakulam - Cherai)',
+                },
+                {
+                  'branch_head_id': 10002,
+                  'branch_head_name': 'idukki',
+                  'district_id': 6,
+                  'district_name': 'Idukki',
+                  'area_id': 65,
+                  'area_name': 'Kumily',
+                  'area_pincode': '685509',
+                  'display_label': 'idukki (Idukki - Kumily)',
+                },
+              ],
+            }),
+            200,
+          );
+        }
+        return http.Response('{}', 200);
+      });
+
+      final storage = TokenStorage();
+      await storage.savetoken('coord_token');
+
+      final vm = CoordinatorUpdateStatusViewModel(
+        customer: customer,
+        client: mockClient,
+        tokenStorage: storage,
+      );
+
+      await vm.loadBranchManagers();
+
+      expect(vm.branchManagers.length, 2);
+      expect(
+        vm.availableManagers,
+        equals([
+          'anu (Ernakulam - Cherai) - 683514',
+          'idukki (Idukki - Kumily) - 685509',
+        ]),
+      );
+      expect(vm.selectedBranchManager, 'anu (Ernakulam - Cherai) - 683514');
+
+      final head = vm.selectedBranchHead;
+      expect(head, isNotNull);
+      expect(head!.id, 10001);
+      expect(head.name, 'anu');
+      expect(head.districtId, 7);
+      expect(head.districtName, 'Ernakulam');
+    },
+  );
+
+  test(
+    'CoordinatorUpdateStatusLogic.fetchBranchManagersPaginated sends page and limit query params',
+    () async {
+      http.Request? capturedRequest;
+      final mockClient = MockClient((request) async {
+        if (request.url.path == Uri.parse(ApiConfig.branch_head_listing).path) {
+          capturedRequest = request;
+          return http.Response(
+            json.encode({
+              'success': true,
+              'page': int.parse(request.url.queryParameters['page'] ?? '1'),
+              'limit': int.parse(request.url.queryParameters['limit'] ?? '20'),
+              'count': 35,
+              'data': [
+                {
+                  'branch_head_id': 1,
+                  'branch_head_name': 'Manager 1',
+                  'display_label': 'Manager 1 (TVM)',
+                  'area_pincode': '695001',
+                },
+              ],
+            }),
+            200,
+          );
+        }
+        return http.Response('{}', 200);
+      });
+
+      final logic = CoordinatorUpdateStatusLogic(
+        client: mockClient,
+        tokenStorage: TokenStorage(),
+      );
+
+      final result = await logic.fetchBranchManagersPaginated(
+        page: 1,
+        limit: 20,
+      );
+
+      expect(capturedRequest, isNotNull);
+      expect(capturedRequest!.url.queryParameters['page'], '1');
+      expect(capturedRequest!.url.queryParameters['limit'], '20');
+      expect(result.page, 1);
+      expect(result.limit, 20);
+      expect(result.count, 35);
+      expect(result.hasMore, isTrue);
+      expect(result.users.length, 1);
+      expect(result.users[0].listingLabel, 'Manager 1 (TVM) - 695001');
+    },
+  );
+
+  test(
+    'CoordinatorUpdateStatusViewModel paginates branch managers on loadNextBranchManagersPage',
+    () async {
+      const customer = CustomerDetailsData(
+        id: '1',
+        name: 'Jane Doe',
+        inquiry: 'Door Inquiry',
+        phoneNumber: '9876543210',
+        addressLine1: 'Marine Drive',
+        addressLine2: 'Kochi',
+        status: 'Scheduled',
+        notes: '',
+        documents: [],
+      );
+
+      final mockClient = MockClient((request) async {
+        if (request.url.path == Uri.parse(ApiConfig.branch_head_listing).path) {
+          final page = int.parse(request.url.queryParameters['page'] ?? '1');
+          if (page == 1) {
+            return http.Response(
+              json.encode({
+                'success': true,
+                'page': 1,
+                'limit': 2,
+                'count': 4,
+                'data': [
+                  {
+                    'branch_head_id': 101,
+                    'branch_head_name': 'BM 1',
+                    'display_label': 'BM 1 (EKM)',
+                    'area_pincode': '682001',
+                  },
+                  {
+                    'branch_head_id': 102,
+                    'branch_head_name': 'BM 2',
+                    'display_label': 'BM 2 (EKM)',
+                    'area_pincode': '682002',
+                  },
+                ],
+              }),
+              200,
+            );
+          } else if (page == 2) {
+            return http.Response(
+              json.encode({
+                'success': true,
+                'page': 2,
+                'limit': 2,
+                'count': 4,
+                'data': [
+                  {
+                    'branch_head_id': 103,
+                    'branch_head_name': 'BM 3',
+                    'display_label': 'BM 3 (KZD)',
+                    'area_pincode': '673001',
+                  },
+                  {
+                    'branch_head_id': 104,
+                    'branch_head_name': 'BM 4',
+                    'display_label': 'BM 4 (KZD)',
+                    'area_pincode': '673002',
+                  },
+                ],
+              }),
+              200,
+            );
+          }
+        }
+        return http.Response('{}', 200);
+      });
+
+      final vm = CoordinatorUpdateStatusViewModel(
+        customer: customer,
+        client: mockClient,
+        tokenStorage: TokenStorage(),
+      );
+
+      await vm.loadBranchManagers();
+
+      expect(vm.branchManagers.length, 2);
+      expect(vm.hasMoreManagers, isTrue);
+      expect(vm.managerPage, 1);
+
+      await vm.loadNextBranchManagersPage();
+
+      expect(vm.branchManagers.length, 4);
+      expect(vm.hasMoreManagers, isFalse);
+      expect(vm.managerPage, 2);
+      expect(vm.availableManagers.length, 4);
+      expect(vm.availableManagers, contains('BM 3 (KZD) - 673001'));
+    },
+  );
+
+  testWidgets(
+    'BranchManagerFieldCard displays Load more... option when hasMore is true and invokes onLoadMore',
+    (WidgetTester tester) async {
+      bool loadMoreCalled = false;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: BranchManagerFieldCard(
+              selectedManager: 'BM 1 (EKM) - 682001',
+              onManagerChanged: (_) {},
+              managers: const ['BM 1 (EKM) - 682001', 'BM 2 (EKM) - 682002'],
+              hasMore: true,
+              onLoadMore: () {
+                loadMoreCalled = true;
+              },
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Tap on card to open popup
+      await tester.tap(find.text('BRANCH MANAGER'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Load more...'), findsOneWidget);
+
+      await tester.tap(find.text('Load more...'));
+      await tester.pumpAndSettle();
+
+      expect(loadMoreCalled, isTrue);
+    },
+  );
+
+  testWidgets(
+    'BranchManagerFieldCard triggers onLoadMore on scroll when scrolling near the bottom of the popup',
+    (WidgetTester tester) async {
+      bool loadMoreTriggeredOnScroll = false;
+      final managers = List.generate(20, (i) => 'Branch Manager $i');
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: BranchManagerFieldCard(
+              selectedManager: 'Branch Manager 0',
+              onManagerChanged: (_) {},
+              managers: managers,
+              hasMore: true,
+              onLoadMore: () {
+                loadMoreTriggeredOnScroll = true;
+              },
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Tap on card to open popup
+      await tester.tap(find.text('BRANCH MANAGER'));
+      await tester.pumpAndSettle();
+
+      // Scroll the popup down towards the bottom by dragging visible item in popup
+      await tester.drag(
+        find.text('Branch Manager 0').last,
+        const Offset(0, -600),
+      );
+      await tester.pumpAndSettle();
+
+      expect(loadMoreTriggeredOnScroll, isTrue);
+    },
+  );
+
+  testWidgets(
+    'BranchManagerFieldCard dynamically appends new items while popup menu is open when state updates',
+    (WidgetTester tester) async {
+      List<String> managers = ['BM 1', 'BM 2'];
+      bool hasMore = true;
+      String selected = 'BM 1';
+
+      late void Function(void Function()) parentSetState;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: StatefulBuilder(
+              builder: (context, setState) {
+                parentSetState = setState;
+                return BranchManagerFieldCard(
+                  selectedManager: selected,
+                  onManagerChanged: (val) {
+                    setState(() => selected = val);
+                  },
+                  managers: managers,
+                  hasMore: hasMore,
+                  onLoadMore: () {
+                    parentSetState(() {
+                      managers = ['BM 1', 'BM 2', 'BM 3 (Page 2)'];
+                      hasMore = false;
+                    });
+                  },
+                );
+              },
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Open the dropdown menu
+      await tester.tap(find.text('BRANCH MANAGER'));
+      await tester.pumpAndSettle();
+
+      // Page 1 items are shown
+      expect(find.text('BM 1'), findsNWidgets(2)); // in card and in menu
+      expect(find.text('BM 2'), findsOneWidget);
+      expect(find.text('BM 3 (Page 2)'), findsNothing);
+
+      // Now tap Load more... inside the open menu
+      await tester.tap(find.text('Load more...'));
+      await tester.pump(); // frame for parent setState
+      await tester.pumpAndSettle();
+
+      // BM 3 (Page 2) is NOW visible inside the STILL-OPEN popup menu!
+      expect(find.text('BM 3 (Page 2)'), findsOneWidget);
+
+      // Tap on BM 3 (Page 2) to select it
+      await tester.tap(find.text('BM 3 (Page 2)'));
+      await tester.pumpAndSettle();
+
+      // The selection was updated to BM 3 (Page 2)
+      expect(selected, 'BM 3 (Page 2)');
     },
   );
 }

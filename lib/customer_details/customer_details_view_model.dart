@@ -1,12 +1,14 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:share_plus/share_plus.dart';
 import '../api/api.dart';
 import '../api/authenticated_client.dart';
 import '../login_page/token_storage.dart';
 import '../today/today_model.dart';
 import '../update_status/status_update_result.dart';
 import 'customer_details_model.dart';
+import 'widgets/customer_header_card.dart';
 
 /// ViewModel managing state, status updates, notes, and deletion for Customer Details screen.
 class CustomerDetailsViewModel extends ChangeNotifier {
@@ -219,6 +221,78 @@ class CustomerDetailsViewModel extends ChangeNotifier {
   void updateNotes(String newNotes) {
     customer = customer.copyWith(notes: newNotes);
     notifyListeners();
+  }
+
+  /// Formats all available customer details into structured text for WhatsApp sharing.
+  String formatCustomerDataForSharing() {
+    final buffer = StringBuffer();
+    buffer.writeln('*Customer Details*');
+    if (customer.name.trim().isNotEmpty) {
+      buffer.writeln('*Name:* ${customer.name.trim()}');
+    }
+    if (customer.phoneNumber.trim().isNotEmpty) {
+      buffer.writeln('*Phone:* ${customer.phoneNumber.trim()}');
+    }
+    if (customer.status.trim().isNotEmpty) {
+      buffer.writeln('*Status:* ${customer.status.trim()}');
+    }
+    if (customer.scheduleDate != null && customer.scheduleDate!.trim().isNotEmpty) {
+      buffer.writeln('*Scheduled Date:* ${customer.formattedScheduleDate}');
+    }
+    final addressParts = [
+      customer.addressLine1.trim(),
+      customer.addressLine2.trim(),
+    ].where((p) => p.isNotEmpty).join(', ');
+    if (addressParts.isNotEmpty) {
+      buffer.writeln('*Address:* $addressParts');
+    }
+    if (customer.mapLink != null && customer.mapLink!.trim().isNotEmpty) {
+      buffer.writeln('*Location Map:* ${customer.mapLink!.trim()}');
+    }
+    if (customer.inquiry.trim().isNotEmpty) {
+      buffer.writeln('*Enquiry:* ${customer.inquiry.trim()}');
+    }
+    if (customer.notes.trim().isNotEmpty) {
+      buffer.writeln('*Notes:* ${customer.notes.trim()}');
+    }
+    if (customer.staffNotes.trim().isNotEmpty) {
+      buffer.writeln('*Staff Notes:* ${customer.staffNotes.trim()}');
+    }
+    if (customer.branchHeadName != null && customer.branchHeadName!.trim().isNotEmpty) {
+      buffer.writeln('*Branch Manager:* ${customer.branchHeadName!.trim()}');
+    }
+    return buffer.toString().trim();
+  }
+
+  /// Shares all customer information as text directly to the customer's WhatsApp number.
+  Future<bool> shareDataToWhatsApp({
+    Future<void> Function(String phone, {String? text})? whatsAppLauncher,
+  }) async {
+    final phone = customer.phoneNumber.trim();
+    if (phone.isEmpty) return false;
+    final text = formatCustomerDataForSharing();
+    final launcher = whatsAppLauncher ?? openWhatsApp;
+    await launcher(phone, text: text);
+    return true;
+  }
+
+  /// Shares a brochure PDF file to the customer via WhatsApp/Share sheet.
+  Future<bool> shareBrochurePdf({
+    String? filePath,
+    XFile? xFile,
+    String? text,
+    Future<void> Function(List<XFile> files, {String? text})? shareLauncher,
+  }) async {
+    final fileToShare = xFile ?? (filePath != null ? XFile(filePath) : null);
+    if (fileToShare == null) return false;
+
+    final shareText = text ?? 'Hello ${customer.name}, please find our brochure attached.';
+    if (shareLauncher != null) {
+      await shareLauncher([fileToShare], text: shareText);
+    } else {
+      await Share.shareXFiles([fileToShare], text: shareText);
+    }
+    return true;
   }
 
   @override

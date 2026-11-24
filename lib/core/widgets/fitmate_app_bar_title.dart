@@ -22,7 +22,7 @@ class FitmateAppBarTitle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final defaultColor = isDark ? Colors.white : AppColors.brandGreen;
+    final defaultColor = isDark ? AppDarkColors.textPrimary : AppColors.brandGreen;
     final textColor = color ?? defaultColor;
 
     return Row(

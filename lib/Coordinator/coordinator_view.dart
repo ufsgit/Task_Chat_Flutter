@@ -192,10 +192,14 @@ class _CoordinatorViewState extends State<CoordinatorView> {
     required String label,
     required VoidCallback onDeleted,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bg = isDark ? AppDarkColors.chipPendingBg : AppColors.chipPendingBg;
+    final fg = isDark ? AppDarkColors.chipPendingText : AppColors.chipPendingText;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: AppColors.chipPendingBg,
+        color: bg,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -203,8 +207,8 @@ class _CoordinatorViewState extends State<CoordinatorView> {
         children: [
           Text(
             label,
-            style: const TextStyle(
-              color: AppColors.chipPendingText,
+            style: TextStyle(
+              color: fg,
               fontSize: 12,
               fontWeight: FontWeight.w600,
             ),
@@ -212,10 +216,10 @@ class _CoordinatorViewState extends State<CoordinatorView> {
           const SizedBox(width: 4),
           GestureDetector(
             onTap: onDeleted,
-            child: const Icon(
+            child: Icon(
               Icons.close_rounded,
               size: 14,
-              color: AppColors.chipPendingText,
+              color: fg,
             ),
           ),
         ],
@@ -246,7 +250,7 @@ class _CoordinatorViewState extends State<CoordinatorView> {
                   onTap: () async {
                     await Navigator.of(context).push(
                       SlideUpRoute(
-                        page: const add_booking(isCoordinator: true),
+                        page: const AddBookingView(isCoordinator: true),
                       ),
                     );
                     if (mounted) {
@@ -386,27 +390,36 @@ class _CoordinatorViewState extends State<CoordinatorView> {
                               ),
                               child: Row(
                                 children: [
-                                  if (_viewModel.selectedStatusFilter !=
-                                      'All') ...[
-                                    _buildActiveFilterChip(
-                                      label:
-                                          'Status: ${_viewModel.selectedStatusFilter}',
-                                      onDeleted: () =>
-                                          _viewModel.setStatusFilter('All'),
+                                  Expanded(
+                                    child: SingleChildScrollView(
+                                      scrollDirection: Axis.horizontal,
+                                      child: Row(
+                                        children: [
+                                          if (_viewModel.selectedStatusFilter !=
+                                              'All') ...[
+                                            _buildActiveFilterChip(
+                                              label:
+                                                  'Status: ${_viewModel.selectedStatusFilter}',
+                                              onDeleted: () =>
+                                                  _viewModel.setStatusFilter('All'),
+                                            ),
+                                            const SizedBox(width: 8),
+                                          ],
+                                          if (_viewModel.selectedManagerFilter !=
+                                              'All') ...[
+                                            _buildActiveFilterChip(
+                                              label:
+                                                  'Manager: ${_viewModel.selectedManagerFilter}',
+                                              onDeleted: () =>
+                                                  _viewModel.setManagerFilter('All'),
+                                            ),
+                                            const SizedBox(width: 8),
+                                          ],
+                                        ],
+                                      ),
                                     ),
-                                    const SizedBox(width: 8),
-                                  ],
-                                  if (_viewModel.selectedManagerFilter !=
-                                      'All') ...[
-                                    _buildActiveFilterChip(
-                                      label:
-                                          'Manager: ${_viewModel.selectedManagerFilter}',
-                                      onDeleted: () =>
-                                          _viewModel.setManagerFilter('All'),
-                                    ),
-                                    const SizedBox(width: 8),
-                                  ],
-                                  const Spacer(),
+                                  ),
+                                  const SizedBox(width: 8),
                                   GestureDetector(
                                     onTap: () => _viewModel.resetFilters(),
                                     child: const Text(
@@ -594,6 +607,7 @@ class _CoordinatorViewState extends State<CoordinatorView> {
                                                         booking.scheduleDate,
                                                     statusColorCode:
                                                         booking.statusColorCode,
+                                                        mapLink: booking.mapLink,
                                                   )
                                                 : CustomerDetailsData.fromChatInfo(
                                                     name:
@@ -639,6 +653,7 @@ class _CoordinatorViewState extends State<CoordinatorView> {
                                                             ?.toString() ??
                                                         item['branchHeadName']
                                                             ?.toString(),
+                                                        mapLink: item['mapLink']?.toString(),
                                                   );
                                             final updatedStatus =
                                                 await Navigator.of(

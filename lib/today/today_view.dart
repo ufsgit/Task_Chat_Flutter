@@ -160,6 +160,7 @@ class _TodayPageState extends State<TodayPage> {
                 dateFrom: dateFrom,
                 dateTo: dateTo,
                 filterRole: filterRole,
+                limit: '20',
               );
               if (_scrollController.hasClients) {
                 _scrollController.jumpTo(0.0);
@@ -252,7 +253,7 @@ class _TodayPageState extends State<TodayPage> {
                   onTap: () async {
                     await Navigator.of(context, rootNavigator: true).push(
                       SlideUpRoute(
-                        page: add_booking(isCoordinator: widget.isDealer),
+                        page: AddBookingView(isCoordinator: widget.isDealer),
                       ),
                     );
                     if (mounted) {
@@ -501,41 +502,83 @@ class _TodayPageState extends State<TodayPage> {
                                 16.0,
                                 6.0,
                               ),
-                              child: SingleChildScrollView(
-                                scrollDirection: Axis.horizontal,
-                                child: Row(
-                                  children: [
-                                    if (_viewModel.selectedStatusFilter !=
-                                        'All')
-                                      _buildActiveFilterChip(
-                                        label:
-                                            'Status: ${_viewModel.selectedStatusFilter}',
-                                        isDark: isDark,
-                                        onDeleted: () {
-                                          _viewModel.setStatusFilter('All');
-                                        },
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: SingleChildScrollView(
+                                      scrollDirection: Axis.horizontal,
+                                      child: Row(
+                                        children: [
+                                          if (_viewModel.selectedStatusFilter !=
+                                              'All') ...[
+                                            _buildActiveFilterChip(
+                                              label:
+                                                  'Status: ${_viewModel.selectedStatusFilter}',
+                                              isDark: isDark,
+                                              onDeleted: () {
+                                                _viewModel.setStatusFilter('All');
+                                              },
+                                            ),
+                                            const SizedBox(width: 8),
+                                          ],
+                                          if ((_viewModel.dateFrom != null &&
+                                                  _viewModel.dateFrom!.isNotEmpty) ||
+                                              (_viewModel.dateTo != null &&
+                                                  _viewModel.dateTo!.isNotEmpty)) ...[
+                                            _buildActiveFilterChip(
+                                              label:
+                                                  'Date: ${formatDateToDayMonthYear(_viewModel.dateFrom)} - ${formatDateToDayMonthYear(_viewModel.dateTo)}',
+                                              isDark: isDark,
+                                              onDeleted: () {
+                                                _viewModel.setDateRange(
+                                                  from: null,
+                                                  to: null,
+                                                );
+                                              },
+                                            ),
+                                            const SizedBox(width: 8),
+                                          ],
+                                          if (_viewModel.districtId != null &&
+                                              _viewModel.districtId!.isNotEmpty) ...[
+                                            _buildActiveFilterChip(
+                                              label:
+                                                  'District: ${_viewModel.districtId}',
+                                              isDark: isDark,
+                                              onDeleted: () {
+                                                _viewModel.setDistrictId(null);
+                                              },
+                                            ),
+                                            const SizedBox(width: 8),
+                                          ],
+                                          if (_viewModel.filterRoleName != null &&
+                                              _viewModel.filterRoleName!.isNotEmpty) ...[
+                                            _buildActiveFilterChip(
+                                              label:
+                                                  'Role: ${_viewModel.filterRoleName}',
+                                              isDark: isDark,
+                                              onDeleted: () {
+                                                _viewModel.setFilterRole(null);
+                                              },
+                                            ),
+                                            const SizedBox(width: 8),
+                                          ],
+                                        ],
                                       ),
-                                    if ((_viewModel.dateFrom != null &&
-                                            _viewModel.dateFrom!.isNotEmpty) ||
-                                        (_viewModel.dateTo != null &&
-                                            _viewModel.dateTo!.isNotEmpty)) ...[
-                                      if (_viewModel.selectedStatusFilter !=
-                                          'All')
-                                        const SizedBox(width: 8),
-                                      _buildActiveFilterChip(
-                                        label:
-                                            'Date: ${formatDateToDayMonthYear(_viewModel.dateFrom)} - ${formatDateToDayMonthYear(_viewModel.dateTo)}',
-                                        isDark: isDark,
-                                        onDeleted: () {
-                                          _viewModel.setDateRange(
-                                            from: null,
-                                            to: null,
-                                          );
-                                        },
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  GestureDetector(
+                                    onTap: () => _viewModel.resetFilters(),
+                                    child: const Text(
+                                      'Clear all',
+                                      style: TextStyle(
+                                        color: AppColors.brandGreen,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
                                       ),
-                                    ],
-                                  ],
-                                ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
 
@@ -714,6 +757,7 @@ class _TodayPageState extends State<TodayPage> {
                                                         booking.scheduleDate,
                                                     statusColorCode:
                                                         booking.statusColorCode,
+                                                        mapLink: booking.mapLink,
                                                   )
                                                 : CustomerDetailsData.fromChatInfo(
                                                     name:
@@ -759,6 +803,7 @@ class _TodayPageState extends State<TodayPage> {
                                                             ?.toString() ??
                                                         item['branchHeadName']
                                                             ?.toString(),
+                                                        mapLink: item['mapLink']?.toString(),
                                                   );
 
                                             final updatedStatus =

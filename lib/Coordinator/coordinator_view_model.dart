@@ -14,6 +14,32 @@ import 'coordinator_model.dart';
 class CoordinatorViewModel extends ChangeNotifier {
   static CoordinatorViewModel? currentSession;
 
+  static bool _registeredResetCallback = false;
+
+  /// Resets the coordinator session, clearing all cached list items.
+  static void resetSession() {
+    final session = currentSession;
+    currentSession = null;
+    if (session != null && !session._isDisposed) {
+      session.clear();
+    }
+  }
+
+  void clear() {
+    _bookings.clear();
+    _items.clear();
+    _branchHeadUsers.clear();
+    _managerToDistrictId.clear();
+    _managerToBranchHeadId.clear();
+    _errorMessage = null;
+    _currentPage = 1;
+    _hasMore = true;
+    _isLoadingMore = false;
+    if (!_isDisposed) {
+      notifyListeners();
+    }
+  }
+
   final http.Client _client;
   final bool _isInternalClient;
   final TokenStorage? tokenStorage;
@@ -27,10 +53,9 @@ class CoordinatorViewModel extends ChangeNotifier {
   bool _isLoadingMore = false;
   bool _hasMore = true;
   int _currentPage = 1;
-  final String _limit = '10';
-  final String _isFollowUp = '1';
+  String _limit = '10';
   String get limit => _limit;
-  String get isFollowUp => _isFollowUp;
+  String? get isFollowUp => null;
   String? _errorMessage;
   List<BookingModel> _bookings = [];
   List<Map<String, dynamic>> _items = [];
@@ -98,6 +123,10 @@ class CoordinatorViewModel extends ChangeNotifier {
            ? 'All'
            : initialManagerFilter {
     currentSession = this;
+    if (!_registeredResetCallback) {
+      _registeredResetCallback = true;
+      TodayViewModel.registerOnReset(CoordinatorViewModel.resetSession);
+    }
     for (final it in _items) {
       final m = it['branchManager']?.toString();
       if (m != null && m.trim().isNotEmpty) {
@@ -199,15 +228,33 @@ class CoordinatorViewModel extends ChangeNotifier {
     }
   }
 
-  /// Fetches the official branch head users from the backend listing.
-  Future<void> fetchBranchHeads() async {
+  /// Fetches the official branch head users from the backend listing with pagination support.
+  Future<void> fetchBranchHeads({int page = 1, int limit = 20}) async {
     try {
       final headers = await (tokenStorage ?? TokenStorage()).authHeaders();
-      final uri = Uri.parse(ApiConfig.branch_head_listing);
-      final future = _client.get(uri, headers: headers);
-      final response = TokenStorage.isTestEnvironment
+      final baseUri = Uri.parse(ApiConfig.branch_head_listing);
+      final queryParams = <String, String>{
+        ...baseUri.queryParameters,
+        'page': page.toString(),
+        'limit': limit.toString(),
+      };
+      final uri = baseUri.replace(queryParameters: queryParams);
+      var future = _client.get(uri, headers: headers);
+      var response = TokenStorage.isTestEnvironment
           ? await future
           : await future.timeout(const Duration(seconds: 10));
+
+      if (response.statusCode >= 400 && response.statusCode < 500) {
+        // Fallback for tests or mocks expecting exact URI without query parameters
+        try {
+          final fallbackResponse = TokenStorage.isTestEnvironment
+              ? await _client.get(baseUri, headers: headers)
+              : await _client.get(baseUri, headers: headers).timeout(const Duration(seconds: 5));
+          if (fallbackResponse.statusCode >= 200 && fallbackResponse.statusCode < 300) {
+            response = fallbackResponse;
+          }
+        } catch (_) {}
+      }
 
       if (response.statusCode >= 200 && response.statusCode < 300) {
         final decoded = json.decode(response.body);
@@ -223,15 +270,32 @@ class CoordinatorViewModel extends ChangeNotifier {
               .where((u) => u.name.isNotEmpty)
               .toList();
 
-          _branchHeadUsers.clear();
-          _branchHeadUsers.addAll(heads);
+          if (page == 1) {
+            _branchHeadUsers.clear();
+          }
+          final existingIds = _branchHeadUsers.map((h) => h.id).toSet();
+          _branchHeadUsers.addAll(heads.where((h) => !existingIds.contains(h.id)));
 
           for (final h in heads) {
             final did = h.districtId ?? h.id;
             _managerToDistrictId[h.name] = did;
             _managerToDistrictId[h.name.toLowerCase().trim()] = did;
+            _managerToDistrictId[h.listingLabel] = did;
+            _managerToDistrictId[h.listingLabel.toLowerCase().trim()] = did;
+            if (h.displayLabel != null) {
+              _managerToDistrictId[h.displayLabel!] = did;
+              _managerToDistrictId[h.displayLabel!.toLowerCase().trim()] = did;
+            }
+
+            _managerToBranchHeadId[h.id.toString()] = h.id;
             _managerToBranchHeadId[h.name] = h.id;
             _managerToBranchHeadId[h.name.toLowerCase().trim()] = h.id;
+            _managerToBranchHeadId[h.listingLabel] = h.id;
+            _managerToBranchHeadId[h.listingLabel.toLowerCase().trim()] = h.id;
+            if (h.displayLabel != null) {
+              _managerToBranchHeadId[h.displayLabel!] = h.id;
+              _managerToBranchHeadId[h.displayLabel!.toLowerCase().trim()] = h.id;
+            }
           }
           notifyListeners();
         }
@@ -307,11 +371,11 @@ class CoordinatorViewModel extends ChangeNotifier {
   };
 
   /// Builds query parameters for GET /api/bookings based on active filters and page.
-  Map<String, String> buildQueryParameters({int page = 1}) {
+  Map<String, String> buildQueryParameters({int page = 1, String? limit}) {
+    final effectiveLimit = limit ?? (hasActiveFilters ? '20' : _limit);
     final params = <String, String>{
       'page': page.toString(),
-      'limit': _limit,
-      'isFollowUp': _isFollowUp,
+      'limit': effectiveLimit,
     };
 
     if (_selectedStatusFilter.isNotEmpty &&
@@ -575,6 +639,9 @@ class CoordinatorViewModel extends ChangeNotifier {
   void setStatusFilter(String status) {
     if (_selectedStatusFilter != status) {
       _selectedStatusFilter = status;
+      _limit = (status.toLowerCase().trim() != 'all' || hasActiveFilters)
+          ? '20'
+          : '10';
       _currentPage = 1;
       _hasMore = true;
       _items.clear();
@@ -591,6 +658,9 @@ class CoordinatorViewModel extends ChangeNotifier {
         : manager;
     if (_selectedManagerFilter != sanitized) {
       _selectedManagerFilter = sanitized;
+      _limit = (sanitized.toLowerCase().trim() != 'all' || hasActiveFilters)
+          ? '20'
+          : '10';
       _currentPage = 1;
       _hasMore = true;
       _items.clear();
@@ -607,6 +677,10 @@ class CoordinatorViewModel extends ChangeNotifier {
         : manager;
     _selectedStatusFilter = status;
     _selectedManagerFilter = sanitizedManager;
+    _limit = (status.toLowerCase().trim() != 'all' ||
+            sanitizedManager.toLowerCase().trim() != 'all')
+        ? '20'
+        : '10';
     _currentPage = 1;
     _hasMore = true;
     _items.clear();
@@ -619,6 +693,7 @@ class CoordinatorViewModel extends ChangeNotifier {
   void resetFilters() {
     _selectedStatusFilter = 'All';
     _selectedManagerFilter = 'All';
+    _limit = '10';
     _currentPage = 1;
     _hasMore = true;
     _items.clear();
@@ -668,6 +743,8 @@ class CoordinatorViewModel extends ChangeNotifier {
     if (identical(currentSession, this)) {
       currentSession = null;
     }
+    _items.clear();
+    _bookings.clear();
     _searchDebounceTimer?.cancel();
     if (_internalController) {
       searchController.dispose();

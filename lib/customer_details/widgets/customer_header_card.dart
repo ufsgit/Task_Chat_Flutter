@@ -15,12 +15,14 @@ class CustomerHeaderCard extends StatelessWidget {
   final CustomerDetailsData customer;
   final VoidCallback? onCallTap;
   final VoidCallback? onMessageTap;
+  final VoidCallback? onMapTap;
 
   const CustomerHeaderCard({
     super.key,
     required this.customer,
     this.onCallTap,
     this.onMessageTap,
+    this.onMapTap,
   });
 
   ({Color bg, Color text, Color dot}) _getBadgeColors(
@@ -124,11 +126,17 @@ class CustomerHeaderCard extends StatelessWidget {
     final hasAddress =
         customer.addressLine1.trim().isNotEmpty ||
         customer.addressLine2.trim().isNotEmpty;
+    final hasMap =
+        customer.mapLink != null && customer.mapLink!.trim().isNotEmpty;
 
-    return Row(
+    final addressWidget = Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(Icons.location_on_outlined, color: colors.primaryGreen, size: 20),
+        Icon(
+          hasMap ? Icons.location_on : Icons.location_on_outlined,
+          color: colors.primaryGreen,
+          size: 20,
+        ),
         const SizedBox(width: 10),
         Expanded(
           child: Column(
@@ -164,8 +172,29 @@ class CustomerHeaderCard extends StatelessWidget {
             ],
           ),
         ),
+        if (hasMap) ...[
+          const SizedBox(width: 8),
+          Icon(
+            Icons.open_in_new_rounded,
+            color: colors.primaryGreen,
+            size: 18,
+          ),
+        ],
       ],
     );
+
+    if (hasMap) {
+      return InkWell(
+        onTap: onMapTap ?? () => openMap(customer.mapLink!),
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: addressWidget,
+        ),
+      );
+    }
+
+    return addressWidget;
   }
 
   Widget _buildPhoneSection(BuildContext context, AppThemeColors colors) {
@@ -533,7 +562,7 @@ Future<void> openDialer(String phoneNumber) async {
   }
 }
 
-Future<void> openWhatsApp(String phoneNumber) async {
+Future<void> openWhatsApp(String phoneNumber, {String? text}) async {
   final trimmed = phoneNumber.trim();
 
   final numberOnly = trimmed.startsWith('whatsapp:')
@@ -548,16 +577,45 @@ Future<void> openWhatsApp(String phoneNumber) async {
     whatsappNumber = '91$whatsappNumber';
   }
 
-  final nativeUri = Uri.parse('whatsapp://send?phone=$whatsappNumber');
+  final encodedText = (text != null && text.isNotEmpty)
+      ? Uri.encodeComponent(text)
+      : null;
+  final textQuery = encodedText != null ? '&text=$encodedText' : '';
+  final nativeUri = Uri.parse('whatsapp://send?phone=$whatsappNumber$textQuery');
 
   try {
-    await launchUrl(nativeUri, mode: LaunchMode.externalApplication);
+    final launched = await launchUrl(nativeUri, mode: LaunchMode.externalApplication);
+    if (!launched) {
+      final webTextQuery = encodedText != null ? '?text=$encodedText' : '';
+      final webUri = Uri.parse('https://wa.me/$whatsappNumber$webTextQuery');
+      await launchUrl(webUri, mode: LaunchMode.externalApplication);
+    }
   } catch (_) {
     try {
-      final webUri = Uri.parse('https://wa.me/$whatsappNumber');
+      final webTextQuery = encodedText != null ? '?text=$encodedText' : '';
+      final webUri = Uri.parse('https://wa.me/$whatsappNumber$webTextQuery');
       await launchUrl(webUri, mode: LaunchMode.externalApplication);
     } catch (e) {
       debugPrint('Could not launch WhatsApp: $e');
+    }
+  }
+}
+
+Future<void> openMap(String mapLink) async {
+  final trimmed = mapLink.trim();
+  if (trimmed.isEmpty) return;
+  Uri? uri = Uri.tryParse(trimmed);
+  if (uri != null && !uri.hasScheme) {
+    uri = Uri.tryParse('https://$trimmed');
+  }
+  if (uri != null) {
+    try {
+      final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (!launched) {
+        await launchUrl(uri);
+      }
+    } catch (e) {
+      debugPrint('Could not launch map: $e');
     }
   }
 }

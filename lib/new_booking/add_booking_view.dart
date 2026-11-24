@@ -18,7 +18,7 @@ import 'widgets/lead_form_card.dart';
 import 'widgets/lead_labeled_row.dart';
 import 'widgets/lead_stage_selector.dart';
 
-class add_booking extends StatefulWidget {
+class AddBookingView extends StatefulWidget {
   final LeadFormData? initialData;
   final List<String>? stages;
   final ValueChanged<LeadFormData>? onSave;
@@ -28,7 +28,7 @@ class add_booking extends StatefulWidget {
   final AddBookingViewModel? viewModel;
   final bool? isCoordinator;
 
-  const add_booking({
+  const AddBookingView({
     super.key,
     this.initialData,
     this.stages,
@@ -41,10 +41,13 @@ class add_booking extends StatefulWidget {
   });
 
   @override
-  State<add_booking> createState() => _add_bookingState();
+  State<AddBookingView> createState() => _AddBookingViewState();
 }
 
-class _add_bookingState extends State<add_booking> {
+/// Backwards compatibility alias for [AddBookingView].
+typedef add_booking = AddBookingView;
+
+class _AddBookingViewState extends State<AddBookingView> {
   late final TextEditingController _nameController;
   late final TextEditingController _mobileController;
   late final TextEditingController _addressController;
