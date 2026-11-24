@@ -27,6 +27,7 @@ class BookingModel {
   final String? scheduleDate;
   final String? statusColorCode;
   final String? mapLink;
+  final String? inquiry;
 
   BookingModel({
     required this.id,
@@ -53,6 +54,7 @@ class BookingModel {
     this.scheduleDate,
     this.statusColorCode,
     this.mapLink,
+    this.inquiry,
   });
 
   BookingModel copyWith({
@@ -80,6 +82,7 @@ class BookingModel {
     String? scheduleDate,
     String? statusColorCode,
     String? mapLink,
+    String? inquiry,
   }) {
     return BookingModel(
       id: id ?? this.id,
@@ -106,6 +109,7 @@ class BookingModel {
       scheduleDate: scheduleDate ?? this.scheduleDate,
       statusColorCode: statusColorCode ?? this.statusColorCode,
       mapLink: mapLink ?? this.mapLink,
+      inquiry: inquiry ?? this.inquiry,
     );
   }
 
@@ -164,6 +168,7 @@ class BookingModel {
               json['color_code'])
           ?.toString(),
       mapLink: (json['mapLink'] ?? json['map_link'])?.toString(),
+      inquiry: (json['inquiry'] ?? json['enquiry'] ?? json['booking_inquiry'])?.toString(),
     );
   }
 
@@ -219,6 +224,7 @@ class BookingModel {
       'notes': notes,
       'documents': documents,
       'mapLink': mapLink,
+      'inquiry': inquiry,
       'booking': this,
       'searchIndex':
           '$name $mobile $status $locationStr $formattedDate $notes $areaName $districtName'

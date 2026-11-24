@@ -28,12 +28,13 @@ class CustomerDetailsView extends StatefulWidget {
   final CustomerDetailsModel customer;
   final bool isCoordinator;
   final CustomerDetailsViewModel? viewModel;
-
+  final bool? autoFetch;
 
   const CustomerDetailsView({
     super.key,
     required this.customer,
     this.viewModel,
+    this.autoFetch,
     bool? isCoordinator,
   }) : isCoordinator = isCoordinator ?? false;
 
@@ -49,6 +50,21 @@ class _CustomerDetailsViewState extends State<CustomerDetailsView> {
     super.initState();
     _viewModel =
         widget.viewModel ?? CustomerDetailsViewModel(customer: widget.customer);
+    if (widget.autoFetch == true) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _fetchLatestDetails();
+      });
+    }
+  }
+
+  Future<void> _fetchLatestDetails() async {
+    final success = await _viewModel.fetchCustomerDetails();
+    if (!success && mounted) {
+      AppNotification.showError(
+        context,
+        _viewModel.fetchError ?? 'Failed to update',
+      );
+    }
   }
 
   @override
@@ -142,14 +158,16 @@ class _CustomerDetailsViewState extends State<CustomerDetailsView> {
               documents: updatedDocs,
             );
             if (success && mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    'Document "${file.name}" uploaded successfully',
-                  ),
-                  backgroundColor: AppColors.primaryGreen,
-                  behavior: SnackBarBehavior.floating,
-                ),
+              AppNotification.show(
+                context,
+                'Document "${file.name}" uploaded successfully',
+                icon: Icons.check_circle_rounded,
+                iconColor: AppColors.primaryGreen,
+              );
+            } else if (!success && mounted) {
+              AppNotification.showError(
+                context,
+                _viewModel.updateError ?? 'Failed to update',
               );
             }
           }
@@ -205,10 +223,7 @@ class _CustomerDetailsViewState extends State<CustomerDetailsView> {
       if (!mounted) return;
 
       if (success) {
-        AppNotification.showContactDeleted(
-          context,
-          aboveBottomNav: true,
-        );
+        AppNotification.showContactDeleted(context, aboveBottomNav: true);
         Navigator.of(context).pop('DELETED');
       } else {
         AppNotification.showError(
@@ -221,9 +236,7 @@ class _CustomerDetailsViewState extends State<CustomerDetailsView> {
 
   Future<void> _handleEditContact() async {
     final result = await Navigator.of(context).push<EditCustomerData>(
-      SlideUpRoute(
-        page: EditCustomerView(customer: _viewModel.customer),
-      ),
+      SlideUpRoute(page: EditCustomerView(customer: _viewModel.customer)),
     );
 
     if (result != null && mounted) {
@@ -267,10 +280,7 @@ class _CustomerDetailsViewState extends State<CustomerDetailsView> {
 
     final success = await _viewModel.shareDataToWhatsApp();
     if (!success && mounted) {
-      AppNotification.showError(
-        context,
-        'Could not open WhatsApp for sharing',
-      );
+      AppNotification.showError(context, 'Could not open WhatsApp for sharing');
     }
   }
 
@@ -311,20 +321,14 @@ class _CustomerDetailsViewState extends State<CustomerDetailsView> {
               name: file.name,
               mimeType: 'application/pdf',
             );
-            await _viewModel.shareBrochurePdf(
-              xFile: xFile,
-              text: shareText,
-            );
+            await _viewModel.shareBrochurePdf(xFile: xFile, text: shareText);
           }
         }
       }
     } catch (e) {
       debugPrint('Error picking or sharing brochure: $e');
       if (mounted) {
-        AppNotification.showError(
-          context,
-          'Failed to pick or share brochure',
-        );
+        AppNotification.showError(context, 'Failed to pick or share brochure');
       }
     }
   }
@@ -557,32 +561,38 @@ class _CustomerDetailsViewState extends State<CustomerDetailsView> {
             body: SafeArea(
               child: Stack(
                 children: [
-                  SingleChildScrollView(
-                    physics: const BouncingScrollPhysics(),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 16,
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        // 1. Unified Contact Info Section (Name, Address, Phone number, Status, Note)
-                        CustomerHeaderCard(customer: customer),
+                  RefreshIndicator(
+                    onRefresh: _fetchLatestDetails,
+                    color: AppColors.primaryGreen,
+                    child: SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(
+                        parent: BouncingScrollPhysics(),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 16,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          // 1. Unified Contact Info Section (Name, Address, Phone number, Status, Note)
+                          CustomerHeaderCard(customer: customer),
 
-                        const SizedBox(height: 16),
+                          const SizedBox(height: 16),
 
-                        // 2. Full-width Update Status Button opens the Update Status Page
-                        UpdateStatusButton(onTap: _openUpdateStatusPage),
+                          // 2. Full-width Update Status Button opens the Update Status Page
+                          UpdateStatusButton(onTap: _openUpdateStatusPage),
 
-                        const SizedBox(height: 16),
+                          const SizedBox(height: 16),
 
-                        // 3. Attached Documents Card
-                        CustomerDocumentsCard(
-                          documents: customer.documents,
-                          onView: _handlePreviewDocument,
-                          onUpload: _handleUploadDocument,
-                        ),
-                      ],
+                          // 3. Attached Documents Card
+                          CustomerDocumentsCard(
+                            documents: customer.documents,
+                            onView: _handlePreviewDocument,
+                            onUpload: _handleUploadDocument,
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                   if (_viewModel.isDeleting)

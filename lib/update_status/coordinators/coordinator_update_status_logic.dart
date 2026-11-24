@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../../api/api.dart';
 import '../../api/authenticated_client.dart';
@@ -336,8 +337,14 @@ class CoordinatorUpdateStatusLogic {
         ? formatCurrentDate()
         : (scheduleDate.trim().isNotEmpty ? scheduleDate : formatCurrentDate());
 
+    final parsedClientId = int.tryParse(customer.id.trim());
+    if (parsedClientId == null || parsedClientId <= 0) {
+      debugPrint('[StatusUpdate] Aborting: invalid customer id "${customer.id}"');
+      return false;
+    }
+
     final requestPayload = StatusUpdateRequest(
-      clientId: int.tryParse(customer.id) ?? 1,
+      clientId: parsedClientId,
       clientName: customer.name,
       status: status,
       scheduleDate: effectiveDate,

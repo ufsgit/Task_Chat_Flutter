@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/status_color_service.dart';
 import '../../core/theme.dart';
+import '../../core/widgets/app_pill_notification.dart';
 import '../../core/widgets/user_circle_avatar.dart';
 import '../customer_details_model.dart';
 
@@ -72,17 +73,36 @@ class CustomerHeaderCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 20),
                 Expanded(
-                  child: Text(
-                    customer.name,
-                    maxLines: 2,
-                    style: TextStyle(
-                      fontFamily: 'Helvetica Neue',
-                      fontSize: 20,
-                      fontWeight: FontWeight.w600,
-                      color: colors.textPrimary,
-                      letterSpacing: -0.2,
-                    ),
-                    overflow: TextOverflow.ellipsis,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        customer.name,
+                        maxLines: 2,
+                        style: TextStyle(
+                          fontFamily: 'Helvetica Neue',
+                          fontSize: 20,
+                          fontWeight: FontWeight.w600,
+                          color: colors.textPrimary,
+                          letterSpacing: -0.2,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      if (customer.inquiry.trim().isNotEmpty) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          customer.inquiry.trim(),
+                          style: TextStyle(
+                            fontFamily: 'Helvetica Neue',
+                            fontSize: 13,
+                            fontWeight: FontWeight.w400,
+                            color: colors.textSubtitle,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ],
                   ),
                 ),
               ],
@@ -252,9 +272,14 @@ class CustomerHeaderCard extends StatelessWidget {
                 onTap:
                     onCallTap ??
                     () {
-                      final phone = customer.phoneNumber.isNotEmpty
-                          ? customer.phoneNumber
-                          : "7089098908";
+                      final phone = customer.phoneNumber.trim();
+                      if (phone.isEmpty) {
+                        AppNotification.showError(
+                          context,
+                          'No phone number available for this contact',
+                        );
+                        return;
+                      }
                       openDialer(phone);
                     },
               ),
@@ -270,9 +295,14 @@ class CustomerHeaderCard extends StatelessWidget {
                 onTap:
                     onMessageTap ??
                     () {
-                      final phone = customer.phoneNumber.isNotEmpty
-                          ? customer.phoneNumber
-                          : "7089098910";
+                      final phone = customer.phoneNumber.trim();
+                      if (phone.isEmpty) {
+                        AppNotification.showError(
+                          context,
+                          'No phone number available for this contact',
+                        );
+                        return;
+                      }
                       openWhatsApp(phone);
                     },
               ),

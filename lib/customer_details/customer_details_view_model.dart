@@ -21,6 +21,8 @@ class CustomerDetailsViewModel extends ChangeNotifier {
   String? _deleteError;
   bool _isUpdating = false;
   String? _updateError;
+  bool _isFetching = false;
+  String? _fetchError;
 
   CustomerDetailsViewModel({
     required this.customer,
@@ -34,10 +36,19 @@ class CustomerDetailsViewModel extends ChangeNotifier {
   String? get deleteError => _deleteError;
   bool get isUpdating => _isUpdating;
   String? get updateError => _updateError;
+  bool get isFetching => _isFetching;
+  String? get fetchError => _fetchError;
 
   /// Fetches latest details for this customer/booking from the backend API.
   Future<bool> fetchCustomerDetails() async {
-    if (customer.id.isEmpty) return false;
+    if (customer.id.isEmpty) {
+      _fetchError = 'Failed to update';
+      return false;
+    }
+    _isFetching = true;
+    _fetchError = null;
+    notifyListeners();
+
     try {
       final headers = await (tokenStorage ?? TokenStorage()).authHeaders();
       final uri = Uri.parse('${ApiConfig.bookings}/${customer.id}');
@@ -59,11 +70,21 @@ class CustomerDetailsViewModel extends ChangeNotifier {
           customer = CustomerDetailsModel.fromBooking(
             BookingModel.fromJson(rawData),
           );
+          _fetchError = null;
           notifyListeners();
           return true;
+        } else {
+          _fetchError = 'Failed to update';
         }
+      } else {
+        _fetchError = 'Failed to update';
       }
-    } catch (_) {}
+    } catch (_) {
+      _fetchError = 'Failed to update';
+    } finally {
+      _isFetching = false;
+      notifyListeners();
+    }
     return false;
   }
 

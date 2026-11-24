@@ -560,9 +560,7 @@ class _CoordinatorViewState extends State<CoordinatorView> {
                                                     id: booking.id.toString(),
                                                     name: booking.name,
                                                     inquiry:
-                                                        booking.notes.isNotEmpty
-                                                        ? booking.notes
-                                                        : 'Steel door enquiry',
+                                                        booking.inquiry ?? '',
                                                     status:
                                                         booking
                                                             .status

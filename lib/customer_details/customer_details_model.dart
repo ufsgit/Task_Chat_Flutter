@@ -113,15 +113,15 @@ class CustomerDetailsModel {
     return CustomerDetailsModel(
       id: id ?? 'cust_default',
       name: name,
-      inquiry: inquiry ?? '5ft Steel door enquiry',
+      inquiry: inquiry ?? '',
       status: resolvedStatus,
       phoneNumber: (phoneNumber != null && phoneNumber.isNotEmpty)
           ? phoneNumber
-          : '7096797345',
+          : '',
       addressLine1: location != null && location.isNotEmpty
-          ? '742 Evergreen Terrace, $location'
-          : '742 Evergreen Terrace',
-      addressLine2: 'Springfield, OR 97477',
+          ? location
+          : '',
+      addressLine2: '',
       notes: notes ?? '',
       staffNotes: staffNotes ?? '',
       hasBeenScheduled: isScheduledOrCompleted,
@@ -136,11 +136,13 @@ class CustomerDetailsModel {
 
   /// Factory to generate customer details from a BookingModel.
   factory CustomerDetailsModel.fromBooking(BookingModel booking) {
-    final locationStr = booking.areaName.isNotEmpty
-        ? booking.areaName
-        : (booking.districtName.isNotEmpty
-            ? booking.districtName
-            : booking.address);
+    final locationParts = [
+      booking.areaName,
+      booking.districtName,
+      booking.stateName,
+    ].where((s) => s.trim().isNotEmpty).toList();
+
+    final locationStr = locationParts.join(', ');
 
     final resolvedStatus =
         booking.status.isNotEmpty ? booking.status : 'New';
@@ -151,19 +153,11 @@ class CustomerDetailsModel {
     return CustomerDetailsModel(
       id: booking.id.toString(),
       name: booking.name.isNotEmpty ? booking.name : 'Booking #${booking.id}',
-      inquiry: '5ft Steel door enquiry',
+      inquiry: booking.inquiry ?? '',
       status: resolvedStatus,
-      phoneNumber: booking.mobile.isNotEmpty ? booking.mobile : '7096797345',
-      addressLine1: booking.address.isNotEmpty
-          ? booking.address
-          : (locationStr.isNotEmpty
-              ? '742 Evergreen Terrace, $locationStr'
-              : '742 Evergreen Terrace'),
-      addressLine2: [
-        booking.areaName,
-        booking.districtName,
-        booking.stateName,
-      ].where((s) => s.isNotEmpty).join(', '),
+      phoneNumber: booking.mobile,
+      addressLine1: booking.address,
+      addressLine2: locationStr,
       notes: booking.notes,
       staffNotes: booking.staffNotes,
       hasBeenScheduled: isScheduledOrCompleted,
