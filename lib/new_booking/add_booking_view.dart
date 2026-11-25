@@ -77,7 +77,7 @@ class _AddBookingViewState extends State<AddBookingView> {
     _selectedStageIndex = stageIdx != -1 ? stageIdx : 0;
 
     _isCoordinator = widget.isCoordinator ?? false;
-    _selectedDistrict = data.district ?? defaultHardcodedDistricts.first;
+    _selectedDistrict = data.district;
 
     if (widget.viewModel != null) {
       _viewModel = widget.viewModel!;

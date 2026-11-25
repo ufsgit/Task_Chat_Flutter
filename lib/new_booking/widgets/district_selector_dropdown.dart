@@ -3,15 +3,6 @@ import '../../core/theme.dart';
 import '../model/district_model.dart';
 import 'lead_form_card.dart';
 
-/// Available hardcoded districts for Coordinator role as fallback.
-const List<String> defaultHardcodedDistricts = [
-  'Ernakulam',
-  'Thiruvananthapuram',
-  'Kozhikode',
-  'Thrissur',
-  'Kannur',
-];
-
 /// A dropdown selector widget for District selection displayed for Coordinator role.
 /// Consistent with [AreaSelectorDropdown] and the app's 'Helvetica Neue' typography.
 class DistrictSelectorDropdown extends StatelessWidget {
@@ -27,7 +18,7 @@ class DistrictSelectorDropdown extends StatelessWidget {
   const DistrictSelectorDropdown({
     super.key,
     this.selectedDistrict,
-    this.districts = defaultHardcodedDistricts,
+    this.districts = const [],
     this.districtItems,
     this.onDistrictSelected,
     this.onDistrictItemSelected,

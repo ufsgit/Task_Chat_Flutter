@@ -190,8 +190,13 @@ void main() {
       };
 
       final client = MockClient((request) async {
+        final search = request.url.queryParameters['search']?.toLowerCase();
+        final history = (mockData['data'] as Map<String, dynamic>)['history'] as List;
+        final filtered = (search == null || search.isEmpty)
+            ? history
+            : history.where((h) => h['clientName'].toString().toLowerCase().contains(search)).toList();
         return http.Response(
-          jsonEncode(mockData),
+          jsonEncode({'success': true, 'data': {'history': filtered}}),
           200,
           headers: {'content-type': 'application/json'},
         );
@@ -211,13 +216,15 @@ void main() {
       vm.setStatusFilter('All');
       expect(vm.filteredActivities.length, equals(2));
 
-      // Search query
+      // Search query triggers backend search and updates filteredActivities
       vm.setSearchQuery('Arun', immediate: true);
+      await Future.delayed(const Duration(milliseconds: 10));
       expect(vm.filteredActivities.length, equals(1));
       expect(vm.filteredActivities.first.title, equals('Arun'));
 
       // Time filters: 'All' shows all items, and switching works
       vm.setSearchQuery('', immediate: true);
+      await Future.delayed(const Duration(milliseconds: 10));
       expect(vm.filters.first, equals('All'));
       expect(vm.selectedFilterIndex, equals(0));
       expect(vm.filteredActivities.length, equals(2));

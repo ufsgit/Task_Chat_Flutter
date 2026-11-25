@@ -6,15 +6,6 @@ import '../api/api.dart';
 import '../api/authenticated_client.dart';
 import 'model/district_model.dart';
 
-/// Default fallback districts for initial display and offline resilience.
-const List<DistrictItem> defaultDistricts = [
-  DistrictItem(id: 1, name: 'Ernakulam'),
-  DistrictItem(id: 2, name: 'Thiruvananthapuram'),
-  DistrictItem(id: 3, name: 'Kozhikode'),
-  DistrictItem(id: 4, name: 'Thrissur'),
-  DistrictItem(id: 5, name: 'Kannur'),
-];
-
 /// ViewModel managing state, API fetching, and selection for District dropdown.
 class DistrictViewModel extends ChangeNotifier {
   final http.Client _client;
@@ -22,7 +13,7 @@ class DistrictViewModel extends ChangeNotifier {
 
   bool _isLoading = false;
   String? _errorMessage;
-  List<DistrictItem> _districts = defaultDistricts;
+  List<DistrictItem> _districts = [];
   DistrictItem? _selectedDistrict;
 
   DistrictViewModel({
@@ -35,8 +26,6 @@ class DistrictViewModel extends ChangeNotifier {
       _selectedDistrict = initialDistrict;
     } else if (initialDistrictName != null && initialDistrictName.isNotEmpty) {
       selectDistrictByName(initialDistrictName);
-    } else {
-      _selectedDistrict = defaultDistricts.first;
     }
   }
 

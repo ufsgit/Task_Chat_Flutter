@@ -309,9 +309,8 @@ class _CustomerDetailsViewState extends State<CustomerDetailsView> {
         label: selectedUrls.length > 1
             ? 'Preparing brochures...'
             : 'Preparing brochure...',
-        task: (closeDialog) => _viewModel.shareBrochureFromLink(
+        task: () => _viewModel.shareBrochureFromLink(
           overrideDocUrls: selectedUrls,
-          onFilesReady: closeDialog,
         ),
       );
       if (!success && mounted) {
@@ -330,7 +329,7 @@ class _CustomerDetailsViewState extends State<CustomerDetailsView> {
 
   Future<T> _runWithLoadingFilesDialog<T>({
     required String label,
-    required Future<T> Function(VoidCallback closeDialog) task,
+    required Future<T> Function() task,
   }) async {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final dialogBg = isDark ? AppDarkColors.surfaceCard : Colors.white;
@@ -338,12 +337,17 @@ class _CustomerDetailsViewState extends State<CustomerDetailsView> {
         isDark ? AppDarkColors.textPrimary : AppColors.textPrimary;
 
     bool dialogOpen = true;
+    late final AppLifecycleListener lifecycleListener;
     void closeDialog() {
       if (dialogOpen && mounted) {
         dialogOpen = false;
         Navigator.of(context, rootNavigator: true).pop();
       }
     }
+
+    lifecycleListener = AppLifecycleListener(
+      onInactive: closeDialog,
+    );
 
     showDialog<void>(
       context: context,
@@ -391,8 +395,9 @@ class _CustomerDetailsViewState extends State<CustomerDetailsView> {
     });
 
     try {
-      return await task(closeDialog);
+      return await task();
     } finally {
+      lifecycleListener.dispose();
       closeDialog();
     }
   }

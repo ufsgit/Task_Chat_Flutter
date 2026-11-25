@@ -1,5 +1,7 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -11,6 +13,29 @@ import 'package:task_chat/customer_details/customer_details_view.dart';
 import 'package:task_chat/customer_details/customer_details_view_model.dart';
 
 void main() {
+  setUpAll(() {
+    TestWidgetsFlutterBinding.ensureInitialized();
+    const shareChannel = MethodChannel('dev.fluttercommunity.plus/share');
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(shareChannel, (call) async => 'success');
+    const urlLauncherChannel = MethodChannel('plugins.flutter.io/url_launcher');
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(urlLauncherChannel, (call) async => true);
+    const urlLauncherWinChannel =
+        MethodChannel('plugins.flutter.io/url_launcher_windows');
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(urlLauncherWinChannel, (call) async => true);
+  });
+
+  setUp(() {
+    final dir = Directory(
+      '${Directory.systemTemp.path}${Platform.pathSeparator}brochure_share',
+    );
+    if (dir.existsSync()) {
+      dir.deleteSync(recursive: true);
+    }
+  });
+
   group('CustomerDetailsViewModel Sharing Tests', () {
     const testCustomer = CustomerDetailsModel(
       id: '201',
@@ -426,7 +451,8 @@ void main() {
       // Select Brochure sharing
       await tester.tap(find.text('Brochure sharing'));
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump(const Duration(milliseconds: 300));
 
       // Verify menu dismissed and loading dialog closed
       expect(find.text('Brochure sharing'), findsNothing);
@@ -500,11 +526,94 @@ void main() {
       // Tap Send (1)
       await tester.tap(find.text('Send (1)'));
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump(const Duration(milliseconds: 300));
 
       // Only the second file should be downloaded and loading dialog should be closed
       expect(downloadedUrls, ['https://example.com/uploads/catalog.pdf']);
       expect(find.byType(Dialog), findsNothing);
+    });
+  });
+
+  group('Brochure Cache Sync Tests', () {
+    const testCustomer = CustomerDetailsModel(
+      id: '201',
+      name: 'Ananya Nair',
+      inquiry: 'Double Door Fitting',
+      status: 'Scheduled',
+      phoneNumber: '9876543210',
+      addressLine1: 'Kaloor',
+      addressLine2: 'Ernakulam',
+      notes: '',
+      staffNotes: '',
+      scheduleDate: '26/11/2026',
+    );
+
+    test('Reuses cached brochure on repeat share and deletes removed DB brochures on fetch', () async {
+      int fileDownloadCount = 0;
+      bool dbHasBrochure = true;
+
+      final mockClient = MockClient((request) async {
+        if (request.url.path.endsWith('/api/brochures')) {
+          return http.Response(
+            jsonEncode({
+              'success': true,
+              'data': dbHasBrochure
+                  ? [
+                      {
+                        'id': 1,
+                        'title': 'Brochure 1',
+                        'file_url': 'https://example.com/uploads/111-brochure.pdf',
+                      },
+                    ]
+                  : [],
+            }),
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        }
+        fileDownloadCount++;
+        return http.Response.bytes(
+          utf8.encode('%PDF-1.4 cached bytes'),
+          200,
+          headers: {'content-type': 'application/pdf'},
+        );
+      });
+
+      final vm = CustomerDetailsViewModel(customer: testCustomer, client: mockClient);
+
+      // First share: downloads once
+      final items1 = await vm.fetchBrochureItems();
+      expect(items1.length, 1);
+      final ok1 = await vm.shareBrochureFromLink(
+        overrideDocUrls: [items1.first.url],
+        shareLauncher: (files, {text}) async {},
+      );
+      expect(ok1, isTrue);
+      expect(fileDownloadCount, 1);
+
+      // Second share with same DB brochure: reuses cached file (0 new downloads)
+      final items2 = await vm.fetchBrochureItems();
+      expect(items2.length, 1);
+      final ok2 = await vm.shareBrochureFromLink(
+        overrideDocUrls: [items2.first.url],
+        shareLauncher: (files, {text}) async {},
+      );
+      expect(ok2, isTrue);
+      expect(fileDownloadCount, 1);
+
+      // Now remove brochure from DB and fetch again -> cached file is wiped
+      dbHasBrochure = false;
+      final items3 = await vm.fetchBrochureItems();
+      expect(items3, isEmpty);
+
+      final shareDir = Directory(
+        '${Directory.systemTemp.path}${Platform.pathSeparator}brochure_share',
+      );
+      final remainingFiles = shareDir.existsSync()
+          ? shareDir.listSync(recursive: true).whereType<File>().toList()
+          : <File>[];
+      expect(remainingFiles, isEmpty);
     });
   });
 }

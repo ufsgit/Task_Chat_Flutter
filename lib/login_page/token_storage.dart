@@ -39,8 +39,12 @@ class TokenStorage {
   }
 
   Future<String?> getToken() async {
+    final cached = _memoryCache[_primaryKey] ?? _memoryCache[_legacyKey];
+    if (cached != null && cached.isNotEmpty) {
+      return cached;
+    }
     if (useMemoryOnly) {
-      return _memoryCache[_primaryKey] ?? _memoryCache[_legacyKey];
+      return null;
     }
     try {
       final token = await _storage.read(key: _primaryKey);

@@ -75,7 +75,6 @@ class ActivityViewModel extends ChangeNotifier {
   bool get hasActiveFilters => _selectedStatusFilter != 'All';
 
   List<ActivityModel> get filteredActivities {
-    final query = _searchQuery.trim().toLowerCase();
     final selectedTimeFilter = _filters[_selectedFilterIndex];
 
     return _activities.where((item) {
@@ -110,19 +109,6 @@ class ActivityViewModel extends ChangeNotifier {
         return false;
       }
 
-      // 3. Search query
-      if (query.isNotEmpty) {
-        final title = item.title.toLowerCase();
-        final note = item.noteText?.toLowerCase() ?? '';
-        final subtitle = item.subtitleHighlight?.toLowerCase() ?? '';
-        final status = item.statusTag?.toLowerCase() ?? '';
-        final loc = item.location?.toLowerCase() ?? '';
-        return title.contains(query) ||
-            note.contains(query) ||
-            subtitle.contains(query) ||
-            status.contains(query) ||
-            loc.contains(query);
-      }
       return true;
     }).toList();
   }
@@ -240,7 +226,7 @@ class ActivityViewModel extends ChangeNotifier {
       final uri = queryParams.isNotEmpty
           ? baseUri.replace(queryParameters: queryParams)
           : baseUri;
-      debugPrint('>>> [ActivityViewModel] GET $uri with headers: $headers');
+      debugPrint('>>> [ActivityViewModel] GET $uri');
 
       final response = await _client
           .get(uri, headers: headers)
@@ -375,7 +361,7 @@ class ActivityViewModel extends ChangeNotifier {
 
       final baseUri = Uri.parse(ApiConfig.history_list);
       final uri = baseUri.replace(queryParameters: queryParams);
-      debugPrint('>>> [ActivityViewModel] GET $uri with headers: $headers');
+      debugPrint('>>> [ActivityViewModel] GET $uri');
 
       final future = _client.get(uri, headers: headers);
       final response = TokenStorage.isTestEnvironment

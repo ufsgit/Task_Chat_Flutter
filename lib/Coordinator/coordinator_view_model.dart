@@ -31,6 +31,7 @@ class CoordinatorViewModel extends ChangeNotifier {
     _branchHeadUsers.clear();
     _managerToDistrictId.clear();
     _managerToBranchHeadId.clear();
+    _knownManagers.clear();
     _errorMessage = null;
     _currentPage = 1;
     _hasMore = true;
@@ -118,10 +119,7 @@ class CoordinatorViewModel extends ChangeNotifier {
        _internalController = searchController == null,
        _selectedFilterIndex = initialFilterIndex,
        _selectedStatusFilter = initialStatusFilter,
-       _selectedManagerFilter =
-           initialManagerFilter.toLowerCase().trim() == 'rajesh menon'
-           ? 'All'
-           : initialManagerFilter {
+       _selectedManagerFilter = initialManagerFilter {
     currentSession = this;
     if (!_registeredResetCallback) {
       _registeredResetCallback = true;
@@ -156,14 +154,9 @@ class CoordinatorViewModel extends ChangeNotifier {
     names.addAll(_knownManagers);
     final dynamicManagers = _items
         .map((e) => e['branchManager']?.toString() ?? '')
-        .where(
-          (m) =>
-              m.trim().isNotEmpty && m.toLowerCase().trim() != 'rajesh menon',
-        );
+        .where((m) => m.trim().isNotEmpty);
     names.addAll(dynamicManagers);
-    names.removeWhere(
-      (m) => m.toLowerCase().trim() == 'rajesh menon' || m.trim().isEmpty,
-    );
+    names.removeWhere((m) => m.trim().isEmpty);
 
     if (names.isNotEmpty) {
       return ['All', ...names];
@@ -244,7 +237,10 @@ class CoordinatorViewModel extends ChangeNotifier {
           ? await future
           : await future.timeout(const Duration(seconds: 10));
 
-      if (response.statusCode >= 400 && response.statusCode < 500) {
+      if (response.statusCode >= 400 &&
+          response.statusCode < 500 &&
+          response.statusCode != 401 &&
+          response.statusCode != 403) {
         // Fallback for tests or mocks expecting exact URI without query parameters
         try {
           final fallbackResponse = TokenStorage.isTestEnvironment
@@ -653,12 +649,9 @@ class CoordinatorViewModel extends ChangeNotifier {
   }
 
   void setManagerFilter(String manager) {
-    final sanitized = manager.toLowerCase().trim() == 'rajesh menon'
-        ? 'All'
-        : manager;
-    if (_selectedManagerFilter != sanitized) {
-      _selectedManagerFilter = sanitized;
-      _limit = (sanitized.toLowerCase().trim() != 'all' || hasActiveFilters)
+    if (_selectedManagerFilter != manager) {
+      _selectedManagerFilter = manager;
+      _limit = (manager.toLowerCase().trim() != 'all' || hasActiveFilters)
           ? '20'
           : '10';
       _currentPage = 1;
@@ -672,13 +665,10 @@ class CoordinatorViewModel extends ChangeNotifier {
   }
 
   void applyFilters(String status, String manager) {
-    final sanitizedManager = manager.toLowerCase().trim() == 'rajesh menon'
-        ? 'All'
-        : manager;
     _selectedStatusFilter = status;
-    _selectedManagerFilter = sanitizedManager;
+    _selectedManagerFilter = manager;
     _limit = (status.toLowerCase().trim() != 'all' ||
-            sanitizedManager.toLowerCase().trim() != 'all')
+            manager.toLowerCase().trim() != 'all')
         ? '20'
         : '10';
     _currentPage = 1;

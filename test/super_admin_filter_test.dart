@@ -365,23 +365,22 @@ void main() {
   );
 
   test(
-    'CoordinatorViewModel excludes Rajesh Menon from branchManagerOptions',
+    'CoordinatorViewModel includes all non-empty managers in branchManagerOptions',
     () {
       final vm = CoordinatorViewModel(
         initialItems: [
           {'id': '1', 'branchManager': 'Rajesh Menon'},
-          {'id': '2', 'branchManager': 'rajesh menon'},
+          {'id': '2', 'branchManager': '   '},
           {'id': '3', 'branchManager': 'Sarah Jenkins'},
           {'id': '4', 'branchManager': 'Bob Smith'},
         ],
       );
 
-      expect(vm.branchManagerOptions, isNot(contains('Rajesh Menon')));
-      expect(vm.branchManagerOptions, isNot(contains('rajesh menon')));
       expect(
         vm.branchManagerOptions,
-        containsAll(['All', 'Sarah Jenkins', 'Bob Smith']),
+        containsAll(['All', 'Rajesh Menon', 'Sarah Jenkins', 'Bob Smith']),
       );
+      expect(vm.branchManagerOptions, isNot(contains('   ')));
     },
   );
 

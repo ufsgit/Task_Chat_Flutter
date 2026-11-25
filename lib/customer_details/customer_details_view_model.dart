@@ -347,6 +347,47 @@ class CustomerDetailsViewModel extends ChangeNotifier {
     }
   }
 
+  static Directory get _brochureShareDir => Directory(
+    '${Directory.systemTemp.path}${Platform.pathSeparator}brochure_share',
+  );
+
+  static String _urlCacheKey(String url) {
+    int hash = 0x811c9dc5;
+    for (final codeUnit in url.codeUnits) {
+      hash ^= codeUnit;
+      hash = (hash * 0x01000193) & 0xFFFFFFFF;
+    }
+    return hash.toRadixString(16).padLeft(8, '0');
+  }
+
+  static String? _mimeTypeFromName(String fileName) {
+    final lower = fileName.toLowerCase();
+    if (lower.endsWith('.pdf')) return 'application/pdf';
+    if (lower.endsWith('.png')) return 'image/png';
+    if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return 'image/jpeg';
+    if (lower.endsWith('.webp')) return 'image/webp';
+    return null;
+  }
+
+  static void _syncBrochureCache(List<BrochureItem> activeItems) {
+    if (kIsWeb) return;
+    try {
+      final dir = _brochureShareDir;
+      if (!dir.existsSync()) return;
+      final validKeys = activeItems.map((e) => _urlCacheKey(e.url)).toSet();
+      for (final entity in dir.listSync()) {
+        final name = entity.uri.pathSegments
+            .where((s) => s.isNotEmpty)
+            .lastOrNull;
+        if (name == null || !validKeys.contains(name)) {
+          try {
+            entity.deleteSync(recursive: true);
+          } catch (_) {}
+        }
+      }
+    } catch (_) {}
+  }
+
   /// Fetches brochure items (with metadata like title/filename) from [ApiConfig.brochure].
   Future<List<BrochureItem>> fetchBrochureItems() async {
     try {
@@ -369,6 +410,7 @@ class CustomerDetailsViewModel extends ChangeNotifier {
         if (response.body.isNotEmpty) {
           final dynamic decoded = jsonDecode(response.body);
           final extracted = _extractBrochureItems(decoded);
+          _syncBrochureCache(extracted);
           if (extracted.isNotEmpty) {
             debugPrint(
               '<<< [Brochure] Extracted URLs from API: ${extracted.map((e) => e.url).toList()}',
@@ -535,7 +577,6 @@ class CustomerDetailsViewModel extends ChangeNotifier {
   Future<bool> shareBrochureFromLink({
     List<String>? overrideDocUrls,
     String? overrideDocUrl,
-    VoidCallback? onFilesReady,
     Future<void> Function(List<XFile> files, {String? text})? shareLauncher,
     Future<void> Function(String text)? textShareLauncher,
   }) async {
@@ -547,80 +588,112 @@ class CustomerDetailsViewModel extends ChangeNotifier {
       return false;
     }
 
-    final List<XFile> filesToShare = [];
-    final List<String> failedUrls = [];
-
-    // Download each brochure file
-    for (final docUrl in docUrls) {
-      try {
-        debugPrint('>>> [Brochure] Downloading file from: $docUrl');
-        final fileUri = Uri.parse(docUrl);
-        final fileResponse = await _client
-            .get(fileUri)
-            .timeout(const Duration(seconds: 30));
-        debugPrint(
-          '<<< [Brochure] Download status: ${fileResponse.statusCode}, bytes: ${fileResponse.bodyBytes.length}',
-        );
-
-        if (fileResponse.statusCode >= 200 &&
-            fileResponse.statusCode < 300 &&
-            fileResponse.bodyBytes.isNotEmpty) {
-          final pathSeg = fileUri.pathSegments;
-          final rawName = pathSeg.isNotEmpty ? pathSeg.last : 'brochure';
-          String fileName = rawName;
-          String? mimeType;
-          final lower = rawName.toLowerCase();
-
-          if (lower.endsWith('.pdf')) {
-            mimeType = 'application/pdf';
-          } else if (lower.endsWith('.png')) {
-            mimeType = 'image/png';
-          } else if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) {
-            mimeType = 'image/jpeg';
-          } else if (lower.endsWith('.webp')) {
-            mimeType = 'image/webp';
-          } else if (!rawName.contains('.')) {
-            final contentType =
-                fileResponse.headers['content-type']?.toLowerCase() ?? '';
-            if (contentType.contains('png')) {
-              fileName = '$rawName.png';
-              mimeType = 'image/png';
-            } else if (contentType.contains('image')) {
-              fileName = '$rawName.jpg';
-              mimeType = 'image/jpeg';
-            } else {
-              fileName = '$rawName.pdf';
-              mimeType = 'application/pdf';
-            }
-          }
-
-          final XFile xFile;
-          if (kIsWeb) {
-            xFile = XFile.fromData(
-              fileResponse.bodyBytes,
-              name: fileName,
-              mimeType: mimeType,
-            );
-          } else {
-            final tempFile = File(
-              '${Directory.systemTemp.path}${Platform.pathSeparator}$fileName',
-            );
-            tempFile.writeAsBytesSync(fileResponse.bodyBytes, flush: true);
-            xFile = XFile(tempFile.path, name: fileName, mimeType: mimeType);
-          }
-          filesToShare.add(xFile);
-        } else {
-          failedUrls.add(docUrl);
-        }
-      } catch (e) {
-        debugPrint('Error downloading brochure file from $docUrl: $e');
-        failedUrls.add(docUrl);
+    Directory? shareTempDir;
+    if (!kIsWeb) {
+      shareTempDir = _brochureShareDir;
+      if (!shareTempDir.existsSync()) {
+        shareTempDir.createSync(recursive: true);
       }
     }
 
-    // If at least one file was downloaded successfully, close loader & share via files
+    // Reuse cached files for unchanged URLs; download any missing ones concurrently
+    final results = await Future.wait(
+      docUrls.map((docUrl) async {
+        try {
+          Directory? urlCacheDir;
+          if (!kIsWeb && shareTempDir != null) {
+            urlCacheDir = Directory(
+              '${shareTempDir.path}${Platform.pathSeparator}${_urlCacheKey(docUrl)}',
+            );
+            if (urlCacheDir.existsSync()) {
+              for (final entity in urlCacheDir.listSync()) {
+                if (entity is File && entity.lengthSync() > 0) {
+                  final cachedName = entity.uri.pathSegments
+                      .where((s) => s.isNotEmpty)
+                      .lastOrNull ?? 'brochure';
+                  debugPrint('>>> [Brochure] Reusing cached file: ${entity.path}');
+                  return (
+                    file: XFile(
+                      entity.path,
+                      name: cachedName,
+                      mimeType: _mimeTypeFromName(cachedName),
+                    ),
+                    failedUrl: null as String?,
+                  );
+                }
+              }
+            }
+          }
+
+          debugPrint('>>> [Brochure] Downloading file from: $docUrl');
+          final fileUri = Uri.parse(docUrl);
+          final fileResponse = await _client
+              .get(fileUri)
+              .timeout(const Duration(seconds: 30));
+          debugPrint(
+            '<<< [Brochure] Download status: ${fileResponse.statusCode}, bytes: ${fileResponse.bodyBytes.length}',
+          );
+
+          if (fileResponse.statusCode >= 200 &&
+              fileResponse.statusCode < 300 &&
+              fileResponse.bodyBytes.isNotEmpty) {
+            final pathSeg = fileUri.pathSegments;
+            final rawName = pathSeg.isNotEmpty ? pathSeg.last : 'brochure';
+            String fileName = rawName;
+            String? mimeType = _mimeTypeFromName(rawName);
+
+            if (!rawName.contains('.')) {
+              final contentType =
+                  fileResponse.headers['content-type']?.toLowerCase() ?? '';
+              if (contentType.contains('png')) {
+                fileName = '$rawName.png';
+                mimeType = 'image/png';
+              } else if (contentType.contains('image')) {
+                fileName = '$rawName.jpg';
+                mimeType = 'image/jpeg';
+              } else {
+                fileName = '$rawName.pdf';
+                mimeType = 'application/pdf';
+              }
+            }
+
+            final XFile xFile;
+            if (kIsWeb) {
+              xFile = XFile.fromData(
+                fileResponse.bodyBytes,
+                name: fileName,
+                mimeType: mimeType,
+              );
+            } else {
+              urlCacheDir!.createSync(recursive: true);
+              final tempFile = File(
+                '${urlCacheDir.path}${Platform.pathSeparator}$fileName',
+              );
+              tempFile.writeAsBytesSync(fileResponse.bodyBytes, flush: true);
+              xFile = XFile(tempFile.path, name: fileName, mimeType: mimeType);
+            }
+            return (file: xFile, failedUrl: null as String?);
+          }
+          return (file: null as XFile?, failedUrl: docUrl);
+        } catch (e) {
+          debugPrint('Error downloading brochure file from $docUrl: $e');
+          return (file: null as XFile?, failedUrl: docUrl);
+        }
+      }),
+    );
+
+    final List<XFile> filesToShare = [];
+    final List<String> failedUrls = [];
+    for (final res in results) {
+      if (res.file != null) {
+        filesToShare.add(res.file!);
+      } else if (res.failedUrl != null) {
+        failedUrls.add(res.failedUrl!);
+      }
+    }
+
+    // If at least one file was downloaded successfully, share via files
     if (filesToShare.isNotEmpty) {
-      onFilesReady?.call();
       final String? textWithLinks = failedUrls.isEmpty
           ? null
           : failedUrls.join('\n');

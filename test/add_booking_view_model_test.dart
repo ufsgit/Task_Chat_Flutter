@@ -188,11 +188,10 @@ void main() {
   });
 
   group('DistrictViewModel MVVM Tests', () {
-    test('initializes with default fallback districts', () {
+    test('initializes with empty districts (no hardcoded fallback)', () {
       final vm = DistrictViewModel();
-      expect(vm.districts, isNotEmpty);
-      expect(vm.districts.first.name, 'Ernakulam');
-      expect(vm.selectedDistrict?.name, 'Ernakulam');
+      expect(vm.districts, isEmpty);
+      expect(vm.selectedDistrict, isNull);
     });
 
     test('fetchDistricts updates districts from API', () async {
@@ -372,8 +371,9 @@ void main() {
           ),
         ),
       );
+      await tester.pumpAndSettle();
 
-      // Verify District dropdown is present
+      // Verify District dropdown is present and populated from API
       expect(find.byKey(const Key('district_selector_dropdown')), findsOneWidget);
       expect(find.text('District'), findsOneWidget);
       expect(find.text('Ernakulam'), findsOneWidget);
