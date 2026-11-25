@@ -48,6 +48,8 @@ class ActivityViewModel extends ChangeNotifier {
   ];
 
   String _searchQuery = '';
+  String? _fromDate;
+  String? _toDate;
 
   bool get isLoading => _isLoading;
   bool get isLoadingMore => _isLoadingMore;
@@ -62,6 +64,8 @@ class ActivityViewModel extends ChangeNotifier {
   String get selectedStatusFilter => _selectedStatusFilter;
   List<String> get statusOptions => _statusOptions;
   String get searchQuery => _searchQuery;
+  String? get fromDate => _fromDate;
+  String? get toDate => _toDate;
   http.Client get client => _client;
 
   void setLimit(int limit) {
@@ -137,11 +141,27 @@ class ActivityViewModel extends ChangeNotifier {
     }
   }
 
-  void resetFilters() {
+  void setDateRange({String? from, String? to, bool fetch = true}) {
+    if (_fromDate != from || _toDate != to) {
+      _fromDate = from;
+      _toDate = to;
+      notifyListeners();
+      if (fetch) {
+        fetchHistory(force: true);
+      }
+    }
+  }
+
+  void resetFilters({bool fetch = true}) {
     _selectedStatusFilter = 'All';
     _selectedFilterIndex = 0;
     _searchQuery = '';
+    _fromDate = null;
+    _toDate = null;
     notifyListeners();
+    if (fetch) {
+      fetchHistory(force: true);
+    }
   }
 
   void setSearchQuery(String query, {bool immediate = false}) {
@@ -150,6 +170,7 @@ class ActivityViewModel extends ChangeNotifier {
       if (_searchQuery != query) {
         _searchQuery = query;
         notifyListeners();
+        fetchHistory(force: true);
       }
       return;
     }
@@ -159,6 +180,7 @@ class ActivityViewModel extends ChangeNotifier {
       if (_searchQuery != query) {
         _searchQuery = query;
         notifyListeners();
+        fetchHistory(force: true);
       }
     });
   }
@@ -199,7 +221,25 @@ class ActivityViewModel extends ChangeNotifier {
               token.startsWith('Bearer ') ? token : 'Bearer $token',
       };
 
-      final uri = Uri.parse(ApiConfig.history_list);
+      final baseUri = Uri.parse(ApiConfig.history_list);
+      final queryParams = <String, String>{};
+      if (_searchQuery.trim().isNotEmpty) {
+        queryParams['search'] = _searchQuery.trim();
+      }
+      if (_fromDate != null && _fromDate!.trim().isNotEmpty) {
+        queryParams['fromDate'] = _fromDate!.trim();
+      }
+      if (_toDate != null && _toDate!.trim().isNotEmpty) {
+        queryParams['toDate'] = _toDate!.trim();
+      }
+      if (queryParams.isNotEmpty) {
+        queryParams['page'] = '1';
+        queryParams['limit'] = _limit.toString();
+      }
+
+      final uri = queryParams.isNotEmpty
+          ? baseUri.replace(queryParameters: queryParams)
+          : baseUri;
       debugPrint('>>> [ActivityViewModel] GET $uri with headers: $headers');
 
       final response = await _client
@@ -302,6 +342,15 @@ class ActivityViewModel extends ChangeNotifier {
       'page': nextPage.toString(),
       'limit': _limit.toString(),
     };
+    if (_searchQuery.trim().isNotEmpty) {
+      queryParams['search'] = _searchQuery.trim();
+    }
+    if (_fromDate != null && _fromDate!.trim().isNotEmpty) {
+      queryParams['fromDate'] = _fromDate!.trim();
+    }
+    if (_toDate != null && _toDate!.trim().isNotEmpty) {
+      queryParams['toDate'] = _toDate!.trim();
+    }
 
     String? token;
     try {

@@ -405,6 +405,132 @@ void main() {
       expect(vm.hasMore, isFalse); // Total 35 items loaded which equals totalCount
     });
 
+    test('ActivityViewModel.setSearchQuery triggers fetchHistory with search, page, and limit query parameters', () async {
+      Uri? lastUri;
+      final client = MockClient((request) async {
+        lastUri = request.url;
+        return http.Response(
+          jsonEncode({
+            'success': true,
+            'data': {
+              'history': [
+                {
+                  'history_id': 101,
+                  'booking_id': 1001,
+                  'booking_name': 'Ravi Customer',
+                  'new_status_label': 'Scheduled',
+                  'created_at': '2026-11-25T10:00:00.000Z',
+                }
+              ],
+              'count': 1,
+            },
+          }),
+          200,
+          headers: {'content-type': 'application/json'},
+        );
+      });
+
+      final vm = ActivityViewModel(
+        client: client,
+        debounceDuration: Duration.zero,
+      );
+
+      vm.setSearchQuery('Ravi', immediate: true);
+      // Wait for async fetchHistory
+      await Future.delayed(const Duration(milliseconds: 10));
+
+      expect(lastUri, isNotNull);
+      expect(lastUri!.queryParameters['search'], equals('Ravi'));
+      expect(lastUri!.queryParameters['page'], equals('1'));
+      expect(lastUri!.queryParameters['limit'], equals('20'));
+      expect(vm.activities.length, equals(1));
+      expect(vm.activities.first.title, equals('Ravi Customer'));
+    });
+
+    test('ActivityViewModel.setDateRange triggers fetchHistory with fromDate and toDate query parameters', () async {
+      Uri? lastUri;
+      final client = MockClient((request) async {
+        lastUri = request.url;
+        return http.Response(
+          jsonEncode({
+            'success': true,
+            'data': {
+              'history': [],
+              'count': 0,
+            },
+          }),
+          200,
+          headers: {'content-type': 'application/json'},
+        );
+      });
+
+      final vm = ActivityViewModel(
+        client: client,
+        debounceDuration: Duration.zero,
+      );
+
+      vm.setDateRange(from: '2026-11-25', to: '2026-11-25', fetch: true);
+      await Future.delayed(const Duration(milliseconds: 10));
+
+      expect(lastUri, isNotNull);
+      expect(lastUri!.queryParameters['fromDate'], equals('2026-11-25'));
+      expect(lastUri!.queryParameters['toDate'], equals('2026-11-25'));
+      expect(lastUri!.queryParameters['page'], equals('1'));
+      expect(lastUri!.queryParameters['limit'], equals('20'));
+    });
+
+    test('ActivityViewModel.loadNextPage preserves search, fromDate, and toDate query parameters', () async {
+      final requestedUris = <Uri>[];
+      final client = MockClient((request) async {
+        requestedUris.add(request.url);
+        return http.Response(
+          jsonEncode({
+            'success': true,
+            'data': {
+              'history': List.generate(
+                20,
+                (i) => {
+                  'history_id': 2000 + i,
+                  'booking_id': 200 + i,
+                  'booking_name': 'Client $i',
+                  'new_status_label': 'New',
+                  'created_at': '2026-11-25T10:00:00.000Z',
+                },
+              ),
+              'page': requestedUris.length,
+              'limit': 20,
+              'count': 40,
+            },
+          }),
+          200,
+          headers: {'content-type': 'application/json'},
+        );
+      });
+
+      final vm = ActivityViewModel(
+        client: client,
+        debounceDuration: Duration.zero,
+      );
+
+      vm.setDateRange(from: '2026-11-25', to: '2026-11-25', fetch: false);
+      vm.setSearchQuery('n', immediate: true);
+      await Future.delayed(const Duration(milliseconds: 10));
+
+      expect(requestedUris.length, equals(1));
+      expect(requestedUris[0].queryParameters['search'], equals('n'));
+      expect(requestedUris[0].queryParameters['fromDate'], equals('2026-11-25'));
+      expect(requestedUris[0].queryParameters['toDate'], equals('2026-11-25'));
+      expect(requestedUris[0].queryParameters['page'], equals('1'));
+
+      await vm.loadNextPage();
+
+      expect(requestedUris.length, equals(2));
+      expect(requestedUris[1].queryParameters['search'], equals('n'));
+      expect(requestedUris[1].queryParameters['fromDate'], equals('2026-11-25'));
+      expect(requestedUris[1].queryParameters['toDate'], equals('2026-11-25'));
+      expect(requestedUris[1].queryParameters['page'], equals('2'));
+    });
+
     test('ActivityViewModel.fetchHistoryByBookingId requests report_graph_bybookingid endpoint and returns list', () async {
       final client = MockClient((request) async {
         expect(

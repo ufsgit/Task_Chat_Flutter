@@ -3,6 +3,7 @@ import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:http/http.dart' as http;
 import '../../core/status_color_service.dart';
 import '../../core/theme.dart';
+import '../../core/widgets/circular_back_button.dart';
 import '../../login_page/token_storage.dart';
 import '../widgets/history_skeleton_loading.dart';
 import 'activity_model.dart';
@@ -688,10 +689,8 @@ class _BookingHistoryPageState extends State<BookingHistoryPage> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  _buildCircleButton(
-                    isDark: isDark,
-                    icon: Icons.chevron_left_rounded,
-                    onTap: () => Navigator.pop(context),
+                  CircularBackButton(
+                    onBack: () => Navigator.pop(context),
                   ),
                   Text(
                     'History',
@@ -898,13 +897,17 @@ class _BookingHistoryPageState extends State<BookingHistoryPage> {
                                               ),
                                               const SizedBox(height: 5),
 
-                                              // Subtitle Row: Status Pill + #ID + Updates
-                                              Row(
+                                              // Subtitle: Status Pill + #ID + Updates
+                                              Wrap(
+                                                crossAxisAlignment:
+                                                    WrapCrossAlignment.center,
+                                                spacing: 6,
+                                                runSpacing: 4,
                                                 children: [
                                                   Container(
                                                     padding:
                                                         const EdgeInsets.symmetric(
-                                                          horizontal: 8,
+                                                          horizontal: 7,
                                                           vertical: 2,
                                                         ),
                                                     decoration: BoxDecoration(
@@ -925,7 +928,6 @@ class _BookingHistoryPageState extends State<BookingHistoryPage> {
                                                       ),
                                                     ),
                                                   ),
-                                                  const SizedBox(width: 8),
                                                   Text(
                                                     '#${group.bookingId}',
                                                     style: TextStyle(
@@ -935,7 +937,6 @@ class _BookingHistoryPageState extends State<BookingHistoryPage> {
                                                       color: textSubtitle,
                                                     ),
                                                   ),
-                                                  const SizedBox(width: 4),
                                                   Text(
                                                     '·',
                                                     style: TextStyle(
@@ -943,7 +944,6 @@ class _BookingHistoryPageState extends State<BookingHistoryPage> {
                                                       color: textSubtitle,
                                                     ),
                                                   ),
-                                                  const SizedBox(width: 4),
                                                   Text(
                                                     '${group.events.length} updates',
                                                     style: TextStyle(
@@ -958,6 +958,8 @@ class _BookingHistoryPageState extends State<BookingHistoryPage> {
                                             ],
                                           ),
                                         ),
+
+                                        const SizedBox(width: 6),
 
                                         // Accordion Chevron Arrow
                                         Icon(
@@ -1084,50 +1086,54 @@ class _BookingHistoryPageState extends State<BookingHistoryPage> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 3,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: event.badgeBg,
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  child: Text(
-                                    event.badgeLabel,
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w700,
-                                      color: event.badgeTextColor,
-                                    ),
-                                  ),
-                                ),
-                                if (event.isCurrent) ...[
-                                  const SizedBox(width: 6),
+                            Expanded(
+                              child: Wrap(
+                                crossAxisAlignment: WrapCrossAlignment.center,
+                                spacing: 6,
+                                runSpacing: 4,
+                                children: [
                                   Container(
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 8,
                                       vertical: 3,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: const Color(0xFFCCFBF1),
+                                      color: event.badgeBg,
                                       borderRadius: BorderRadius.circular(10),
                                     ),
-                                    child: const Text(
-                                      'CURRENT',
+                                    child: Text(
+                                      event.badgeLabel,
                                       style: TextStyle(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w800,
-                                        color: Color(0xFF0F766E),
-                                        letterSpacing: 0.5,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w700,
+                                        color: event.badgeTextColor,
                                       ),
                                     ),
                                   ),
+                                  if (event.isCurrent)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 3,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFCCFBF1),
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      child: const Text(
+                                        'CURRENT',
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w800,
+                                          color: Color(0xFF0F766E),
+                                          letterSpacing: 0.5,
+                                        ),
+                                      ),
+                                    ),
                                 ],
-                              ],
+                              ),
                             ),
+                            const SizedBox(width: 8),
                             Text(
                               event.time,
                               style: TextStyle(
@@ -1220,7 +1226,11 @@ class _BookingHistoryPageState extends State<BookingHistoryPage> {
                                           ),
                                         ),
                                       ] else ...[
-                                        Row(
+                                        Wrap(
+                                          crossAxisAlignment:
+                                              WrapCrossAlignment.center,
+                                          spacing: 6,
+                                          runSpacing: 2,
                                           children: [
                                             if (diff.oldValue.isNotEmpty) ...[
                                               Text(
@@ -1232,26 +1242,18 @@ class _BookingHistoryPageState extends State<BookingHistoryPage> {
                                                   color: Color(0xFF94A3B8),
                                                 ),
                                               ),
-                                              const Padding(
-                                                padding: EdgeInsets.symmetric(
-                                                  horizontal: 8.0,
-                                                ),
-                                                child: Icon(
-                                                  Icons.arrow_forward_rounded,
-                                                  size: 13,
-                                                  color: Color(0xFF94A3B8),
-                                                ),
+                                              const Icon(
+                                                Icons.arrow_forward_rounded,
+                                                size: 13,
+                                                color: Color(0xFF94A3B8),
                                               ),
                                             ],
-                                            Flexible(
-                                              child: Text(
-                                                diff.newValue,
-                                                style: TextStyle(
-                                                  fontSize: 13,
-                                                  fontWeight: FontWeight.w700,
-                                                  color: textPrimary,
-                                                ),
-                                                overflow: TextOverflow.ellipsis,
+                                            Text(
+                                              diff.newValue,
+                                              style: TextStyle(
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.w700,
+                                                color: textPrimary,
                                               ),
                                             ),
                                           ],
@@ -1296,33 +1298,44 @@ class _BookingHistoryPageState extends State<BookingHistoryPage> {
   }) {
     return Material(
       color: Colors.transparent,
+      shape: const CircleBorder(),
       child: InkWell(
-        borderRadius: BorderRadius.circular(22),
+        customBorder: const CircleBorder(),
         onTap: onTap,
-        child: Container(
-          width: 42,
-          height: 42,
-          alignment: Alignment.center,
+        child: Ink(
+          width: 38,
+          height: 38,
           decoration: BoxDecoration(
             color: isActive
                 ? (isDark ? AppDarkColors.primaryGreen : AppColors.brandGreen)
                 : (isDark
                       ? AppDarkColors.surfaceCard
-                      : const Color(0xFFF1F5F9)),
+                      : AppColors.surfaceWhite),
             shape: BoxShape.circle,
             border: Border.all(
-              color: isDark ? AppDarkColors.border : const Color(0xFFE2E8F0),
+              color: isDark ? AppDarkColors.border : AppColors.border,
               width: 1,
             ),
+            boxShadow: [
+              BoxShadow(
+                color: isDark
+                    ? Colors.black.withValues(alpha: 0.2)
+                    : AppColors.textPrimary.withValues(alpha: 0.04),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
-          child: Icon(
-            icon,
-            size: 20,
-            color: isActive
-                ? Colors.white
-                : (isDark
-                      ? AppDarkColors.textPrimary
-                      : const Color(0xFF334155)),
+          child: Center(
+            child: Icon(
+              icon,
+              size: 20,
+              color: isActive
+                  ? Colors.white
+                  : (isDark
+                        ? AppDarkColors.textPrimary
+                        : const Color(0xFF334155)),
+            ),
           ),
         ),
       ),

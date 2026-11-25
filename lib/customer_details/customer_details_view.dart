@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:lottie/lottie.dart';
 import 'package:share_plus/share_plus.dart';
 import '../api/document_upload_service.dart';
 import '../core/widgets/app_pill_notification.dart';
@@ -267,17 +268,6 @@ class _CustomerDetailsViewState extends State<CustomerDetailsView> {
   }
 
   Future<void> _handleDataSharing() async {
-    final phone = _viewModel.customer.phoneNumber.trim();
-    if (phone.isEmpty) {
-      if (mounted) {
-        AppNotification.showError(
-          context,
-          'No phone number available for this contact',
-        );
-      }
-      return;
-    }
-
     final success = await _viewModel.shareDataToWhatsApp();
     if (!success && mounted) {
       AppNotification.showError(context, 'Could not open WhatsApp for sharing');
@@ -285,52 +275,341 @@ class _CustomerDetailsViewState extends State<CustomerDetailsView> {
   }
 
   Future<void> _handleBrochureSharing() async {
-    final phone = _viewModel.customer.phoneNumber.trim();
-    if (phone.isEmpty) {
-      if (mounted) {
-        AppNotification.showError(
-          context,
-          'No phone number available for this contact',
-        );
-      }
-      return;
-    }
-
     try {
-      final files = await FilePicker.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['pdf'],
-        dialogTitle: 'Select Brochure PDF',
+      AppNotification.show(
+        context,
+        'Loading brochures...',
+        icon: Icons.downloading_rounded,
+        iconColor: AppColors.primaryGreen,
       );
 
-      if (files.isNotEmpty) {
-        final file = files.first;
-        final shareText =
-            'Hello ${_viewModel.customer.name}, please find our brochure attached.';
+      final brochures = await _viewModel.fetchBrochureItems();
+      if (!mounted) return;
 
-        if (file.path != null && file.path!.isNotEmpty) {
-          await _viewModel.shareBrochurePdf(
-            filePath: file.path,
-            text: shareText,
-          );
-        } else {
-          final bytes = await file.readAsBytes();
-          if (bytes != null) {
-            final xFile = XFile.fromData(
-              bytes,
-              name: file.name,
-              mimeType: 'application/pdf',
-            );
-            await _viewModel.shareBrochurePdf(xFile: xFile, text: shareText);
-          }
+      if (brochures.isEmpty) {
+        AppNotification.showError(
+          context,
+          'Failed to load doc',
+        );
+        return;
+      }
+
+      List<String> selectedUrls;
+      if (brochures.length == 1) {
+        selectedUrls = [brochures.first.url];
+      } else {
+        final chosen = await _showBrochureSelectionSheet(brochures);
+        if (chosen == null || chosen.isEmpty || !mounted) {
+          return;
         }
+        selectedUrls = chosen;
+      }
+
+      final bool success = await _runWithLoadingFilesDialog(
+        label: selectedUrls.length > 1
+            ? 'Preparing brochures...'
+            : 'Preparing brochure...',
+        task: (closeDialog) => _viewModel.shareBrochureFromLink(
+          overrideDocUrls: selectedUrls,
+          onFilesReady: closeDialog,
+        ),
+      );
+      if (!success && mounted) {
+        AppNotification.showError(
+          context,
+          'Failed to load doc',
+        );
       }
     } catch (e) {
-      debugPrint('Error picking or sharing brochure: $e');
+      debugPrint('Error sharing brochure: $e');
       if (mounted) {
-        AppNotification.showError(context, 'Failed to pick or share brochure');
+        AppNotification.showError(context, 'Failed to load doc');
       }
     }
+  }
+
+  Future<T> _runWithLoadingFilesDialog<T>({
+    required String label,
+    required Future<T> Function(VoidCallback closeDialog) task,
+  }) async {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final dialogBg = isDark ? AppDarkColors.surfaceCard : Colors.white;
+    final textPrimary =
+        isDark ? AppDarkColors.textPrimary : AppColors.textPrimary;
+
+    bool dialogOpen = true;
+    void closeDialog() {
+      if (dialogOpen && mounted) {
+        dialogOpen = false;
+        Navigator.of(context, rootNavigator: true).pop();
+      }
+    }
+
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return PopScope(
+          canPop: false,
+          child: Dialog(
+            backgroundColor: dialogBg,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(
+                    height: 90,
+                    width: 240,
+                    child: Lottie.asset(
+                      'assets/animations/loading_files.json',
+                      fit: BoxFit.contain,
+                      repeat: true,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    label,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: textPrimary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    ).then((_) {
+      dialogOpen = false;
+    });
+
+    try {
+      return await task(closeDialog);
+    } finally {
+      closeDialog();
+    }
+  }
+
+  Future<List<String>?> _showBrochureSelectionSheet(
+    List<BrochureItem> brochures,
+  ) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final surfaceBg = isDark ? AppDarkColors.surfaceCard : Colors.white;
+    final textPrimary =
+        isDark ? AppDarkColors.textPrimary : AppColors.textPrimary;
+    final textSecondary =
+        isDark ? AppDarkColors.textSecondary : AppColors.textSecondary;
+    final borderColor = isDark ? AppDarkColors.border : AppColors.border;
+
+    final selected = brochures.map((b) => b.url).toSet();
+
+    return showModalBottomSheet<List<String>>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: surfaceBg,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            final allSelected = selected.length == brochures.length;
+            return SafeArea(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height * 0.72,
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Center(
+                        child: Container(
+                          width: 36,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: borderColor,
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Select brochures to share',
+                            style: TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w700,
+                              color: textPrimary,
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () {
+                              setModalState(() {
+                                if (allSelected) {
+                                  selected.clear();
+                                } else {
+                                  selected.addAll(brochures.map((b) => b.url));
+                                }
+                              });
+                            },
+                            child: Text(
+                              allSelected ? 'Clear all' : 'Select all',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.primaryGreen,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Flexible(
+                        child: ListView.separated(
+                          shrinkWrap: true,
+                          itemCount: brochures.length,
+                          separatorBuilder: (_, _) =>
+                              Divider(height: 1, color: borderColor),
+                          itemBuilder: (context, index) {
+                            final item = brochures[index];
+                            final isChecked = selected.contains(item.url);
+                            final lower = (item.fileName ?? item.url).toLowerCase();
+                            final IconData fileIcon = lower.endsWith('.pdf')
+                                ? Icons.picture_as_pdf_rounded
+                                : (lower.endsWith('.png') ||
+                                        lower.endsWith('.jpg') ||
+                                        lower.endsWith('.jpeg') ||
+                                        lower.endsWith('.webp'))
+                                    ? Icons.image_rounded
+                                    : Icons.insert_drive_file_rounded;
+
+                            return CheckboxListTile(
+                              value: isChecked,
+                              activeColor: AppColors.primaryGreen,
+                              contentPadding:
+                                  const EdgeInsets.symmetric(horizontal: 4),
+                              controlAffinity: ListTileControlAffinity.trailing,
+                              secondary: Container(
+                                width: 38,
+                                height: 38,
+                                decoration: BoxDecoration(
+                                  color: AppColors.primaryGreen.withValues(
+                                    alpha: 0.12,
+                                  ),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Icon(
+                                  fileIcon,
+                                  size: 20,
+                                  color: AppColors.primaryGreen,
+                                ),
+                              ),
+                              title: Text(
+                                item.title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600,
+                                  color: textPrimary,
+                                ),
+                              ),
+                              subtitle: item.fileName != null &&
+                                      item.fileName != item.title
+                                  ? Text(
+                                      item.fileName!,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: textSecondary,
+                                      ),
+                                    )
+                                  : null,
+                              onChanged: (checked) {
+                                setModalState(() {
+                                  if (checked == true) {
+                                    selected.add(item.url);
+                                  } else {
+                                    selected.remove(item.url);
+                                  }
+                                });
+                              },
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: () =>
+                                  Navigator.of(sheetContext).pop(null),
+                              style: OutlinedButton.styleFrom(
+                                side: BorderSide(color: borderColor),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 13),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              child: Text(
+                                'Cancel',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  color: textPrimary,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: selected.isEmpty
+                                  ? null
+                                  : () => Navigator.of(
+                                        sheetContext,
+                                      ).pop(selected.toList()),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primaryGreen,
+                                foregroundColor: Colors.white,
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 13),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              child: Text(
+                                'Send (${selected.length})',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   @override

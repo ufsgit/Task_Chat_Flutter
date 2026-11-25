@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:task_chat/core/widgets/circular_back_button.dart';
 import 'package:task_chat/report_activity/activity/activity_model.dart';
 import 'package:task_chat/report_activity/activity/booking_history_page.dart';
 import 'package:task_chat/report_activity/widgets/history_skeleton_loading.dart';
@@ -59,6 +60,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
 
     expect(find.text('History'), findsOneWidget);
+    expect(find.byType(CircularBackButton), findsOneWidget);
     expect(find.text('Test Client'), findsWidgets);
   });
 
