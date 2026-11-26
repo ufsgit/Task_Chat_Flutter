@@ -45,11 +45,46 @@ class StatusSelectorChips extends StatelessWidget {
       }
     }
 
-    if (displayList.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
     final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    if (displayList.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: isDark ? AppDarkColors.surfaceCard : const Color(0xFFF8FAFC),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isDark ? AppDarkColors.border : const Color(0xFFE2E8F0),
+            width: 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              Icons.info_outline_rounded,
+              size: 18,
+              color: isDark
+                  ? AppDarkColors.textSubtitle
+                  : const Color(0xFF64748B),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'No status available from server',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: isDark
+                      ? AppDarkColors.textSubtitle
+                      : const Color(0xFF64748B),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
 
     return Row(
       children: displayList.map((item) {

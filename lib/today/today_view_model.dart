@@ -157,8 +157,8 @@ class TodayViewModel extends ChangeNotifier {
     this.tokenStorage,
     Duration? debounceDuration,
     List<Map<String, dynamic>>? initialChatItems,
-  }) : _client = client ?? AuthenticatedClient(),
-       _isInternalClient = client == null,
+  }) : _client = client ?? AuthenticatedClient.instance,
+       _isInternalClient = false,
        debounceDuration =
            debounceDuration ??
            (TokenStorage.isTestEnvironment

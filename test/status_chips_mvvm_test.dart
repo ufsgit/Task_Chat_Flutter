@@ -465,6 +465,61 @@ void main() {
     expect(postedBody?['isFollowUp'], 1);
     expect(postedBody?['scheduleDate'], '11/12/2026');
   });
+
+  testWidgets('StatusSelectorChips shows No status banner when backend returns empty', (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: StatusSelectorChips(
+            selectedStatus: 'New',
+            onStatusSelected: _noop,
+            chips: [],
+            options: [],
+            isLoading: false,
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    expect(find.text('No status available from server'), findsOneWidget);
+  });
+
+  test('submitStatusUpdate succeeds independently when document PUT fails', () async {
+    final mockClient = MockClient((request) async {
+      if (request.method == 'POST' && request.url.path.endsWith('/api/status')) {
+        return http.Response(jsonEncode({'success': true}), 200);
+      }
+      if (request.method == 'PUT' && request.url.path.contains('/api/bookings/')) {
+        return http.Response('Server Error', 500);
+      }
+      return http.Response('Not Found', 404);
+    });
+
+    const customer = CustomerDetailsData(
+      id: '10',
+      name: 'Independent Docs Test',
+      inquiry: 'Door',
+      status: 'New',
+      phoneNumber: '9999999999',
+      addressLine1: 'Kochi',
+      addressLine2: 'Kerala',
+      notes: '',
+      documents: ['/uploads/old.pdf'],
+    );
+
+    bool? docsResult;
+    final statusOk = await BranchManagerUpdateStatusLogic(client: mockClient).submitStatusUpdate(
+      customer: customer,
+      status: 'Scheduled',
+      scheduleDate: '27/11/2026',
+      notes: 'Note',
+      documents: ['/uploads/old.pdf', '/uploads/new.pdf'],
+      onDocumentsSyncResult: (ok) => docsResult = ok,
+    );
+
+    expect(statusOk, isTrue);
+    expect(docsResult, isFalse);
+  });
 }
 
 void _noop(String val) {}

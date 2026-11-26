@@ -118,8 +118,40 @@ void main() {
         hasBeenScheduled: true,
       );
 
+      final mockClient = MockClient((request) async {
+        if (request.method == 'GET' && request.url.path.endsWith('/api/status')) {
+          return http.Response(
+            jsonEncode({
+              'data': [
+                {'id': 1, 'code': 'Scheduled', 'label': 'Scheduled', 'isFollowUp': true, 'isActive': true, 'sortOrder': 1},
+                {'id': 2, 'code': 'Completed', 'label': 'Completed', 'isFollowUp': false, 'isActive': true, 'sortOrder': 2},
+                {'id': 3, 'code': 'Cancelled', 'label': 'Cancelled', 'isFollowUp': false, 'isActive': true, 'sortOrder': 3},
+              ],
+            }),
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        }
+        if (request.method == 'GET' && request.url.path.endsWith('/api/status')) {
+          return http.Response(
+            jsonEncode({
+              'data': [
+                {'id': 1, 'code': 'Scheduled', 'label': 'Scheduled', 'isFollowUp': true, 'isActive': true, 'sortOrder': 1},
+                {'id': 2, 'code': 'Completed', 'label': 'Completed', 'isFollowUp': false, 'isActive': true, 'sortOrder': 2},
+                {'id': 3, 'code': 'Cancelled', 'label': 'Cancelled', 'isFollowUp': false, 'isActive': true, 'sortOrder': 3},
+              ],
+            }),
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        }
+        return http.Response('{}', 200);
+      });
+
       await tester.pumpWidget(
-        const MaterialApp(home: UpdateStatusPage(customer: customer)),
+        MaterialApp(
+          home: UpdateStatusPage(customer: customer, client: mockClient),
+        ),
       );
       await tester.pumpAndSettle();
 
@@ -174,8 +206,21 @@ void main() {
 
     http.Request? capturedRequest;
     final mockClient = MockClient((request) async {
-      capturedRequest = request;
+      if (request.method == 'GET' && request.url.path.endsWith('/api/status')) {
+        return http.Response(
+          jsonEncode({
+            'data': [
+              {'id': 1, 'code': 'Scheduled', 'label': 'Scheduled', 'isFollowUp': true, 'isActive': true, 'sortOrder': 1},
+              {'id': 2, 'code': 'Completed', 'label': 'Completed', 'isFollowUp': false, 'isActive': true, 'sortOrder': 2},
+              {'id': 3, 'code': 'Cancelled', 'label': 'Cancelled', 'isFollowUp': false, 'isActive': true, 'sortOrder': 3},
+            ],
+          }),
+          200,
+          headers: {'content-type': 'application/json'},
+        );
+      }
       if (request.url.toString() == ApiConfig.statusUpdate) {
+        capturedRequest = request;
         return http.Response(
           jsonEncode({
             'clientId': 1,
@@ -262,7 +307,36 @@ void main() {
 
       http.Request? capturedRequest;
       final mockClient = MockClient((request) async {
-        capturedRequest = request;
+        if (request.method == 'GET' && request.url.path.endsWith('/api/status')) {
+          return http.Response(
+            jsonEncode({
+              'data': [
+                {'id': 1, 'code': 'Scheduled', 'label': 'Scheduled', 'isFollowUp': true, 'isActive': true, 'sortOrder': 1},
+                {'id': 2, 'code': 'Completed', 'label': 'Completed', 'isFollowUp': false, 'isActive': true, 'sortOrder': 2},
+                {'id': 3, 'code': 'Cancelled', 'label': 'Cancelled', 'isFollowUp': false, 'isActive': true, 'sortOrder': 3},
+              ],
+            }),
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        }
+        if (request.method == 'GET' && request.url.path.endsWith('/api/status')) {
+          return http.Response(
+            jsonEncode({
+              'data': [
+                {'id': 1, 'code': 'Scheduled', 'label': 'Scheduled', 'isFollowUp': true, 'isActive': true, 'sortOrder': 1},
+                {'id': 2, 'code': 'Completed', 'label': 'Completed', 'isFollowUp': false, 'isActive': true, 'sortOrder': 2},
+                {'id': 3, 'code': 'Cancelled', 'label': 'Cancelled', 'isFollowUp': false, 'isActive': true, 'sortOrder': 3},
+              ],
+            }),
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        }
+        if (request.method == 'POST' &&
+            request.url.toString() == ApiConfig.statusUpdate) {
+          capturedRequest = request;
+        }
         return http.Response(
           jsonEncode({'message': 'Status updated'}),
           200,
@@ -323,7 +397,7 @@ void main() {
       expect(bmViewModel.showSchedule, isTrue);
       expect(
         bmViewModel.availableOptions,
-        equals(['New', 'Scheduled', 'Cancelled']),
+        isEmpty,
       );
 
       bmViewModel.setStatus('Cancelled');
@@ -341,7 +415,7 @@ void main() {
       expect(coordViewModel.showSchedule, isTrue);
       expect(
         coordViewModel.availableOptions,
-        equals(['New', 'Scheduled', 'Cancelled']),
+        isEmpty,
       );
 
       coordViewModel.setBranchManager('Ramesh Kumar');
@@ -455,6 +529,19 @@ void main() {
       );
 
       final mockClient = MockClient((request) async {
+        if (request.method == 'GET' && request.url.path.endsWith('/api/status')) {
+          return http.Response(
+            jsonEncode({
+              'data': [
+                {'id': 1, 'code': 'Scheduled', 'label': 'Scheduled', 'isFollowUp': true, 'isActive': true, 'sortOrder': 1},
+                {'id': 2, 'code': 'Completed', 'label': 'Completed', 'isFollowUp': false, 'isActive': true, 'sortOrder': 2},
+                {'id': 3, 'code': 'Cancelled', 'label': 'Cancelled', 'isFollowUp': false, 'isActive': true, 'sortOrder': 3},
+              ],
+            }),
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        }
         if (request.method == 'GET' &&
             request.url.path == Uri.parse(ApiConfig.branch_head_listing).path) {
           return http.Response(
@@ -595,6 +682,19 @@ void main() {
 
       http.Request? capturedStatusRequest;
       final mockClient = MockClient((request) async {
+        if (request.method == 'GET' && request.url.path.endsWith('/api/status')) {
+          return http.Response(
+            jsonEncode({
+              'data': [
+                {'id': 1, 'code': 'Scheduled', 'label': 'Scheduled', 'isFollowUp': true, 'isActive': true, 'sortOrder': 1},
+                {'id': 2, 'code': 'Completed', 'label': 'Completed', 'isFollowUp': false, 'isActive': true, 'sortOrder': 2},
+                {'id': 3, 'code': 'Cancelled', 'label': 'Cancelled', 'isFollowUp': false, 'isActive': true, 'sortOrder': 3},
+              ],
+            }),
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        }
         if (request.method == 'GET' &&
             request.url.path == Uri.parse(ApiConfig.branch_head_listing).path) {
           return http.Response(
@@ -715,6 +815,19 @@ void main() {
       );
 
       final mockClient = MockClient((request) async {
+        if (request.method == 'GET' && request.url.path.endsWith('/api/status')) {
+          return http.Response(
+            jsonEncode({
+              'data': [
+                {'id': 1, 'code': 'Scheduled', 'label': 'Scheduled', 'isFollowUp': true, 'isActive': true, 'sortOrder': 1},
+                {'id': 2, 'code': 'Completed', 'label': 'Completed', 'isFollowUp': false, 'isActive': true, 'sortOrder': 2},
+                {'id': 3, 'code': 'Cancelled', 'label': 'Cancelled', 'isFollowUp': false, 'isActive': true, 'sortOrder': 3},
+              ],
+            }),
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        }
         if (request.method == 'GET' &&
             request.url.path == Uri.parse(ApiConfig.branch_head_listing).path) {
           return http.Response(

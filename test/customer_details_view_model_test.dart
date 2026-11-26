@@ -354,7 +354,22 @@ void main() {
       });
 
       final mockClient = MockClient((request) async {
-        if (request.url.path.contains('/api/bookings/status/update')) {
+        if (request.method == 'GET' && request.url.path.endsWith('/api/status')) {
+          return http.Response(
+            jsonEncode({
+              'data': [
+                {'id': 1, 'code': 'New', 'label': 'New', 'isFollowUp': true, 'isActive': true, 'sortOrder': 1},
+                {'id': 2, 'code': 'Scheduled', 'label': 'Scheduled', 'isFollowUp': true, 'isActive': true, 'sortOrder': 2},
+                {'id': 3, 'code': 'Completed', 'label': 'Completed', 'isFollowUp': false, 'isActive': true, 'sortOrder': 3},
+                {'id': 4, 'code': 'Cancelled', 'label': 'Cancelled', 'isFollowUp': false, 'isActive': true, 'sortOrder': 4},
+              ],
+            }),
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        }
+        if (request.url.path.contains('/api/bookings/status/update') ||
+            request.url.path.endsWith('/api/status')) {
           return http.Response(jsonEncode({'message': 'Status updated'}), 200);
         }
         return http.Response(jsonEncode([]), 200);

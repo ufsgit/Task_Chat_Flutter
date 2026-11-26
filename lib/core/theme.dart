@@ -250,7 +250,9 @@ abstract final class AppTheme {
   }
 
   /// Light Theme configuration.
-  static ThemeData get lightTheme {
+  static final ThemeData lightTheme = _buildLightTheme();
+
+  static ThemeData _buildLightTheme() {
     return ThemeData(
       fontFamily: 'Helvetica Neue',
       colorScheme: ColorScheme.fromSeed(
@@ -321,6 +323,10 @@ abstract final class AppTheme {
           color: Color(0xFF0F172A),
         ),
       ),
+      dialogTheme: const DialogThemeData(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
+      ),
       pageTransitionsTheme: _pageTransitionsTheme,
     );
   }
@@ -339,7 +345,9 @@ abstract final class AppTheme {
       );
 
   /// Dark Mode Theme configuration.
-  static ThemeData get darkTheme {
+  static final ThemeData darkTheme = _buildDarkTheme();
+
+  static ThemeData _buildDarkTheme() {
     return ThemeData(
       fontFamily: 'Helvetica Neue',
       brightness: Brightness.dark,

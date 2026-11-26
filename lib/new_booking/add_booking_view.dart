@@ -17,6 +17,7 @@ import 'widgets/lead_document_upload_card.dart';
 import 'widgets/lead_form_card.dart';
 import 'widgets/lead_labeled_row.dart';
 import 'widgets/lead_stage_selector.dart';
+import 'widgets/location_link_card.dart';
 
 class AddBookingView extends StatefulWidget {
   final LeadFormData? initialData;
@@ -52,6 +53,7 @@ class _AddBookingViewState extends State<AddBookingView> {
   late final TextEditingController _mobileController;
   late final TextEditingController _addressController;
   late final TextEditingController _notesController;
+  late final TextEditingController _mapLinkController;
   late final AddBookingViewModel _viewModel;
   late List<String> _documents;
   final bool _isUploadingDocument = false;
@@ -70,6 +72,7 @@ class _AddBookingViewState extends State<AddBookingView> {
     _mobileController = TextEditingController(text: data.mobile);
     _addressController = TextEditingController(text: data.address);
     _notesController = TextEditingController(text: data.notes);
+    _mapLinkController = TextEditingController(text: data.mapLink ?? '');
     _documents = List<String>.from(data.documents);
 
     _stages = widget.stages ?? defaultLeadStages;
@@ -149,6 +152,7 @@ class _AddBookingViewState extends State<AddBookingView> {
     _mobileController.dispose();
     _addressController.dispose();
     _notesController.dispose();
+    _mapLinkController.dispose();
     if (_isLocalViewModel) {
       _viewModel.dispose();
     }
@@ -172,6 +176,7 @@ class _AddBookingViewState extends State<AddBookingView> {
         ? (_selectedDistrict ?? selectedDistrictItem?.name)
         : null;
 
+    final trimmedMapLink = _mapLinkController.text.trim();
     final result = LeadFormData(
       name: _nameController.text.trim(),
       mobile: _mobileController.text.trim(),
@@ -183,6 +188,7 @@ class _AddBookingViewState extends State<AddBookingView> {
       districtId: effectiveDistrictId,
       districtName: effectiveDistrictName,
       district: effectiveDistrictName,
+      mapLink: trimmedMapLink.isNotEmpty ? trimmedMapLink : null,
       documents: _documents,
     );
 
@@ -191,10 +197,7 @@ class _AddBookingViewState extends State<AddBookingView> {
     if (!mounted) return;
 
     if (saveResult.isSuccess) {
-      AppNotification.showBookingSaved(
-        context,
-        aboveBottomNav: true,
-      );
+      AppNotification.showBookingSaved(context, aboveBottomNav: true);
 
       if (widget.onSave != null) {
         widget.onSave!(result);
@@ -461,12 +464,17 @@ class _AddBookingViewState extends State<AddBookingView> {
                 ),
                 const SizedBox(height: 14),
               ],
+              const SizedBox(height: 14),
 
               // 5. Area Selector Card
               AreaSelectorDropdown(viewModel: _viewModel.areaViewModel),
               const SizedBox(height: 14),
 
-              // 5. Attach Documents Card
+              // 5b. Location Link Card (Manual link, Current Location, or Map Picker)
+              LocationLinkCard(controller: _mapLinkController),
+              const SizedBox(height: 14),
+
+              // 6. Attach Documents Card
               LeadDocumentUploadCard(
                 documents: _documents,
                 isUploading: _isUploadingDocument,

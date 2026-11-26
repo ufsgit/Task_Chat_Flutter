@@ -70,7 +70,10 @@ class _SplashScreenState extends State<SplashScreen>
 
     try {
       final results = await Future.wait([
-        tokenStorage.getToken().catchError((_) => null),
+        tokenStorage
+            .getToken()
+            .timeout(const Duration(seconds: 2), onTimeout: () => null)
+            .catchError((_) => null),
         UserProfileData.loadUser().catchError((_) => null),
       ]);
       token = results[0] as String?;
@@ -126,7 +129,7 @@ class _SplashScreenState extends State<SplashScreen>
                 'Authorization': authHeader,
               },
             )
-            .timeout(const Duration(seconds: 5));
+            .timeout(const Duration(seconds: 3));
 
         if (response.statusCode == 200) {
           final parsed = _parseCheckvalidResponse(response.body);

@@ -1,10 +1,15 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../login_page/login_model.dart';
+import '../login_page/token_storage.dart';
 
 /// Data model representing the user's profile on the Settings screen.
 class UserProfileData {
   static const _prefKey = 'auth_user_profile';
+
+  static Duration get _prefsTimeout => TokenStorage.isTestEnvironment
+      ? const Duration(milliseconds: 200)
+      : const Duration(seconds: 3);
 
   final String name;
   final String initials;
@@ -29,8 +34,9 @@ class UserProfileData {
   /// Persists the logged-in user to SharedPreferences.
   static Future<void> save(UserModel user) async {
     try {
-      final prefs = await SharedPreferences.getInstance()
-          .timeout(const Duration(seconds: 1));
+      final prefs = await SharedPreferences.getInstance().timeout(
+        _prefsTimeout,
+      );
       await prefs.setString(_prefKey, jsonEncode(user.toJson()));
     } catch (_) {}
   }
@@ -38,8 +44,9 @@ class UserProfileData {
   /// Loads the persisted user profile from SharedPreferences.
   static Future<UserProfileData?> load() async {
     try {
-      final prefs = await SharedPreferences.getInstance()
-          .timeout(const Duration(seconds: 1));
+      final prefs = await SharedPreferences.getInstance().timeout(
+        _prefsTimeout,
+      );
       final raw = prefs.getString(_prefKey);
       if (raw == null || raw.isEmpty) return null;
       final map = jsonDecode(raw) as Map<String, dynamic>;
@@ -52,8 +59,9 @@ class UserProfileData {
   /// Loads the persisted UserModel from SharedPreferences.
   static Future<UserModel?> loadUser() async {
     try {
-      final prefs = await SharedPreferences.getInstance()
-          .timeout(const Duration(seconds: 1));
+      final prefs = await SharedPreferences.getInstance().timeout(
+        _prefsTimeout,
+      );
       final raw = prefs.getString(_prefKey);
       if (raw == null || raw.isEmpty) return null;
       final map = jsonDecode(raw) as Map<String, dynamic>;
@@ -66,8 +74,9 @@ class UserProfileData {
   /// Clears stored user session from SharedPreferences on logout.
   static Future<void> clear() async {
     try {
-      final prefs = await SharedPreferences.getInstance()
-          .timeout(const Duration(seconds: 1));
+      final prefs = await SharedPreferences.getInstance().timeout(
+        _prefsTimeout,
+      );
       await prefs.remove(_prefKey);
     } catch (_) {}
   }
@@ -75,7 +84,9 @@ class UserProfileData {
   factory UserProfileData.fromUserModel(UserModel user) {
     return UserProfileData(
       name: user.name.isNotEmpty ? user.name : user.username,
-      initials: computeInitials(user.name.isNotEmpty ? user.name : user.username),
+      initials: computeInitials(
+        user.name.isNotEmpty ? user.name : user.username,
+      ),
       phone: user.phone ?? '',
       email: user.email,
       role: user.role.isNotEmpty ? user.role : user.userType,
@@ -119,4 +130,3 @@ class UserProfileData {
     );
   }
 }
-

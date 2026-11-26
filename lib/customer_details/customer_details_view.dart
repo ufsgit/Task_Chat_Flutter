@@ -2,7 +2,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:lottie/lottie.dart';
-import 'package:share_plus/share_plus.dart';
 import '../api/document_upload_service.dart';
 import '../core/widgets/app_pill_notification.dart';
 import '../core/widgets/circular_back_button.dart';
@@ -197,6 +196,11 @@ class _CustomerDetailsViewState extends State<CustomerDetailsView> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
+            style: TextButton.styleFrom(
+              foregroundColor: Theme.of(ctx).brightness == Brightness.dark
+                  ? const Color(0xFF94A3B8)
+                  : const Color(0xFF64748B),
+            ),
             child: const Text(
               'Cancel',
               style: TextStyle(fontFamily: 'Helvetica Neue'),
@@ -246,6 +250,7 @@ class _CustomerDetailsViewState extends State<CustomerDetailsView> {
         phoneNumber: result.phoneNumber,
         address: result.address,
         notes: result.notes,
+        mapLink: result.mapLink,
         documents: result.documents,
       );
 

@@ -312,6 +312,7 @@ class CoordinatorUpdateStatusLogic {
     String? districtName,
     bool? isFollowUp,
     List<String>? documents,
+    void Function(bool documentsSucceeded)? onDocumentsSyncResult,
   }) async {
     final isTest = TokenStorage.isTestEnvironment;
 
@@ -369,6 +370,7 @@ class CoordinatorUpdateStatusLogic {
       effectiveDate: effectiveDate,
       notes: notes,
       documents: documents,
+      onDocumentsSyncResult: onDocumentsSyncResult,
     );
   }
 }

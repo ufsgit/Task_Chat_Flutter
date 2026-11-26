@@ -47,6 +47,7 @@ Future<bool> executeStatusUpdateSubmit({
   required String effectiveDate,
   required String notes,
   List<String>? documents,
+  void Function(bool documentsSucceeded)? onDocumentsSyncResult,
 }) async {
   final response = await client
       .post(
@@ -58,16 +59,21 @@ Future<bool> executeStatusUpdateSubmit({
 
   if (response.statusCode >= 200 && response.statusCode < 300) {
     if (documents != null && !listEquals(documents, customer.documents)) {
+      var docsOk = false;
       try {
         final bookingUri = Uri.parse('${ApiConfig.bookings}/${customer.id}');
-        await client
+        final putResponse = await client
             .put(
               bookingUri,
               headers: headers,
               body: jsonEncode({'documents': documents}),
             )
             .timeout(const Duration(seconds: 10));
-      } catch (_) {}
+        docsOk = putResponse.statusCode >= 200 && putResponse.statusCode < 300;
+      } catch (_) {
+        docsOk = false;
+      }
+      onDocumentsSyncResult?.call(docsOk);
     }
 
     updateChatItemStatus(

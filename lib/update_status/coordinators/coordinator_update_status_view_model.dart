@@ -279,9 +279,8 @@ class CoordinatorUpdateStatusViewModel extends ChangeNotifier {
     }
   }
 
-  List<String> get availableOptions => _statusChips.isNotEmpty
-      ? statusChips.map((c) => c.label).toList()
-      : getAvailableStatusOptions(hasBeenScheduled: _hasBeenScheduled);
+  List<String> get availableOptions =>
+      statusChips.map((c) => c.label).toList();
 
   /// Loads status filter chips from GET /api/status.
   Future<void> loadStatusChips() async {
@@ -394,6 +393,15 @@ class CoordinatorUpdateStatusViewModel extends ChangeNotifier {
   Future<bool> saveStatus(BuildContext context) async {
     if (_isSaving) return false;
 
+    if (availableOptions.isEmpty) {
+      _errorMessage = 'No status available from server';
+      if (context.mounted) {
+        AppNotification.showError(context, _errorMessage!);
+      }
+      notifyListeners();
+      return false;
+    }
+
     if (_selectedStatus.toLowerCase() == 'completed') {
       _scheduleDate = formatCurrentDate();
     } else if (showSchedule && _scheduleDate.trim().isEmpty) {
@@ -409,6 +417,7 @@ class CoordinatorUpdateStatusViewModel extends ChangeNotifier {
     _errorMessage = null;
     notifyListeners();
 
+    bool? documentsSyncOk;
     try {
       final selectedBm = selectedBranchHead;
       final bmId = selectedBm?.id ?? customer.branchHeadId;
@@ -427,6 +436,7 @@ class CoordinatorUpdateStatusViewModel extends ChangeNotifier {
         districtName: districtName,
         isFollowUp: selectedStatusChip?.isFollowUp,
         documents: _documents,
+        onDocumentsSyncResult: (ok) => documentsSyncOk = ok,
       );
 
       if (success) {
@@ -437,6 +447,22 @@ class CoordinatorUpdateStatusViewModel extends ChangeNotifier {
             customerName: customer.name,
             assignment: _selectedBranchManager,
           );
+          if (documentsSyncOk == false) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Failed to save documents on server'),
+                backgroundColor: Color(0xFFDC2626),
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          } else if (documentsSyncOk == true) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Documents updated successfully'),
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          }
         }
         _isSaving = false;
         notifyListeners();

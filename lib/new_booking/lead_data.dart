@@ -10,6 +10,7 @@ class LeadFormData {
   final int? districtId;
   final String? districtName;
   final String? district;
+  final String? mapLink;
   final List<String> documents;
 
   const LeadFormData({
@@ -23,6 +24,7 @@ class LeadFormData {
     this.districtId,
     this.districtName,
     this.district,
+    this.mapLink,
     this.documents = const [],
   });
 
@@ -37,6 +39,7 @@ class LeadFormData {
     int? districtId,
     String? districtName,
     String? district,
+    String? mapLink,
     List<String>? documents,
   }) {
     return LeadFormData(
@@ -50,6 +53,7 @@ class LeadFormData {
       districtId: districtId ?? this.districtId,
       districtName: districtName ?? this.districtName,
       district: district ?? this.district,
+      mapLink: mapLink ?? this.mapLink,
       documents: documents ?? this.documents,
     );
   }
@@ -59,6 +63,7 @@ class LeadFormData {
         (districtName != null && districtName!.isNotEmpty)
         ? districtName
         : district;
+    final trimmedMapLink = mapLink?.trim();
 
     return {
       'name': name,
@@ -73,6 +78,10 @@ class LeadFormData {
           effectiveDistrictName.isNotEmpty) ...{
         'districtName': effectiveDistrictName,
         'district': effectiveDistrictName,
+      },
+      if (trimmedMapLink != null && trimmedMapLink.isNotEmpty) ...{
+        'mapLink': trimmedMapLink,
+        'map_link': trimmedMapLink,
       },
       'documents': documents,
     };
@@ -109,6 +118,7 @@ class LeadFormData {
           json['districtName']?.toString() ?? json['district']?.toString(),
       district:
           json['district']?.toString() ?? json['districtName']?.toString(),
+      mapLink: json['mapLink']?.toString() ?? json['map_link']?.toString(),
       documents: docsList,
     );
   }

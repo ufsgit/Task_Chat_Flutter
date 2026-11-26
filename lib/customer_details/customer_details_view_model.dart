@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -11,7 +10,6 @@ import '../login_page/token_storage.dart';
 import '../today/today_model.dart';
 import '../update_status/status_update_result.dart';
 import 'customer_details_model.dart';
-import 'widgets/customer_header_card.dart';
 
 /// Represents a brochure document returned by `/api/brochures`.
 class BrochureItem {
@@ -155,6 +153,7 @@ class CustomerDetailsViewModel extends ChangeNotifier {
     String? address,
     String? notes,
     String? status,
+    String? mapLink,
     List<String>? documents,
   }) async {
     _isUpdating = true;
@@ -176,6 +175,8 @@ class CustomerDetailsViewModel extends ChangeNotifier {
               : customer.addressLine1);
       final updatedNotes = notes ?? customer.notes;
       final updatedStatus = status ?? customer.status;
+      final updatedMapLink =
+          mapLink != null ? mapLink.trim() : (customer.mapLink ?? '');
       final updatedDocs = documents ?? customer.documents;
 
       final body = jsonEncode({
@@ -184,6 +185,10 @@ class CustomerDetailsViewModel extends ChangeNotifier {
         'address': updatedAddress,
         'notes': updatedNotes,
         'status': updatedStatus.toUpperCase(),
+        if (updatedMapLink.isNotEmpty || mapLink != null) ...{
+          'mapLink': updatedMapLink,
+          'map_link': updatedMapLink,
+        },
         'documents': updatedDocs,
       });
 
@@ -199,6 +204,7 @@ class CustomerDetailsViewModel extends ChangeNotifier {
           addressLine2: '',
           notes: updatedNotes,
           status: updatedStatus,
+          mapLink: updatedMapLink,
           documents: updatedDocs,
         );
         notifyListeners();
@@ -340,7 +346,12 @@ class CustomerDetailsViewModel extends ChangeNotifier {
     } catch (_) {}
 
     try {
-      await Share.share(text, subject: 'Customer Details - ${customer.name}');
+      await SharePlus.instance.share(
+        ShareParams(
+          text: text,
+          subject: 'Customer Details - ${customer.name}',
+        ),
+      );
       return true;
     } catch (_) {
       return false;
@@ -701,7 +712,9 @@ class CustomerDetailsViewModel extends ChangeNotifier {
       if (shareLauncher != null) {
         await shareLauncher(filesToShare, text: textWithLinks);
       } else {
-        await Share.shareXFiles(filesToShare, text: textWithLinks);
+        await SharePlus.instance.share(
+          ShareParams(files: filesToShare, text: textWithLinks),
+        );
       }
       return true;
     }
@@ -723,7 +736,9 @@ class CustomerDetailsViewModel extends ChangeNotifier {
     if (shareLauncher != null) {
       await shareLauncher([fileToShare], text: text);
     } else {
-      await Share.shareXFiles([fileToShare], text: text);
+      await SharePlus.instance.share(
+        ShareParams(files: [fileToShare], text: text),
+      );
     }
     return true;
   }

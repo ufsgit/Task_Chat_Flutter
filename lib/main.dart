@@ -32,34 +32,40 @@ void main() {
   // Mount UI immediately so the splash screen renders instantly on the 1st frame
   runApp(const FitmateApp());
 
-  // Initialize Firebase and notifications asynchronously in the background
-  _initServices();
+  // Defer heavy platform service init until after the 1st frame renders
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    _initServices();
+  });
 }
 
 Future<void> _initServices() async {
-  try {
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
-    NotificationService.navigatorKey = FitmateApp.navigatorKey;
-    await NotificationService.initialize();
-  } catch (e) {
-    debugPrint('>>> [Services Init Error] $e');
-  }
-
-  // Optimize for 120Hz high refresh rate display smoothness
-  try {
-    await DisplayModeService.enableHighRefreshRate();
-  } catch (e) {
-    debugPrint('>>> [DisplayMode Init Note] $e');
-  }
-
-  // Initialize global internet connectivity listener
-  try {
-    await ConnectivityService.instance.initialize();
-  } catch (e) {
-    debugPrint('>>> [ConnectivityService Init Error] $e');
-  }
+  await Future.wait([
+    () async {
+      try {
+        await Firebase.initializeApp(
+          options: DefaultFirebaseOptions.currentPlatform,
+        );
+        NotificationService.navigatorKey = FitmateApp.navigatorKey;
+        await NotificationService.initialize();
+      } catch (e) {
+        debugPrint('>>> [Services Init Error] $e');
+      }
+    }(),
+    () async {
+      try {
+        await DisplayModeService.enableHighRefreshRate();
+      } catch (e) {
+        debugPrint('>>> [DisplayMode Init Note] $e');
+      }
+    }(),
+    () async {
+      try {
+        await ConnectivityService.instance.initialize();
+      } catch (e) {
+        debugPrint('>>> [ConnectivityService Init Error] $e');
+      }
+    }(),
+  ]);
 }
 
 class FitmateApp extends StatelessWidget {

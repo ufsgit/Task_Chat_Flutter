@@ -160,6 +160,7 @@ class BranchManagerUpdateStatusLogic {
     required String notes,
     bool? isFollowUp,
     List<String>? documents,
+    void Function(bool documentsSucceeded)? onDocumentsSyncResult,
   }) async {
     final isTest = TokenStorage.isTestEnvironment;
 
@@ -206,6 +207,7 @@ class BranchManagerUpdateStatusLogic {
       effectiveDate: effectiveDate,
       notes: notes,
       documents: documents,
+      onDocumentsSyncResult: onDocumentsSyncResult,
     );
   }
 }

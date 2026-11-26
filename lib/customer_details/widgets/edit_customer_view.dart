@@ -8,6 +8,7 @@ import '../../core/widgets/document_preview_upload_page.dart';
 import '../../new_booking/widgets/lead_document_upload_card.dart';
 import '../../new_booking/widgets/lead_form_card.dart';
 import '../../new_booking/widgets/lead_labeled_row.dart';
+import '../../new_booking/widgets/location_link_card.dart';
 import '../customer_details_model.dart';
 
 /// Data returned when editing a customer is submitted.
@@ -16,6 +17,7 @@ class EditCustomerData {
   final String phoneNumber;
   final String address;
   final String notes;
+  final String? mapLink;
   final List<String> documents;
 
   const EditCustomerData({
@@ -23,6 +25,7 @@ class EditCustomerData {
     required this.phoneNumber,
     required this.address,
     required this.notes,
+    this.mapLink,
     this.documents = const [],
   });
 }
@@ -53,6 +56,7 @@ class _EditCustomerViewState extends State<EditCustomerView> {
   late final TextEditingController _phoneController;
   late final TextEditingController _addressController;
   late final TextEditingController _notesController;
+  late final TextEditingController _mapLinkController;
   late List<String> _documents;
   final bool _isUploadingDocument = false;
 
@@ -66,6 +70,8 @@ class _EditCustomerViewState extends State<EditCustomerView> {
         : widget.customer.addressLine1;
     _addressController = TextEditingController(text: initialAddress);
     _notesController = TextEditingController(text: widget.customer.notes);
+    _mapLinkController =
+        TextEditingController(text: widget.customer.mapLink ?? '');
     _documents = List<String>.from(widget.customer.documents);
   }
 
@@ -75,6 +81,7 @@ class _EditCustomerViewState extends State<EditCustomerView> {
     _phoneController.dispose();
     _addressController.dispose();
     _notesController.dispose();
+    _mapLinkController.dispose();
     super.dispose();
   }
 
@@ -92,6 +99,7 @@ class _EditCustomerViewState extends State<EditCustomerView> {
       phoneNumber: _phoneController.text.trim(),
       address: _addressController.text.trim(),
       notes: _notesController.text.trim(),
+      mapLink: _mapLinkController.text.trim(),
       documents: _documents,
     );
 
@@ -300,6 +308,10 @@ class _EditCustomerViewState extends State<EditCustomerView> {
                   ],
                 ),
               ),
+              const SizedBox(height: 14),
+
+              // 3b. Location Link Card (Manual link, Current Location, or Map Picker)
+              LocationLinkCard(controller: _mapLinkController),
               const SizedBox(height: 14),
 
               // 4. Attach Documents Card
