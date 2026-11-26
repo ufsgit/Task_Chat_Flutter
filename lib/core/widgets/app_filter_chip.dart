@@ -22,28 +22,25 @@ class AppFilterChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final redAccent = isDark ? AppDarkColors.primaryRed : AppColors.primaryRed;
 
     final chipBg = isSelected
-        ? (isDark ? AppColors.surfaceWhite : AppColors.chipPendingBg)
+        ? (isDark ? AppDarkColors.chipPendingBg : AppColors.chipPendingBg)
         : Colors.transparent;
 
-    final chipTextColor = isDark
-        ? (isSelected ? Colors.black : Colors.white)
-        : (isSelected
-              ? AppColors.chipPendingText
-              : AppColors.chipUnselectedText);
+    final chipTextColor = isSelected
+        ? (isDark ? AppDarkColors.offWhite : AppDarkColors.darkGrey)
+        : (isDark ? AppDarkColors.mutedSilver : AppColors.chipUnselectedText);
 
     final unselectedBorderColor = isDark
-        ? Colors.white.withValues(alpha: 0.35)
+        ? AppDarkColors.border
         : const Color(0xFFCBD5E1);
 
-    final selectedBorderColor = isDark
-        ? AppColors.surfaceWhite
-        : AppColors.brandGreen;
+    final selectedBorderColor = redAccent.withValues(alpha: isDark ? 0.40 : 0.30);
 
     final chipBorder = isSelected
-        ? Border.all(color: selectedBorderColor, width: 1.5)
-        : Border.all(color: unselectedBorderColor, width: 1.8);
+        ? Border.all(color: selectedBorderColor, width: 1.2)
+        : Border.all(color: unselectedBorderColor, width: 1.5);
 
     return GestureDetector(
       onTap: onTap,

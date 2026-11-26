@@ -6,30 +6,31 @@ import 'widgets/circular_back_button.dart';
 /// Contains only the colors actively used across the app.
 abstract final class AppColors {
   // ===========================================================================
-  // PRIMARY GREEN (ONE CENTRAL VARIABLE TO TEST DIFFERENT GREENS)
-  // Change this single color to change the green theme everywhere across the app!
+  // PRIMARY BRAND ACCENT (Light Red #FF6B6B)
   // ===========================================================================
-  static const Color primaryGreen = Color(0xFF16A34A);
+  static const Color primaryRed = Color(0xFFFF6B6B);
+  static const Color logoRed = Color(0xFFE51B23);
+  static const Color primaryGreen = primaryRed;
 
-  // --- Aliased Green Tokens (driven by primaryGreen) ---
-  static const Color brandGreen = primaryGreen;
-  static const Color whatsappGreen = primaryGreen;
+  // --- Aliased Accent Tokens (driven by primaryRed) ---
+  static const Color brandGreen = primaryRed;
+  static const Color whatsappGreen = primaryRed;
 
-  // --- Backgrounds & Surfaces ---
-  static const Color scaffoldBackground = surfaceWhite;
-  static const Color surfaceWhite = Colors.white;
-  static const Color surfaceGrey = Color(0xFFF1F5F9);
-  static const Color surfaceGreyLight = Color(0xFFF4F7FB);
+  // --- Backgrounds & Surfaces (Light Mode) ---
+  static const Color scaffoldBackground = Color(0xFFF6F7F9);
+  static const Color surfaceWhite = Color(0xFFFFFFFF);
+  static const Color surfaceGrey = Color(0xFFECEEF1);
+  static const Color surfaceGreyLight = Color(0xFFF2F3F4);
 
-  // --- Text & Neutral Colors (WhatsApp / Clean Slate Palette) ---
-  static const Color textPrimary = Color(0xFF111B21);
-  static const Color textSecondary = Color(0xFF334155);
-  static const Color textSubtitle = Color(0xFF667781);
-  static const Color textPlaceholder = Color(0xFF8696A0);
+  // --- Text & Neutral Colors ---
+  static const Color textPrimary = Color(0xFF191A1D);
+  static const Color textSecondary = Color(0xFF252629);
+  static const Color textSubtitle = Color(0xFF5E646D);
+  static const Color textPlaceholder = Color(0xFF8C929A);
 
   // --- Borders & Dividers ---
-  static const Color border = Color(0xFFE9EDEF);
-  static const Color divider = Color(0xFFE2E8F0);
+  static const Color border = Color(0xFFDDE0E5);
+  static const Color divider = Color(0xFFE5E7EB);
 
   // --- Status & Tag Colors ---
   // Cancelled / Red
@@ -38,7 +39,7 @@ abstract final class AppColors {
 
   // Completed / Green
   static const Color completedBg = Color(0xFFDCFCE7);
-  static const Color completedText = primaryGreen;
+  static const Color completedText = Color(0xFF16A34A);
 
   // New / Blue
   static const Color newBg = Color(0xFFDBEAFE);
@@ -55,19 +56,19 @@ abstract final class AppColors {
   static const Color scheduledText = Color(0xFFD97706);
 
   // Chips & Filters
-  static const Color chipPendingBg = Color(0xFFD4F4DD);
-  static const Color chipPendingText = primaryGreen;
-  static const Color chipUnselectedBg = Color(0xFFF1F5F9);
-  static const Color chipUnselectedText = Color(0xFF64748B);
+  static const Color chipPendingBg = Color(0x1AFF6B6B);
+  static const Color chipPendingText = primaryRed;
+  static const Color chipUnselectedBg = Color(0xFFECEEF1);
+  static const Color chipUnselectedText = Color(0xFF5E646D);
 
   // Avatar Accents & Badges
   static const Color purpleAvatarBg = Color(0xFFEDE9FE);
   static const Color purpleAvatarText = Color(0xFF7C3AED);
-  static const Color verifiedBadge = primaryGreen;
+  static const Color verifiedBadge = primaryRed;
 
   // Dropdowns & Menus
   static const Color dropdownBackground = Colors.white;
-  static const Color dropdownItemText = Color(0xFF111B21);
+  static const Color dropdownItemText = Color(0xFF191A1D);
 }
 
 /// Global theme data definitions for Fitmate.
@@ -188,7 +189,7 @@ abstract final class AppTheme {
     return ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
         backgroundColor: bgColor,
-        foregroundColor: Colors.white,
+        foregroundColor: AppDarkColors.deepCharcoal,
         elevation: 0,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         textStyle: const TextStyle(
@@ -264,9 +265,12 @@ abstract final class AppTheme {
         backgroundColor: AppColors.surfaceWhite,
         elevation: 0,
         scrolledUnderElevation: 0,
+        shape: Border(
+          bottom: BorderSide(color: AppColors.border, width: 1),
+        ),
         titleTextStyle: TextStyle(
           fontFamily: 'Helvetica Neue',
-          color: AppColors.brandGreen,
+          color: AppColors.textPrimary,
           fontSize: 20,
           fontWeight: FontWeight.w600,
           letterSpacing: -0.3,
@@ -340,10 +344,10 @@ abstract final class AppTheme {
       fontFamily: 'Helvetica Neue',
       brightness: Brightness.dark,
       colorScheme: const ColorScheme.dark(
-        primary: AppDarkColors.primaryGreen,
+        primary: AppDarkColors.primaryRed,
         surface: AppDarkColors.surfaceCard,
         onSurface: AppDarkColors.textPrimary,
-        onPrimary: Color(0xFF111B21),
+        onPrimary: AppDarkColors.deepCharcoal,
       ),
       useMaterial3: true,
       scaffoldBackgroundColor: AppDarkColors.scaffoldBackground,
@@ -355,9 +359,12 @@ abstract final class AppTheme {
         foregroundColor: AppDarkColors.textPrimary,
         elevation: 0,
         scrolledUnderElevation: 0,
+        shape: Border(
+          bottom: BorderSide(color: AppDarkColors.border, width: 1),
+        ),
         titleTextStyle: TextStyle(
           fontFamily: 'Helvetica Neue',
-          color: AppDarkColors.primaryGreen,
+          color: AppDarkColors.textPrimary,
           fontSize: 20,
           fontWeight: FontWeight.w600,
           letterSpacing: -0.3,
@@ -483,52 +490,60 @@ class AppScrollBehavior extends MaterialScrollBehavior {
   }
 }
 
-/// Sleek, eye-friendly Dark Mode Palette with balanced, non-glaring tones.
+/// Premium Dark Mode Palette inspired by the FM logo (Red, Charcoal & Silver).
 abstract final class AppDarkColors {
-  // Calmer, muted emerald green (less neon, avoids eye strain)
-  static const Color primaryGreen = Color(0xFF1EB759);
-  static const Color whatsappGreen = primaryGreen;
-  static const Color brandGreen = primaryGreen;
+  // Core FM Palette Tokens
+  static const Color primaryRed = Color(0xFFFF6B6B);
+  static const Color charcoal = Color(0xFF252629);
+  static const Color deepCharcoal = Color(0xFF191A1D);
+  static const Color offWhite = Color(0xFFF2F3F4);
+  static const Color mutedSilver = Color(0xFFAEB3B8);
+  static const Color darkGrey = Color(0xFF35373B);
 
-  // Backgrounds: Deep Midnight Charcoal & Soft Dark Surfaces
-  static const Color scaffoldBackground = Color(0xFF0F1115);
-  static const Color surface = Color(0xFF16191E);
-  static const Color surfaceCard = Color(0xFF16191E);
-  static const Color surfaceGrey = Color(0xFF16191E);
-  static const Color surfaceGreyLight = Color(0xFF1D222A);
-  static const Color surfaceSecondary = Color(0xFF101317);
+  // Aliased Brand Accent Tokens (driven by primaryRed)
+  static const Color primaryGreen = primaryRed;
+  static const Color whatsappGreen = primaryRed;
+  static const Color brandGreen = primaryRed;
 
-  // Text & Neutral Colors (Soft off-white to eliminate high-contrast halation)
-  static const Color textPrimary = Color(0xFFE2E8F0);
-  static const Color textSecondary = Color(0xFF94A3B8);
-  static const Color textSubtitle = Color(0xFF94A3B8);
-  static const Color textPlaceholder = Color(0xFF64748B);
+  // Backgrounds: Deep Charcoal -> Charcoal -> Dark Grey surface hierarchy
+  static const Color scaffoldBackground = deepCharcoal;
+  static const Color surface = charcoal;
+  static const Color surfaceCard = darkGrey;
+  static const Color surfaceGrey = darkGrey;
+  static const Color surfaceGreyLight = Color(0xFF3F4247);
+  static const Color surfaceSecondary = charcoal;
+
+  // Text & Neutral Colors (Off-white & Muted Silver)
+  static const Color textPrimary = offWhite;
+  static const Color textSecondary = mutedSilver;
+  static const Color textSubtitle = mutedSilver;
+  static const Color textPlaceholder = Color(0xFF7D838A);
 
   // Borders & Dividers
-  static const Color border = Color(0xFF22262E);
-  static const Color divider = Color(0xFF1E222A);
+  static const Color border = Color(0xFF45484E);
+  static const Color divider = Color(0xFF2E3035);
 
-  // Status & Badges (Muted tones instead of harsh saturated neons)
-  static const Color completedBg = Color(0xFF0A2018);
-  static const Color completedText = primaryGreen;
-  static const Color cancelledBg = Color(0xFF2B1417);
-  static const Color cancelledText = Color(0xFFE05D5D);
-  static const Color newBg = Color(0xFF0F1D33);
-  static const Color newText = Color(0xFF5B9EEA);
-  static const Color inProgressBg = Color(0xFF0F1D33);
-  static const Color inProgressText = Color(0xFF5B9EEA);
-  static const Color scheduledBg = Color(0xFF291B0C);
-  static const Color scheduledText = Color(0xFFDE9B2E);
+  // Status & Badges (Restrained, readable tones)
+  static const Color completedBg = Color(0xFF162B22);
+  static const Color completedText = Color(0xFF34D399);
+  static const Color cancelledBg = Color(0xFF361D20);
+  static const Color cancelledText = Color(0xFFF87171);
+  static const Color newBg = Color(0xFF1A283E);
+  static const Color newText = Color(0xFF60A5FA);
+  static const Color inProgressBg = Color(0xFF1A283E);
+  static const Color inProgressText = Color(0xFF60A5FA);
+  static const Color scheduledBg = Color(0xFF332615);
+  static const Color scheduledText = Color(0xFFFBBF24);
 
   // Chips & Avatar backgrounds
-  static const Color chipPendingBg = Color(0xFF0A2018);
-  static const Color pillActiveBg = Color(0xFF0A2018);
-  static const Color chipPendingText = primaryGreen;
-  static const Color chipUnselectedBg = Color(0xFF16191E);
-  static const Color chipUnselectedText = Color(0xFF94A3B8);
+  static const Color chipPendingBg = Color(0x24FF6B6B);
+  static const Color pillActiveBg = Color(0x24FF6B6B);
+  static const Color chipPendingText = primaryRed;
+  static const Color chipUnselectedBg = charcoal;
+  static const Color chipUnselectedText = mutedSilver;
 
   // Dropdowns & Dialogs
-  static const Color dropdownBackground = Color(0xFF16191E);
+  static const Color dropdownBackground = charcoal;
   static const Color dropdownItemText = textPrimary;
 }
 
@@ -550,7 +565,7 @@ class AppThemeColors {
   Color get surfaceGrey =>
       isDark ? AppDarkColors.surfaceGrey : AppColors.surfaceGrey;
   Color get avatarBg =>
-      isDark ? AppDarkColors.chipPendingBg : const Color(0xFFD3F9E0);
+      isDark ? AppDarkColors.chipPendingBg : AppColors.chipPendingBg;
 
   // Text & Neutral Colors
   Color get textPrimary =>
@@ -574,7 +589,7 @@ class AppThemeColors {
   Color get brandGreen =>
       isDark ? AppDarkColors.brandGreen : AppColors.brandGreen;
   Color get pillActiveBg =>
-      isDark ? AppDarkColors.pillActiveBg : const Color(0xFFE7FCE3);
+      isDark ? AppDarkColors.pillActiveBg : AppColors.chipPendingBg;
 
   // Status Badges & Chips
   Color get completedBg =>

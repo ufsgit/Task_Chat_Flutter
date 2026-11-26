@@ -18,7 +18,7 @@ void main() {
     DeviceOrientation.portraitDown,
   ]);
 
-  // Configure modern edge-to-edge transparent system overlay for mobile
+  // Configure modern edge-to-edge transparent system overlay for light-first mobile UI
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,

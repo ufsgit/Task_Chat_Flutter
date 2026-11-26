@@ -128,6 +128,7 @@ void main() {
         home: SplashScreen(
           tokenStorage: tokenStorage,
           client: mockClient,
+          homeBuilder: (_, _) => const SizedBox.shrink(),
         ),
       ),
     );

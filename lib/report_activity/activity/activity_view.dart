@@ -90,7 +90,7 @@ class _ActivityViewState extends State<ActivityView> {
 
   Widget _buildScrollToTopButton(bool isDark) {
     final btnBg = isDark ? AppDarkColors.whatsappGreen : AppColors.primaryGreen;
-    final iconColor = isDark ? const Color(0xFF06140D) : Colors.white;
+    final iconColor = isDark ? AppDarkColors.offWhite : Colors.white;
 
     return AnimatedScale(
       key: const Key('activity_scroll_to_top_button'),

@@ -83,58 +83,61 @@ class _SplashScreenState extends State<SplashScreen>
     if (!mounted) return;
 
     if (token != null && token.isNotEmpty) {
-      // Validate session with Checkvalid API on app start
+      if (user != null) {
+        // Cached session exists: open HomePage immediately and revalidate in background
+        final navigator = Navigator.of(context);
+        unawaited(
+          NotificationService.registerDeviceWithBackend(jwtToken: token),
+        );
+        navigator.pushReplacement(
+          MaterialPageRoute(
+            builder: (ctx) => widget.homeBuilder != null
+                ? widget.homeBuilder!(ctx, user)
+                : HomePage(
+                    isCoordinator: user?.isCoordinator ?? false,
+                    user: user,
+                  ),
+          ),
+        );
+        unawaited(
+          _validateSessionInBackground(
+            token: token,
+            tokenStorage: tokenStorage,
+            navigator: navigator,
+          ),
+        );
+        return;
+      }
+
+      // No cached profile yet: validate session with Checkvalid API before entering HomePage
       final client = widget.client ?? http.Client();
       final isInternalClient = widget.client == null;
 
       try {
-        final authHeader =
-            token.startsWith('Bearer ') ? token : 'Bearer $token';
-        final response = await client.get(
-          Uri.parse(ApiConfig.Checkvalid),
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'Authorization': authHeader,
-          },
-        ).timeout(const Duration(seconds: 8));
+        final authHeader = token.startsWith('Bearer ')
+            ? token
+            : 'Bearer $token';
+        final response = await client
+            .get(
+              Uri.parse(ApiConfig.Checkvalid),
+              headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'Authorization': authHeader,
+              },
+            )
+            .timeout(const Duration(seconds: 5));
 
         if (response.statusCode == 200) {
-          if (response.body.isNotEmpty) {
-            try {
-              final decoded = jsonDecode(response.body);
-              if (decoded is Map<String, dynamic>) {
-                final userMap = decoded['user'] is Map<String, dynamic>
-                    ? decoded['user'] as Map<String, dynamic>
-                    : (decoded['data'] is Map<String, dynamic>
-                        ? (decoded['data']['user'] is Map<String, dynamic>
-                            ? decoded['data']['user'] as Map<String, dynamic>
-                            : decoded['data'] as Map<String, dynamic>)
-                        : decoded);
-
-                if (userMap.containsKey('id') ||
-                    userMap.containsKey('username')) {
-                  user = UserModel.fromJson(userMap);
-                  await UserProfileData.save(user);
-                }
-
-                final refreshedToken = decoded['sessionToken']?.toString() ??
-                    decoded['token']?.toString() ??
-                    decoded['access_token']?.toString() ??
-                    (decoded['data'] is Map<String, dynamic>
-                        ? (decoded['data']['sessionToken']?.toString() ??
-                            decoded['data']['token']?.toString() ??
-                            decoded['data']['access_token']?.toString())
-                        : null);
-
-                if (refreshedToken != null && refreshedToken.isNotEmpty) {
-                  token = refreshedToken;
-                  await tokenStorage.savetoken(refreshedToken);
-                }
-              }
-            } catch (_) {
-              // Non-fatal parse issue, proceed with cached user if present
-            }
+          final parsed = _parseCheckvalidResponse(response.body);
+          if (parsed.user != null) {
+            user = parsed.user;
+            await UserProfileData.save(user!);
+          }
+          if (parsed.refreshedToken != null &&
+              parsed.refreshedToken!.isNotEmpty) {
+            token = parsed.refreshedToken!;
+            await tokenStorage.savetoken(token);
           }
 
           unawaited(
@@ -153,7 +156,6 @@ class _SplashScreenState extends State<SplashScreen>
           );
           return;
         } else if (response.statusCode == 401 || response.statusCode == 403) {
-          // Token is invalid/expired or user is inactive/deleted
           await tokenStorage.deleteToken();
           await UserProfileData.clear();
           if (!mounted) return;
@@ -161,45 +163,9 @@ class _SplashScreenState extends State<SplashScreen>
             MaterialPageRoute(builder: (_) => const LoginPage()),
           );
           return;
-        } else {
-          // Server error (e.g. 500, 502): fallback to cached profile if available
-          if (user != null) {
-            unawaited(
-              NotificationService.registerDeviceWithBackend(jwtToken: token),
-            );
-            if (!mounted) return;
-            Navigator.of(context).pushReplacement(
-              MaterialPageRoute(
-                builder: (ctx) => widget.homeBuilder != null
-                    ? widget.homeBuilder!(ctx, user)
-                    : HomePage(
-                        isCoordinator: user?.isCoordinator ?? false,
-                        user: user,
-                      ),
-              ),
-            );
-            return;
-          }
         }
       } catch (_) {
-        // Network offline/timeout: allow offline access if cached profile exists
-        if (user != null) {
-          unawaited(
-            NotificationService.registerDeviceWithBackend(jwtToken: token),
-          );
-          if (!mounted) return;
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(
-              builder: (ctx) => widget.homeBuilder != null
-                  ? widget.homeBuilder!(ctx, user)
-                  : HomePage(
-                        isCoordinator: user?.isCoordinator ?? false,
-                        user: user,
-                      ),
-            ),
-          );
-          return;
-        }
+        // Network offline/timeout with no cached user: fall through to LoginPage
       } finally {
         if (isInternalClient) {
           client.close();
@@ -213,6 +179,92 @@ class _SplashScreenState extends State<SplashScreen>
     ).pushReplacement(MaterialPageRoute(builder: (_) => const LoginPage()));
   }
 
+  Future<void> _validateSessionInBackground({
+    required String token,
+    required TokenStorage tokenStorage,
+    required NavigatorState navigator,
+  }) async {
+    final client = widget.client ?? http.Client();
+    final isInternalClient = widget.client == null;
+    try {
+      final authHeader = token.startsWith('Bearer ') ? token : 'Bearer $token';
+      final response = await client
+          .get(
+            Uri.parse(ApiConfig.Checkvalid),
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+              'Authorization': authHeader,
+            },
+          )
+          .timeout(const Duration(seconds: 8));
+
+      if (response.statusCode == 200) {
+        final parsed = _parseCheckvalidResponse(response.body);
+        if (parsed.user != null) {
+          await UserProfileData.save(parsed.user!);
+        }
+        if (parsed.refreshedToken != null &&
+            parsed.refreshedToken!.isNotEmpty) {
+          await tokenStorage.savetoken(parsed.refreshedToken!);
+        }
+      } else if (response.statusCode == 401 || response.statusCode == 403) {
+        await tokenStorage.deleteToken();
+        await UserProfileData.clear();
+        if (navigator.mounted) {
+          navigator.pushAndRemoveUntil(
+            MaterialPageRoute(builder: (_) => const LoginPage()),
+            (_) => false,
+          );
+        }
+      }
+    } catch (_) {
+      // Offline / transient error: keep user on HomePage with cached session
+    } finally {
+      if (isInternalClient) {
+        client.close();
+      }
+    }
+  }
+
+  ({UserModel? user, String? refreshedToken}) _parseCheckvalidResponse(
+    String body,
+  ) {
+    if (body.isEmpty) return (user: null, refreshedToken: null);
+    try {
+      final decoded = jsonDecode(body);
+      if (decoded is! Map<String, dynamic>) {
+        return (user: null, refreshedToken: null);
+      }
+      final userMap = decoded['user'] is Map<String, dynamic>
+          ? decoded['user'] as Map<String, dynamic>
+          : (decoded['data'] is Map<String, dynamic>
+                ? (decoded['data']['user'] is Map<String, dynamic>
+                      ? decoded['data']['user'] as Map<String, dynamic>
+                      : decoded['data'] as Map<String, dynamic>)
+                : decoded);
+
+      UserModel? parsedUser;
+      if (userMap.containsKey('id') || userMap.containsKey('username')) {
+        parsedUser = UserModel.fromJson(userMap);
+      }
+
+      final refreshedToken =
+          decoded['sessionToken']?.toString() ??
+          decoded['token']?.toString() ??
+          decoded['access_token']?.toString() ??
+          (decoded['data'] is Map<String, dynamic>
+              ? (decoded['data']['sessionToken']?.toString() ??
+                    decoded['data']['token']?.toString() ??
+                    decoded['data']['access_token']?.toString())
+              : null);
+
+      return (user: parsedUser, refreshedToken: refreshedToken);
+    } catch (_) {
+      return (user: null, refreshedToken: null);
+    }
+  }
+
   @override
   void dispose() {
     _timer?.cancel();
@@ -222,8 +274,11 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: isDark
+          ? AppDarkColors.scaffoldBackground
+          : AppColors.scaffoldBackground,
       body: SafeArea(
         child: SizedBox.expand(
           child: Column(
@@ -243,12 +298,14 @@ class _SplashScreenState extends State<SplashScreen>
                       const SizedBox(height: 24),
 
                       // Brand Name
-                      const Text(
+                      Text(
                         'Fitmate',
                         style: TextStyle(
                           fontSize: 32,
                           fontWeight: FontWeight.w800,
-                          color: Color(0xFF0B192C),
+                          color: isDark
+                              ? AppDarkColors.textPrimary
+                              : AppColors.textPrimary,
                           letterSpacing: -0.8,
                         ),
                       ),
@@ -272,11 +329,13 @@ class _SplashScreenState extends State<SplashScreen>
                         width: 44,
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(4),
-                          child: const LinearProgressIndicator(
+                          child: LinearProgressIndicator(
                             minHeight: 3.5,
-                            backgroundColor: Color(0xFFD3F9E0),
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              AppColors.primaryGreen,
+                            backgroundColor: isDark
+                                ? AppDarkColors.pillActiveBg
+                                : AppColors.chipPendingBg,
+                            valueColor: const AlwaysStoppedAnimation<Color>(
+                              AppColors.primaryRed,
                             ),
                           ),
                         ),

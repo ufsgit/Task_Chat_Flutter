@@ -223,38 +223,29 @@ class _FloatingBottomBarState extends State<FloatingBottomBar> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final barBg = isDark ? AppDarkColors.surfaceCard : AppColors.surfaceWhite;
     final barBorder = isDark ? AppDarkColors.border : AppColors.border;
-    final activePillDecoration = isDark
-        ? BoxDecoration(
-            borderRadius: BorderRadius.circular(22),
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                Colors.white.withValues(alpha: 0.18),
-                Colors.white.withValues(alpha: 0.08),
-              ],
-            ),
-            border: Border.all(
-              color: Colors.white.withValues(alpha: 0.22),
-              width: 1.0,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.15),
-                blurRadius: 6,
-                offset: const Offset(0, 2),
-              ),
-              BoxShadow(
-                color: Colors.white.withValues(alpha: 0.04),
-                blurRadius: 4,
-                offset: const Offset(0, -1),
-              ),
-            ],
-          )
-        : BoxDecoration(
-            color: AppColors.completedBg,
-            borderRadius: BorderRadius.circular(22),
-          );
+    final pillColor = isDark ? AppDarkColors.primaryRed : AppColors.primaryRed;
+    final activePillDecoration = BoxDecoration(
+      borderRadius: BorderRadius.circular(22),
+      gradient: LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [
+          pillColor.withValues(alpha: isDark ? 0.20 : 0.14),
+          pillColor.withValues(alpha: isDark ? 0.08 : 0.06),
+        ],
+      ),
+      border: Border.all(
+        color: pillColor.withValues(alpha: isDark ? 0.30 : 0.22),
+        width: 1.0,
+      ),
+      boxShadow: [
+        BoxShadow(
+          color: pillColor.withValues(alpha: isDark ? 0.12 : 0.06),
+          blurRadius: 8,
+          offset: const Offset(0, 2),
+        ),
+      ],
+    );
 
     return SafeArea(
       top: false,
@@ -307,7 +298,7 @@ class _FloatingBottomBarState extends State<FloatingBottomBar> {
                 },
                 child: Stack(
                   children: [
-                    // Sliding pill background involving both the icon and the label
+                    // Sliding glass pill background involving both the icon and the label
                     AnimatedPositioned(
                       duration: const Duration(milliseconds: 220),
                       curve: Curves.easeOutCubic,
@@ -315,17 +306,13 @@ class _FloatingBottomBarState extends State<FloatingBottomBar> {
                       top: 4,
                       bottom: 4,
                       width: slotWidth - 8,
-                      child: isDark
-                          ? ClipRRect(
-                              borderRadius: BorderRadius.circular(22),
-                              child: BackdropFilter(
-                                filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-                                child: Container(
-                                  decoration: activePillDecoration,
-                                ),
-                              ),
-                            )
-                          : Container(decoration: activePillDecoration),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(22),
+                        child: BackdropFilter(
+                          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                          child: Container(decoration: activePillDecoration),
+                        ),
+                      ),
                     ),
 
                     // Items layer: Icon on top, Label underneath
@@ -386,9 +373,9 @@ class _FloatingBottomBarState extends State<FloatingBottomBar> {
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isSelected = _activeDisplayIndex == index;
-    final activeColor = isDark
-        ? AppDarkColors.primaryGreen
-        : AppColors.primaryGreen;
+    final selectedColor = isDark
+        ? AppDarkColors.offWhite
+        : AppDarkColors.darkGrey;
     final inactiveColor = isDark
         ? AppDarkColors.textSubtitle
         : AppColors.textSubtitle;
@@ -399,7 +386,11 @@ class _FloatingBottomBarState extends State<FloatingBottomBar> {
         mainAxisSize: MainAxisSize.min,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, size: 21, color: isSelected ? activeColor : inactiveColor),
+          Icon(
+            icon,
+            size: 21,
+            color: isSelected ? selectedColor : inactiveColor,
+          ),
           const SizedBox(height: 3),
           AnimatedDefaultTextStyle(
             duration: const Duration(milliseconds: 180),
@@ -407,9 +398,7 @@ class _FloatingBottomBarState extends State<FloatingBottomBar> {
               fontFamily: 'Helvetica Neue',
               fontSize: 11.5,
               fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-              color: isSelected
-                  ? (isDark ? AppDarkColors.textPrimary : activeColor)
-                  : inactiveColor,
+              color: isSelected ? selectedColor : inactiveColor,
               letterSpacing: -0.2,
             ),
             child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),

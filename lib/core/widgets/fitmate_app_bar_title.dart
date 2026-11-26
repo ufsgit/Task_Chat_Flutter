@@ -22,18 +22,23 @@ class FitmateAppBarTitle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final defaultColor = isDark ? AppDarkColors.textPrimary : AppColors.brandGreen;
+    final defaultColor = isDark
+        ? AppDarkColors.textPrimary
+        : AppColors.textPrimary;
     final textColor = color ?? defaultColor;
 
     return Row(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Image.asset(
-          'assets/images/fitmate_app_logo.png',
-          width: logoSize,
-          height: logoSize,
-          fit: BoxFit.contain,
+        ClipRRect(
+          borderRadius: BorderRadius.circular(logoSize * 0.25),
+          child: Image.asset(
+            'assets/images/fitmate_logo.jpg',
+            width: logoSize,
+            height: logoSize,
+            fit: BoxFit.cover,
+          ),
         ),
         SizedBox(width: spacing),
         Text(

@@ -507,17 +507,17 @@ class CustomerHeaderCard extends StatelessWidget {
     final Color borderColor;
 
     if (isPrimary) {
-      bgColor = isDark ? AppDarkColors.whatsappGreen : AppColors.whatsappGreen;
-      fgColor = isDark ? const Color(0xFF06140D) : Colors.white;
-      iconColor = isDark ? const Color(0xFF06140D) : Colors.white;
+      bgColor = isDark ? AppDarkColors.primaryRed : AppColors.primaryRed;
+      fgColor = AppDarkColors.deepCharcoal;
+      iconColor = AppDarkColors.deepCharcoal;
       borderColor = Colors.transparent;
     } else {
       bgColor = isDark
           ? AppDarkColors.surfaceSecondary
-          : const Color(0xFFF0FDF4);
-      fgColor = isDark ? Colors.white : AppColors.primaryGreen;
-      iconColor = isDark ? AppDarkColors.whatsappGreen : AppColors.primaryGreen;
-      borderColor = isDark ? AppDarkColors.border : const Color(0xFFDCFCE7);
+          : AppColors.surfaceGreyLight;
+      fgColor = isDark ? AppDarkColors.offWhite : AppColors.textPrimary;
+      iconColor = isDark ? AppDarkColors.offWhite : AppColors.textPrimary;
+      borderColor = isDark ? AppDarkColors.border : AppColors.border;
     }
 
     return Material(

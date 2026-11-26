@@ -141,7 +141,7 @@ class _CoordinatorViewState extends State<CoordinatorView> {
 
   Widget _buildScrollToTopButton(bool isDark) {
     final btnBg = isDark ? AppDarkColors.whatsappGreen : AppColors.primaryGreen;
-    final iconColor = isDark ? const Color(0xFF06140D) : Colors.white;
+    final iconColor = isDark ? AppDarkColors.offWhite : Colors.white;
 
     return AnimatedScale(
       key: const Key('coordinator_scroll_to_top_button'),
@@ -326,15 +326,29 @@ class _CoordinatorViewState extends State<CoordinatorView> {
                               alignment: Alignment.center,
                               decoration: BoxDecoration(
                                 color: _viewModel.hasActiveFilters
-                                    ? AppColors.chipPendingBg
-                                    : AppColors.surfaceGrey,
+                                    ? (isDark
+                                          ? AppDarkColors.chipPendingBg
+                                          : AppColors.chipPendingBg)
+                                    : (isDark
+                                          ? AppDarkColors.surfaceCard
+                                          : AppColors.surfaceGrey),
                                 borderRadius: BorderRadius.circular(24),
                                 border: _viewModel.hasActiveFilters
                                     ? Border.all(
-                                        color: AppColors.brandGreen,
-                                        width: 1.5,
+                                        color: (isDark
+                                                ? AppDarkColors.primaryRed
+                                                : AppColors.primaryRed)
+                                            .withValues(
+                                              alpha: isDark ? 0.40 : 0.30,
+                                            ),
+                                        width: 1.2,
                                       )
-                                    : null,
+                                    : (isDark
+                                          ? Border.all(
+                                              color: AppDarkColors.border,
+                                              width: 1,
+                                            )
+                                          : null),
                               ),
                               child: Stack(
                                 clipBehavior: Clip.none,

@@ -37,8 +37,8 @@ class CustomerDocumentsCard extends StatelessWidget {
         ? AppDarkColors.textSubtitle
         : AppColors.textSubtitle;
     final greenColor = isDark
-        ? AppDarkColors.whatsappGreen
-        : const Color(0xFF16A34A);
+        ? AppDarkColors.primaryRed
+        : AppColors.primaryRed;
 
     return Container(
       width: double.infinity,

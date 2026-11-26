@@ -102,20 +102,20 @@ flutter_launcher_icons:
   android: true
   ios: true
   remove_alpha_ios: true
-  image_path: "assets/images/app_logo.png"
+  image_path: "assets/images/fitmate_logo.jpg"
   min_sdk_android: 21
-  adaptive_icon_background: "#D3F9E0"
-  adaptive_icon_foreground: "assets/images/app_logo_foreground.png"
+  adaptive_icon_background: "#000000"
+  adaptive_icon_foreground: "assets/images/fitmate_logo.jpg"
   web:
     generate: true
-    image_path: "assets/images/app_logo.png"
-    background_color: "#D3F9E0"
-    theme_color: "#16A34A"
+    image_path: "assets/images/fitmate_logo.jpg"
+    background_color: "#000000"
+    theme_color: "#000000"
   windows:
     generate: true
-    image_path: "assets/images/app_logo.png"
+    image_path: "assets/images/fitmate_logo.jpg"
     icon_size: 256
   macos:
     generate: true
-    image_path: "assets/images/app_logo.png"
+    image_path: "assets/images/fitmate_logo.jpg"
 

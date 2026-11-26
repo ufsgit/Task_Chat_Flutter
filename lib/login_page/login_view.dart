@@ -81,7 +81,7 @@ class _LoginPageState extends State<LoginPage> {
     final primaryGreen = isDark
         ? AppDarkColors.whatsappGreen
         : AppColors.whatsappGreen;
-    final btnTextColor = isDark ? const Color(0xFF06140D) : Colors.white;
+    final btnTextColor = isDark ? AppDarkColors.offWhite : Colors.white;
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,

@@ -261,7 +261,7 @@ class DashboardModel {
       iconBgColor: const Color(0xFF1D61E7),
       iconColor: const Color(0xFFA3E635),
       cardBgColor: const Color(0xFFF2F7FE),
-      darkCardBgColor: const Color.fromARGB(255, 36, 36, 41),
+      darkCardBgColor: const Color(0xFF35373B),
     );
   }
 
@@ -275,7 +275,7 @@ class DashboardModel {
       iconBgColor: const Color.fromARGB(255, 109, 19, 211),
       iconColor: Colors.purple,
       cardBgColor: const Color.fromARGB(255, 235, 225, 243),
-      darkCardBgColor: const Color.fromARGB(255, 36, 36, 41),
+      darkCardBgColor: const Color(0xFF35373B),
     );
   }
 
@@ -289,7 +289,7 @@ class DashboardModel {
       iconBgColor: const Color(0xFF15803D),
       iconColor: Colors.green,
       cardBgColor: const Color(0xFFEFFBF3),
-      darkCardBgColor: const Color.fromARGB(255, 36, 36, 41),
+      darkCardBgColor: const Color(0xFF35373B),
     );
   }
 
@@ -303,7 +303,7 @@ class DashboardModel {
       iconBgColor: const Color(0xFFB45309),
       iconColor: Colors.orange,
       cardBgColor: const Color(0xFFFFF9EC),
-      darkCardBgColor: const Color.fromARGB(255, 36, 36, 41),
+      darkCardBgColor: const Color(0xFF35373B),
     );
   }
 

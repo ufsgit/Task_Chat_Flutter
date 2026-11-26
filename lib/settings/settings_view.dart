@@ -115,7 +115,7 @@ class _SettingsViewState extends State<SettingsView> {
                     : AppColors.primaryGreen,
                 iconBgColor: isDark
                     ? AppDarkColors.chipPendingBg
-                    : const Color(0xFFE7FCE3),
+                    : AppColors.chipPendingBg,
                 title: 'Theme',
                 subtitle: ThemeController.instance.themeModeLabel,
                 trailing: Icon(
@@ -134,10 +134,12 @@ class _SettingsViewState extends State<SettingsView> {
           // 3. About Action Tile
           SettingsActionTile(
             icon: Icons.info_outline_rounded,
-            iconColor: const Color(0xFF0D9488),
+            iconColor: isDark
+                ? AppDarkColors.mutedSilver
+                : AppColors.textSecondary,
             iconBgColor: isDark
-                ? const Color(0xFF103635)
-                : const Color(0xFFCCFBF1),
+                ? AppDarkColors.surfaceGreyLight
+                : AppColors.surfaceGrey,
             title: 'About',
             subtitle: 'Account info, App version',
             trailing: Icon(
@@ -203,15 +205,17 @@ class _SettingsViewState extends State<SettingsView> {
         ? const Color(0xFF94A3B8)
         : const Color(0xFF64748B);
     final fitmateGreen = isDark
-        ? AppDarkColors.primaryGreen
-        : AppColors.primaryGreen;
-    final iconBg = isDark ? const Color(0xFF122E23) : const Color(0xFFE8F7EC);
+        ? AppDarkColors.primaryRed
+        : AppColors.primaryRed;
+    final iconBg = isDark
+        ? AppDarkColors.surfaceGreyLight
+        : AppColors.surfaceGrey;
     final versionCardBg = isDark
-        ? const Color(0xFF122820)
-        : const Color(0xFFEDF8F1);
+        ? AppDarkColors.surfaceSecondary
+        : AppColors.surfaceGreyLight;
     final versionBorderColor = isDark
-        ? const Color(0xFF1E4534)
-        : const Color(0xFFD4EEDC);
+        ? AppDarkColors.border
+        : AppColors.border;
     final versionLabelColor = isDark
         ? const Color(0xFFCBD5E1)
         : const Color(0xFF334155);
@@ -420,7 +424,7 @@ class _SettingsViewState extends State<SettingsView> {
                       onPressed: () => Navigator.of(ctx).pop(),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: fitmateGreen,
-                        foregroundColor: Colors.white,
+                        foregroundColor: AppDarkColors.deepCharcoal,
                         elevation: 0,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),

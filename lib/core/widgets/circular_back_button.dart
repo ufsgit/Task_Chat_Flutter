@@ -56,8 +56,7 @@ class CircularBackButton extends StatelessWidget {
                 padding: const EdgeInsets.only(right: 1.5),
                 child: Icon(
                   Icons.chevron_left_rounded,
-                  color: iconColor ??
-                      (isDark ? AppDarkColors.whatsappGreen : AppColors.brandGreen),
+                  color: iconColor ?? AppColors.logoRed,
                   size: 24,
                 ),
               ),

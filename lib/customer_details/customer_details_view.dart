@@ -704,9 +704,7 @@ class _CustomerDetailsViewState extends State<CustomerDetailsView> {
                           Icon(
                             Icons.chat_outlined,
                             size: 18,
-                            color: isDark
-                                ? AppDarkColors.whatsappGreen
-                                : AppColors.primaryGreen,
+                            color: primaryTextColor,
                           ),
                           const SizedBox(width: 10),
                           Text(
@@ -728,9 +726,7 @@ class _CustomerDetailsViewState extends State<CustomerDetailsView> {
                           Icon(
                             Icons.picture_as_pdf_outlined,
                             size: 18,
-                            color: isDark
-                                ? AppDarkColors.whatsappGreen
-                                : AppColors.primaryGreen,
+                            color: primaryTextColor,
                           ),
                           const SizedBox(width: 10),
                           Text(
@@ -779,8 +775,8 @@ class _CustomerDetailsViewState extends State<CustomerDetailsView> {
                               avatarLetter: _viewModel.customer.name.isNotEmpty
                                   ? _viewModel.customer.name[0].toUpperCase()
                                   : 'C',
-                              avatarBgColor: const Color(0xFFDCFCE7),
-                              avatarTextColor: const Color(0xFF16A34A),
+                              avatarBgColor: context.colors.avatarBg,
+                              avatarTextColor: context.primaryGreen,
                               date: _viewModel.customer.scheduleDate ?? 'Today',
                               statusTag: _viewModel.customer.status,
                               notes: _viewModel.customer.notes,
